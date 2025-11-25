@@ -1,19 +1,15 @@
-import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Businesses from "./pages/Businesses";
+import BusinessDetails from "./pages/BusinessDetails"; // this will be next step
 
 function App() {
-  const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    fetch("http://localhost:5000")
-      .then(res => res.text())
-      .then(data => setMessage(data));
-  }, []);
-
   return (
-    <div>
-      <h1>Frontend Connected to Backend</h1>
-      <p>{message}</p>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Businesses />} />
+        <Route path="/business/:id" element={<BusinessDetails />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
