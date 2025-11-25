@@ -1,15 +1,15 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Businesses from "./pages/Businesses";
-import BusinessDetails from "./pages/BusinessDetails"; // this will be next step
+import BusinessDetails from "./pages/BusinessDetails";
 
 function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <Routes>
         <Route path="/" element={<Businesses />} />
         <Route path="/business/:id" element={<BusinessDetails />} />
       </Routes>
-    </BrowserRouter>
+    </Router>
   );
 }
 
