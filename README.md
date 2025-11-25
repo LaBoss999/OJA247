@@ -85,7 +85,7 @@ OJA247/
 │  ├─ package.json
 │  └─ .env
 │
-└─ frontend/
+└─ oja247/
 ├─ src/
 │  ├─ components/
 │  ├─ pages/
