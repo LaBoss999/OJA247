@@ -1,81 +1,61 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
-import { Link } from "react-router-dom";
+import { getAllBusinesses } from "../services/api";
+import BusinessCard from "../components/BusinessCard";
 
 function Businesses() {
   const [businesses, setBusinesses] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All");
 
   useEffect(() => {
-    axios.get("http://localhost:5000/businesses")
+    getAllBusinesses()
       .then(res => setBusinesses(res.data))
       .catch(err => console.log(err));
   }, []);
 
-  const filteredBusinesses = businesses.filter(business => {
-    const matchesSearch = business.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter ? business.category === categoryFilter : true;
-    return matchesSearch && matchesCategory;
+  // Get unique categories for the filter dropdown
+  const categories = ["All", ...new Set(businesses.map(b => b.category))];
+
+  // Filter businesses based on search term and category
+  const filteredBusinesses = businesses.filter(b => {
+    const matchesName = b.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = categoryFilter === "All" || b.category === categoryFilter;
+    return matchesName && matchesCategory;
   });
 
-  const categories = [...new Set(businesses.map(b => b.category))];
-
-  const clearFilters = () => {
-    setSearchTerm("");
-    setCategoryFilter("");
-  };
-
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      {/* Search & Filter */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">All Businesses</h1>
+
+      {/* Search and Filter */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <input
           type="text"
-          placeholder="Search businesses..."
-          className="border border-gray-300 rounded-lg px-4 py-2 w-full md:w-1/2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Search by business name..."
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={e => setSearchTerm(e.target.value)}
+          className="p-2 border border-gray-300 rounded w-full sm:w-1/2"
         />
         <select
-          className="border border-gray-300 rounded-lg px-4 py-2 w-full md:w-1/3 focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
+          onChange={e => setCategoryFilter(e.target.value)}
+          className="p-2 border border-gray-300 rounded w-full sm:w-1/4"
         >
-          <option value="">All Categories</option>
-          {categories.map((cat, index) => (
-            <option key={index} value={cat}>{cat}</option>
+          {categories.map(cat => (
+            <option key={cat} value={cat}>{cat}</option>
           ))}
         </select>
-        {(searchTerm || categoryFilter) && (
-          <button
-            onClick={clearFilters}
-            className="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-2 rounded-lg transition"
-          >
-            Clear Filters
-          </button>
+      </div>
+
+      {/* Business Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        {filteredBusinesses.map(b => (
+          <BusinessCard key={b._id} business={b} />
+        ))}
+        {filteredBusinesses.length === 0 && (
+          <p className="text-gray-500 col-span-full">No businesses found.</p>
         )}
       </div>
-
-      {/* Businesses Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        {filteredBusinesses.map((business) => (
-          <Link
-            key={business._id}
-            to={`/business/${business._id}`}
-            className="bg-white rounded-xl shadow-md p-6 hover:shadow-xl hover:scale-105 transform transition duration-300"
-          >
-            <h2 className="text-2xl font-bold mb-2 text-blue-600">{business.name}</h2>
-            <p className="text-gray-600 mb-1"><span className="font-semibold">Category:</span> {business.category}</p>
-            <p className="text-gray-500 mb-2"><span className="font-semibold">Location:</span> {business.location}</p>
-            {business.contact && <p className="text-gray-400"><span className="font-semibold">Contact:</span> {business.contact}</p>}
-          </Link>
-        ))}
-      </div>
-
-      {filteredBusinesses.length === 0 && (
-        <p className="text-center text-gray-500 mt-6 text-lg">No businesses found.</p>
-      )}
     </div>
   );
 }

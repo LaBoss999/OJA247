@@ -1,63 +1,47 @@
-import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from "axios";
+import { useParams, useNavigate } from "react-router-dom";
+import { getBusinessById } from "../services/api";
 
 function BusinessDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [business, setBusiness] = useState(null);
 
   useEffect(() => {
-    axios.get(`http://localhost:5000/businesses/${id}`)
-      .then(res => setBusiness(res.data))
-      .catch(err => console.log(err));
+    getBusinessById(id)
+      .then((res) => setBusiness(res.data))
+      .catch((err) => console.error(err));
   }, [id]);
 
-  if (!business) return <p className="text-center mt-10">Loading...</p>;
+  if (!business) return <p>Loading...</p>;
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      {/* Hero Section */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h1 className="text-4xl font-bold mb-2">{business.name}</h1>
-        <p className="text-gray-500 mb-2">{business.category}</p>
-        <p className="text-gray-400">{business.location}</p>
-      </div>
+    <div className="p-6 max-w-3xl mx-auto">
+      <button
+        onClick={() => navigate(-1)}
+        className="mb-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+      >
+        ← Back
+      </button>
 
-      {/* Description */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-2xl font-semibold mb-2">About</h2>
-        <p className="text-gray-700">{business.description}</p>
-      </div>
+      <h1 className="text-3xl font-bold mb-2">{business.name}</h1>
+      <p className="text-gray-600 mb-4">{business.category}</p>
+      <p className="mb-4">{business.description}</p>
+      <p className="mb-2"><strong>Location:</strong> {business.location}</p>
+      <p className="mb-2"><strong>Contact:</strong> {business.contact}</p>
 
-      {/* Contact Info */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-2xl font-semibold mb-2">Contact</h2>
-        <p className="text-gray-700">{business.contact}</p>
-      </div>
-
-      {/* Image Gallery */}
       {business.images && business.images.length > 0 && (
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-2xl font-semibold mb-4">Gallery</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {business.images.map((img, index) => (
-              <img
-                key={index}
-                src={img}
-                alt={`Business image ${index + 1}`}
-                className="rounded-md w-full h-48 object-cover"
-              />
-            ))}
-          </div>
+        <div className="mt-4 grid grid-cols-2 gap-4">
+          {business.images.map((img, idx) => (
+            <img
+              key={idx}
+              src={img}
+              alt={`${business.name} ${idx}`}
+              className="rounded"
+            />
+          ))}
         </div>
       )}
-
-      {/* Back Button */}
-      <div className="text-center">
-        <Link to="/" className="inline-block bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition">
-          Back to All Businesses
-        </Link>
-      </div>
     </div>
   );
 }
