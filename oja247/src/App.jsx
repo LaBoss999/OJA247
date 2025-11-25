@@ -1,9 +1,20 @@
-import React from 'react'
+import { useEffect, useState } from "react";
 
-const App = () => {
+function App() {
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    fetch("http://localhost:5000")
+      .then(res => res.text())
+      .then(data => setMessage(data));
+  }, []);
+
   return (
-    <div>Oja247</div>
-  )
+    <div>
+      <h1>Frontend Connected to Backend</h1>
+      <p>{message}</p>
+    </div>
+  );
 }
 
-export default App
+export default App;
