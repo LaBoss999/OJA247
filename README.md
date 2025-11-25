@@ -132,7 +132,7 @@ Backend will run at:
 ### 🌐 Frontend Setup
 
 ```bash
-cd frontend
+cd oja247
 npm install
 npm run dev
 ```
