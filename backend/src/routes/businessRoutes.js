@@ -26,4 +26,17 @@ router.get("/", async (req, res) => {
   }
 });
 
+// GET single business
+router.get("/:id", async (req, res) => {
+  try {
+    const business = await Business.findById(req.params.id);
+    if (!business) {
+      return res.status(404).json({ message: "Business not found" });
+    }
+    res.json(business);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching business" });
+  }
+});
+
 export default router;
