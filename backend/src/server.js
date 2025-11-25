@@ -2,19 +2,24 @@ import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import businessRoutes from "./routes/businessRoutes.js";
 
 dotenv.config();
 
 const app = express();
+
+// MIDDLEWARE FIRST
 app.use(cors());
 app.use(express.json());
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI)
+// ROUTES AFTER
+app.use("/businesses", businessRoutes);
+
+// MongoDB
+mongoose.connect(process.env.MONGO_URI, { dbName: "oja247" })
   .then(() => console.log("MongoDB connected"))
   .catch(err => console.log("MongoDB connection error:", err));
 
-// Test route
 app.get("/", (req, res) => {
   res.send("Backend is running and connected to MongoDB!");
 });
