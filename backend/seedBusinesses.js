@@ -111,7 +111,219 @@ const sampleBusinesses = [
       }
     ],
     highlights: ["Premium Brands", "Nationwide Delivery", "Great Customer Service"]
-  }
+  },
+  {
+  name: "GlamourTouch Beauty Studio",
+  description: "Premium makeup, skincare, and beauty enhancement services.",
+  category: "Beauty",
+  location: "Lekki Phase 1, Lagos",
+  contact: "+234 803 552 1199",
+  images: [
+    "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9",
+    "https://images.unsplash.com/photo-1522337660859-02fbefca4702"
+  ],
+  logo: "https://images.unsplash.com/photo-1522336572468-97b06e8ef5a0",
+  banner: "https://images.unsplash.com/photo-1532712938310-34cb3982ef6b",
+  themeColor: "#E91E63",
+  socialLinks: {
+    facebook: "https://facebook.com/glamourtouch",
+    instagram: "https://instagram.com/glamourtouch",
+    twitter: "",
+    website: "https://glamourtouch.ng"
+  },
+  products: [
+    {
+      name: "Bridal Makeover",
+      description: "Luxurious bridal makeup with professional products.",
+      price: 85000,
+      image: "https://images.unsplash.com/photo-1559599238-94f7d8d43c1b"
+    },
+    {
+      name: "Facial Treatment",
+      description: "Deep cleansing and rejuvenation facial.",
+      price: 20000,
+      image: "https://images.unsplash.com/photo-1527515637462-cff94eecc1ac"
+    }
+  ],
+  highlights: ["Certified Makeup Artists", "Premium Beauty Products", "Flexible Home Service"]
+},
+{
+  name: "TasteBuds Continental Kitchen",
+  description: "Delicious meals with a fusion of African and continental flavors.",
+  category: "Food",
+  location: "Surulere, Lagos",
+  contact: "+234 806 778 2211",
+  images: [
+    "https://images.unsplash.com/photo-1504674900247-0877df9cc836",
+    "https://images.unsplash.com/photo-1504674900247-083bdf9bb836"
+  ],
+  logo: "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe",
+  banner: "https://images.unsplash.com/photo-1504674900247-e5807ddcbdc5",
+  themeColor: "#FF5722",
+  socialLinks: {
+    facebook: "https://facebook.com/tastebuds",
+    instagram: "https://instagram.com/tastebuds",
+    twitter: "https://twitter.com/tastebuds",
+    website: ""
+  },
+  products: [
+    {
+      name: "Jollof Rice Special",
+      description: "Smoky party-style jollof with chicken.",
+      price: 3500,
+      image: "https://images.unsplash.com/photo-1512058564366-18510be2db19"
+    },
+    {
+      name: "Seafood Pasta",
+      description: "Creamy pasta with shrimps and calamari.",
+      price: 6000,
+      image: "https://images.unsplash.com/photo-1525755662778-989d0524087e"
+    }
+  ],
+  highlights: ["Fast Delivery", "Fresh Ingredients", "Affordable Prices"]
+},
+{
+  name: "FitNation Gym & Wellness",
+  description: "Modern fitness center offering workouts, yoga, and personal training.",
+  category: "Fitness",
+  location: "Gbagada, Lagos",
+  contact: "+234 909 334 8877",
+  images: [
+    "https://images.unsplash.com/photo-1558611848-73f7eb4001a1",
+    "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b"
+  ],
+  logo: "https://images.unsplash.com/photo-1584467735858-3b3de3fddfa3",
+  banner: "https://images.unsplash.com/photo-1558611848-56cb1b38183a",
+  themeColor: "#4CAF50",
+  socialLinks: {
+    facebook: "",
+    instagram: "https://instagram.com/fitnation",
+    twitter: "https://twitter.com/fitnation",
+    website: "https://fitnation.ng"
+  },
+  products: [
+    {
+      name: "Monthly Gym Membership",
+      description: "Full access to gym equipment and classes.",
+      price: 15000,
+      image: "https://images.unsplash.com/photo-1554284126-aa88f22d8b72"
+    },
+    {
+      name: "Personal Training Session",
+      description: "One-on-one customized workout with a trainer.",
+      price: 10000,
+      image: "https://images.unsplash.com/photo-1546483875-ad9014c88eba"
+    }
+  ],
+  highlights: ["24/7 Access", "Certified Trainers", "Wide Range of Equipment"]
+},
+{
+  name: "UrbanStyle Fashion Hub",
+  description: "Trendy clothing store offering modern outfits for men and women.",
+  category: "Fashion",
+  location: "Yaba, Lagos",
+  contact: "+234 812 339 9022",
+  images: [
+    "https://images.unsplash.com/photo-1521335629791-ce4aec67dd47",
+    "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c"
+  ],
+  logo: "https://images.unsplash.com/photo-1514996937319-344454492b37",
+  banner: "https://images.unsplash.com/photo-1503341455253-b2e723bb3dbb",
+  themeColor: "#9C27B0",
+  socialLinks: {
+    facebook: "https://facebook.com/urbanstyle",
+    instagram: "https://instagram.com/urbanstyle",
+    twitter: "",
+    website: "https://urbanstyle.ng"
+  },
+  products: [
+    {
+      name: "Classic Denim Jacket",
+      description: "Stylish unisex denim jacket.",
+      price: 12000,
+      image: "https://images.unsplash.com/photo-1503341455253-b2e723bb3dbb"
+    },
+    {
+      name: "Sneaker Collection",
+      description: "Trendy sneakers for everyday wear.",
+      price: 18000,
+      image: "https://images.unsplash.com/photo-1519741491158-345201a59ca8"
+    }
+  ],
+  highlights: ["Affordable Prices", "Exclusive Designs", "Fast Delivery"]
+},
+{
+  name: "GreenLeaf Organic Store",
+  description: "Healthy organic foods, groceries, and supplements.",
+  category: "Groceries",
+  location: "Magodo, Lagos",
+  contact: "+234 802 556 7711",
+  images: [
+    "https://images.unsplash.com/photo-1506619216599-9d16d0903dfd",
+    "https://images.unsplash.com/photo-1524594081293-190a2fe0b7c6"
+  ],
+  logo: "https://images.unsplash.com/photo-1506611361891-2f18ae6c8f52",
+  banner: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2",
+  themeColor: "#8BC34A",
+  socialLinks: {
+    facebook: "",
+    instagram: "https://instagram.com/greenleaf",
+    twitter: "https://twitter.com/greenleaf",
+    website: "https://greenleaf.ng"
+  },
+  products: [
+    {
+      name: "Organic Honey",
+      description: "Pure natural honey from trusted farms.",
+      price: 3500,
+      image: "https://images.unsplash.com/photo-1535912841748-969f1f8f35ad"
+    },
+    {
+      name: "Oats and Grains Pack",
+      description: "Healthy whole grain food mix.",
+      price: 2800,
+      image: "https://images.unsplash.com/photo-1514996937319-344454492b37"
+    }
+  ],
+  highlights: ["Fresh Organic Products", "Affordable Healthy Options", "Eco-Friendly Packaging"]
+},
+{
+  name: "TechSavvy Electronics",
+  description: "Latest gadgets, accessories, and tech solutions.",
+  category: "Tech",
+  location: "Ikeja, Lagos",
+  contact: "+234 807 445 3322",
+  images: [
+    "https://images.unsplash.com/photo-1517336714731-489689fd1ca8",
+    "https://images.unsplash.com/photo-1519389950473-47ba0277781c"
+  ],
+  logo: "https://images.unsplash.com/photo-1581092334641-2531c0b9c8e8",
+  banner: "https://images.unsplash.com/photo-1518770660439-4636190af475",
+  themeColor: "#2196F3",
+  socialLinks: {
+    facebook: "https://facebook.com/techsavvy",
+    instagram: "https://instagram.com/techsavvy",
+    twitter: "https://twitter.com/techsavvy",
+    website: "https://techsavvy.ng"
+  },
+  products: [
+    {
+      name: "Smartphone X200",
+      description: "Latest model with advanced features.",
+      price: 75000,
+      image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8"
+    },
+    {
+      name: "Wireless Earbuds",
+      description: "High-quality sound with noise cancellation.",
+      price: 15000,
+      image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c"
+    }
+  ],
+  highlights: ["Cutting-edge Technology", "Affordable Prices", "Excellent Customer Support"]        
+  
+}
+
 ];
 
 async function seed() {
