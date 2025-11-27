@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Facebook, Twitter, Instagram, Menu, X, Rocket, Store, Bike, Package } from "lucide-react";
 import Logo from "../assets/OJA247 VX1.png"; // adjust path if needed
@@ -209,7 +210,7 @@ const LandingPage = () => {
             transition={{ duration: 0.8, delay: 0.3 }}
             className="text-6xl md:text-8xl font-black mb-6 leading-tight"
           >
-            <span className="text-5xl md:text-8xl text-gray-900">
+            <span className="text-5xl md:text-8xl text-[#1db954]">
               Welcome to
             </span>
             <br />
