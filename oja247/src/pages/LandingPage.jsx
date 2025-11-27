@@ -200,7 +200,7 @@ const LandingPage = () => {
             transition={{ duration: 0.8, delay: 0.3 }}
             className="text-6xl md:text-8xl font-black mb-6 leading-tight"
           >
-            <span className="text-5xl md:text-8xl text-gray-900">
+            <span className="text-5xl sm:text-8xl text-gray-900">
               Welcome to
             </span>
             <br />
