@@ -218,9 +218,9 @@ const LandingPage = () => {
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6, type: "spring", stiffness: 200 }}
-              className="text-[#121212] inline-block"
+              className="bg-gradient-to-r from-green-400 via-yellow-400 to-orange-500 bg-clip-text text-transparent inline-block"
             >
-              OJA<span className="text-[#ffc107]">247</span>
+              OJA247
             </motion.span>
           </motion.h1>
 
