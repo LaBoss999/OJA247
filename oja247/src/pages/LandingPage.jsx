@@ -10,6 +10,15 @@ const LandingPage = () => {
   const opacity = useTransform(scrollY, [0, 300], [1, 0]);
   const scale = useTransform(scrollY, [0, 300], [1, 0.8]);
 
+  // Navigation handlers
+  const handleRegisterBusiness = () => {
+    window.location.href = "/business-form";
+  };
+
+  const handleExploreVendors = () => {
+    window.location.href = "/businesses";
+  };
+
   useEffect(() => {
     const handleMouseMove = (e) => {
       setMousePosition({ x: e.clientX, y: e.clientY });
@@ -208,9 +217,9 @@ const LandingPage = () => {
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6, type: "spring", stiffness: 200 }}
-              className="bg-gradient-to-r from-green-400 via-yellow-400 to-orange-500 bg-clip-text text-transparent inline-block"
+              className="text-[#121212] inline-block"
             >
-              OJA247
+              OJA<span className="text-[#ffc107]">247</span>
             </motion.span>
           </motion.h1>
 
@@ -238,6 +247,7 @@ const LandingPage = () => {
             <motion.button
               whileHover={{ scale: 1.05, y: -5 }}
               whileTap={{ scale: 0.95 }}
+              onClick={handleRegisterBusiness}
               className="group relative px-10 py-5 overflow-hidden rounded-2xl"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-500 transition-transform group-hover:scale-110" />
@@ -256,6 +266,7 @@ const LandingPage = () => {
             <motion.button
               whileHover={{ scale: 1.05, y: -5 }}
               whileTap={{ scale: 0.95 }}
+              onClick={handleExploreVendors}
               className="group relative px-10 py-5 bg-white border-2 border-orange-500 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-yellow-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
