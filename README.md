@@ -102,7 +102,7 @@ OJA247/
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/oja247.git
+git clone https://github.com/LaBoss999/OJA247.git
 cd oja247
 ````
 
