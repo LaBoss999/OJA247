@@ -107,7 +107,7 @@ const LandingPage = () => {
                   <img
                     src={Logo}
                     alt="OJA247 Logo"
-                    className="w-[120px] object-contain"
+                    className="w-[84px] object-contain"
                   />
                 </div>
               </div>
