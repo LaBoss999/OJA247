@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Facebook, Twitter, Instagram, Menu, X, Rocket, Store, Bike, Package } from "lucide-react";
+import Logo from "../assets/OJA247 VX1.png"; // adjust path if needed
 
 const LandingPage = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -97,13 +98,21 @@ const LandingPage = () => {
               whileTap={{ scale: 0.95 }}
               className="flex items-center gap-3"
             >
+              
+
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-yellow-500 blur-lg opacity-60 rounded-full" />
-                <div className="relative bg-gradient-to-r from-green-500 to-yellow-500 p-3 rounded-2xl shadow-lg">
-                  <span className="text-2xl font-black text-white">OJA</span>
+                <div></div>
+
+                <div>
+                  <img
+                    src={Logo}
+                    alt="OJA247 Logo"
+                    className="w-[120px] object-contain"
+                  />
                 </div>
               </div>
-              <span className="text-gray-900 text-xl font-bold">247</span>
+
+
             </motion.div>
 
             {/* Desktop Nav */}
