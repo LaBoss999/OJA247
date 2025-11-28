@@ -24,20 +24,6 @@ const sampleBusinesses = [
       twitter: "",
       website: ""
     },
-    products: [
-      {
-        name: "Jollof Rice + Turkey",
-        description: "Smoky party-style jollof with fried turkey.",
-        price: 3500,
-        image: "https://images.unsplash.com/photo-1604909053175-bf5524e78f20"
-      },
-      {
-        name: "Efo Riro",
-        description: "Rich Yoruba vegetable soup with assorted meat.",
-        price: 2500,
-        image: "https://images.unsplash.com/photo-1553621042-f6e147245754"
-      }
-    ],
     highlights: ["Fast Delivery", "Affordable Meals", "Fresh Ingredients"]
   },
 
@@ -60,20 +46,6 @@ const sampleBusinesses = [
       twitter: "https://twitter.com/swiftfix",
       website: "https://swiftfix.ng"
     },
-    products: [
-      {
-        name: "iPhone Screen Replacement",
-        description: "Original quality display replacement.",
-        price: 45000,
-        image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9"
-      },
-      {
-        name: "Battery Replacement",
-        description: "Fast battery swaps for all devices.",
-        price: 15000,
-        image: "https://images.unsplash.com/photo-1516280030429-27679b3dc9cf"
-      }
-    ],
     highlights: ["Same-Day Repairs", "Warranty Guaranteed", "Certified Technicians"]
   },
 
@@ -96,20 +68,6 @@ const sampleBusinesses = [
       twitter: "",
       website: "https://glowbeauty.ng"
     },
-    products: [
-      {
-        name: "Vitamin C Serum",
-        description: "Brightening + anti-aging blend.",
-        price: 8000,
-        image: "https://images.unsplash.com/photo-1596300092616-e304ea0b9c8c"
-      },
-      {
-        name: "Matte Lipstick",
-        description: "Long-lasting and highly pigmented.",
-        price: 4500,
-        image: "https://images.unsplash.com/photo-1583259033935-0c18e7ce95b2"
-      }
-    ],
     highlights: ["Premium Brands", "Nationwide Delivery", "Great Customer Service"]
   },
   {
@@ -131,20 +89,6 @@ const sampleBusinesses = [
     twitter: "",
     website: "https://glamourtouch.ng"
   },
-  products: [
-    {
-      name: "Bridal Makeover",
-      description: "Luxurious bridal makeup with professional products.",
-      price: 85000,
-      image: "https://images.unsplash.com/photo-1559599238-94f7d8d43c1b"
-    },
-    {
-      name: "Facial Treatment",
-      description: "Deep cleansing and rejuvenation facial.",
-      price: 20000,
-      image: "https://images.unsplash.com/photo-1527515637462-cff94eecc1ac"
-    }
-  ],
   highlights: ["Certified Makeup Artists", "Premium Beauty Products", "Flexible Home Service"]
 },
 {
@@ -166,20 +110,6 @@ const sampleBusinesses = [
     twitter: "https://twitter.com/tastebuds",
     website: ""
   },
-  products: [
-    {
-      name: "Jollof Rice Special",
-      description: "Smoky party-style jollof with chicken.",
-      price: 3500,
-      image: "https://images.unsplash.com/photo-1512058564366-18510be2db19"
-    },
-    {
-      name: "Seafood Pasta",
-      description: "Creamy pasta with shrimps and calamari.",
-      price: 6000,
-      image: "https://images.unsplash.com/photo-1525755662778-989d0524087e"
-    }
-  ],
   highlights: ["Fast Delivery", "Fresh Ingredients", "Affordable Prices"]
 },
 {
@@ -201,20 +131,6 @@ const sampleBusinesses = [
     twitter: "https://twitter.com/fitnation",
     website: "https://fitnation.ng"
   },
-  products: [
-    {
-      name: "Monthly Gym Membership",
-      description: "Full access to gym equipment and classes.",
-      price: 15000,
-      image: "https://images.unsplash.com/photo-1554284126-aa88f22d8b72"
-    },
-    {
-      name: "Personal Training Session",
-      description: "One-on-one customized workout with a trainer.",
-      price: 10000,
-      image: "https://images.unsplash.com/photo-1546483875-ad9014c88eba"
-    }
-  ],
   highlights: ["24/7 Access", "Certified Trainers", "Wide Range of Equipment"]
 },
 {
@@ -236,20 +152,6 @@ const sampleBusinesses = [
     twitter: "",
     website: "https://urbanstyle.ng"
   },
-  products: [
-    {
-      name: "Classic Denim Jacket",
-      description: "Stylish unisex denim jacket.",
-      price: 12000,
-      image: "https://images.unsplash.com/photo-1503341455253-b2e723bb3dbb"
-    },
-    {
-      name: "Sneaker Collection",
-      description: "Trendy sneakers for everyday wear.",
-      price: 18000,
-      image: "https://images.unsplash.com/photo-1519741491158-345201a59ca8"
-    }
-  ],
   highlights: ["Affordable Prices", "Exclusive Designs", "Fast Delivery"]
 },
 {
@@ -271,20 +173,6 @@ const sampleBusinesses = [
     twitter: "https://twitter.com/greenleaf",
     website: "https://greenleaf.ng"
   },
-  products: [
-    {
-      name: "Organic Honey",
-      description: "Pure natural honey from trusted farms.",
-      price: 3500,
-      image: "https://images.unsplash.com/photo-1535912841748-969f1f8f35ad"
-    },
-    {
-      name: "Oats and Grains Pack",
-      description: "Healthy whole grain food mix.",
-      price: 2800,
-      image: "https://images.unsplash.com/photo-1514996937319-344454492b37"
-    }
-  ],
   highlights: ["Fresh Organic Products", "Affordable Healthy Options", "Eco-Friendly Packaging"]
 },
 {
@@ -306,20 +194,6 @@ const sampleBusinesses = [
     twitter: "https://twitter.com/techsavvy",
     website: "https://techsavvy.ng"
   },
-  products: [
-    {
-      name: "Smartphone X200",
-      description: "Latest model with advanced features.",
-      price: 75000,
-      image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca8"
-    },
-    {
-      name: "Wireless Earbuds",
-      description: "High-quality sound with noise cancellation.",
-      price: 15000,
-      image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c"
-    }
-  ],
   highlights: ["Cutting-edge Technology", "Affordable Prices", "Excellent Customer Support"]        
   
 }
@@ -330,9 +204,6 @@ async function seed() {
   try {
     await mongoose.connect(process.env.MONGO_URI);
     console.log("MongoDB connected");
-
-    await Business.deleteMany();
-    console.log("Old businesses cleared");
 
     const created = await Business.insertMany(sampleBusinesses);
     console.log(`Inserted ${created.length} sample businesses`);
