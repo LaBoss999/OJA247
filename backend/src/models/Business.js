@@ -17,14 +17,7 @@ const BusinessSchema = new mongoose.Schema(
       twitter: String,
       website: String
     },
-    products: [
-      {
-        name: String,
-        description: String,
-        price: Number,
-        image: String
-      }
-    ],
+       // ❌ REMOVED: products: [...]
     highlights: [String]
   },
   { timestamps: true }
