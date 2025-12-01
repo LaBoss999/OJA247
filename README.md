@@ -1,9 +1,9 @@
-```markdown
+
 # 🚀 OJA247 — Small Business Discovery Platform
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![GitHub issues](https://img.shields.io/github/issues/your-username/oja247)](https://github.com/your-username/oja247/issues)
-[![GitHub stars](https://img.shields.io/github/stars/your-username/oja247?style=social)](https://github.com/your-username/oja247/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/LaBoss999/OJA247)](https://github.com/LaBoss999/OJA247/issues)
+[![GitHub stars](https://img.shields.io/github/stars/LaBoss999/OJA247?style=social)](https://github.com/LaBoss999/OJA247/stargazers)
 
 A **MERN-stack web application** that allows users to discover small businesses, view their mini-websites, and explore products or services.  
 Businesses can register and create a profile containing their details, contact info, and images.
@@ -12,7 +12,8 @@ Businesses can register and create a profile containing their details, contact i
 
 ## 📷 Demo / Screenshot
 
-![OJA247 Demo Screenshot](https://via.placeholder.com/800x400.png?text=OJA247+Demo+Screenshot)
+![OJA247 Demo Screenshot](website-demo-image/OJA247demo.png "desktop demo")
+![OJA247 Demo Screenshot](website-demo-image/mobile-view.png "mobile demo")
 
 ---
 
@@ -71,7 +72,7 @@ Businesses can register and create a profile containing their details, contact i
 ## 📁 Project Structure (Recommended)
 
 ```
-```
+
 OJA247/
 ├─ backend/
 │  ├─ src/
