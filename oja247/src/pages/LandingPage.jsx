@@ -1,7 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
-import { Facebook, Twitter, Instagram, Menu, X, Rocket, Store, Bike, Package, Search, TrendingUp, MapPin, Star } from "lucide-react";
+import {
+  Facebook,
+  Twitter,
+  Instagram,
+  Menu,
+  X,
+  Rocket,
+  Store,
+  Bike,
+  Package,
+  Search,
+  TrendingUp,
+  MapPin,
+  Star,
+} from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import Logo from "../assets/OJA247 VX1.png";
 
@@ -11,9 +26,13 @@ const LandingPage = () => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [businesses, setBusinesses] = useState([]);
   const [featuredProducts, setFeaturedProducts] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [stats, setStats] = useState({ businesses: 0, products: 0, categories: 0 });
-  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [stats, setStats] = useState({
+    businesses: 0,
+    products: 0,
+    categories: 0,
+  });
+
   const { scrollY } = useScroll();
   const opacity = useTransform(scrollY, [0, 300], [1, 0]);
   const scale = useTransform(scrollY, [0, 300], [1, 0.8]);
@@ -32,20 +51,24 @@ const LandingPage = () => {
 
   const fetchData = async () => {
     try {
-      const businessRes = await axios.get('http://localhost:5000/api/businesses');
+      const businessRes = await axios.get(
+        "http://localhost:5000/api/businesses"
+      );
       setBusinesses(businessRes.data.slice(0, 8));
 
-      const productsRes = await axios.get('http://localhost:5000/api/products/featured');
+      const productsRes = await axios.get(
+        "http://localhost:5000/api/products/featured"
+      );
       setFeaturedProducts(productsRes.data.slice(0, 8));
 
-      const categories = new Set(businessRes.data.map(b => b.category));
+      const categories = new Set(businessRes.data.map((b) => b.category));
       setStats({
         businesses: businessRes.data.length,
         products: productsRes.data.length,
-        categories: categories.size
+        categories: categories.size,
       });
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error("Error fetching data:", error);
     }
   };
 
@@ -58,21 +81,35 @@ const LandingPage = () => {
 
   const navItems = ["Home", "Vendors", "Products", "About"];
 
+  const { isAuthenticated, business } = useAuth();
+
   const categories = [
-    { name: 'Food', icon: '🍔', color: 'from-orange-400 to-red-500' },
-    { name: 'Fashion', icon: '👗', color: 'from-pink-400 to-purple-500' },
-    { name: 'Tech', icon: '💻', color: 'from-blue-400 to-indigo-500' },
-    { name: 'Beauty', icon: '💄', color: 'from-purple-400 to-pink-500' },
-    { name: 'Fitness', icon: '💪', color: 'from-green-400 to-teal-500' },
-    { name: 'Groceries', icon: '🛒', color: 'from-yellow-400 to-orange-500' },
-    { name: 'Electronics', icon: '📱', color: 'from-indigo-400 to-blue-500' },
-    { name: 'Other', icon: '🏪', color: 'from-gray-400 to-gray-600' }
+    { name: "Food", icon: "🍔", color: "from-orange-400 to-red-500" },
+    { name: "Fashion", icon: "👗", color: "from-pink-400 to-purple-500" },
+    { name: "Tech", icon: "💻", color: "from-blue-400 to-indigo-500" },
+    { name: "Beauty", icon: "💄", color: "from-purple-400 to-pink-500" },
+    { name: "Fitness", icon: "💪", color: "from-green-400 to-teal-500" },
+    { name: "Groceries", icon: "🛒", color: "from-yellow-400 to-orange-500" },
+    { name: "Electronics", icon: "📱", color: "from-indigo-400 to-blue-500" },
+    { name: "Other", icon: "🏪", color: "from-gray-400 to-gray-600" },
   ];
 
   const features = [
-    { icon: Store, title: "Local Vendors", desc: "Discover amazing local businesses" },
-    { icon: Bike, title: "Fast Delivery", desc: "Quick riders at your service" },
-    { icon: Package, title: "Quality Products", desc: "Curated selection of goods" },
+    {
+      icon: Store,
+      title: "Local Vendors",
+      desc: "Discover amazing local businesses",
+    },
+    {
+      icon: Bike,
+      title: "Fast Delivery",
+      desc: "Quick riders at your service",
+    },
+    {
+      icon: Package,
+      title: "Quality Products",
+      desc: "Curated selection of goods",
+    },
     { icon: Rocket, title: "24/7 Available", desc: "Shop anytime, anywhere" },
   ];
 
@@ -105,13 +142,20 @@ const LandingPage = () => {
         <motion.div
           key={i}
           className="absolute w-2 h-2 bg-green-400/20 rounded-full"
-          initial={{ x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight }}
+          initial={{
+            x: Math.random() * window.innerWidth,
+            y: Math.random() * window.innerHeight,
+          }}
           animate={{
             y: [null, Math.random() * -500, Math.random() * 500],
             x: [null, Math.random() * 100 - 50],
             opacity: [0.1, 0.3, 0.1],
           }}
-          transition={{ duration: Math.random() * 10 + 10, repeat: Infinity, ease: "linear" }}
+          transition={{
+            duration: Math.random() * 10 + 10,
+            repeat: Infinity,
+            ease: "linear",
+          }}
         />
       ))}
 
@@ -124,10 +168,19 @@ const LandingPage = () => {
       >
         <div className="backdrop-blur-xl bg-white/70 border border-gray-200/50 rounded-3xl shadow-2xl px-6 py-4">
           <div className="flex items-center justify-between">
-            <motion.div whileHover={{ scale: 1.05, rotate: 5 }} whileTap={{ scale: 0.95 }}>
-              <img src={Logo} alt="OJA247" className="w-[78px] object-contain" />
+            {/* Logo */}
+            <motion.div
+              whileHover={{ scale: 1.05, rotate: 5 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <img
+                src={Logo}
+                alt="OJA247"
+                className="w-[78px] object-contain"
+              />
             </motion.div>
 
+            {/* Desktop Nav */}
             <nav className="hidden md:flex items-center gap-2">
               {navItems.map((item, i) => (
                 <motion.button
@@ -136,17 +189,44 @@ const LandingPage = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.1 }}
                   whileHover={{ scale: 1.1, y: -2 }}
-                  onClick={() => item === "Home" ? navigate("/") : item === "Vendors" ? navigate("/explore") : null}
+                  onClick={() =>
+                    item === "Home"
+                      ? navigate("/")
+                      : item === "Vendors"
+                      ? navigate("/explore")
+                      : null
+                  }
                   className="px-6 py-2.5 text-gray-700 font-medium hover:text-gray-900 transition relative group"
                 >
                   {item}
                   <motion.div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-green-500 to-yellow-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </motion.button>
               ))}
+
+              {/* MERGED PART: Auth Buttons */}
+              {isAuthenticated ? (
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  onClick={() => navigate(`/dashboard/${business._id}`)}
+                  className="px-6 py-2 bg-green-500 text-white rounded-xl font-semibold shadow-lg hover:bg-green-600 transition"
+                >
+                  My Dashboard
+                </motion.button>
+              ) : (
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  onClick={() => navigate("/login")}
+                  className="px-6 py-2 bg-blue-500 text-white rounded-xl font-semibold shadow-lg hover:bg-blue-600 transition"
+                >
+                  Login
+                </motion.button>
+              )}
             </nav>
 
+            {/* Mobile Menu Button */}
             <motion.button
-              whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 text-gray-900 backdrop-blur-md bg-gray-100/70 rounded-xl"
             >
@@ -155,6 +235,7 @@ const LandingPage = () => {
           </div>
         </div>
 
+        {/* Mobile Menu */}
         {mobileMenuOpen && (
           <motion.div
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
@@ -168,11 +249,33 @@ const LandingPage = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.1 }}
                 className="block w-full text-left px-8 py-4 text-gray-700 font-medium hover:bg-green-50 transition"
-                onClick={() => { setMobileMenuOpen(false); item === "Vendors" && navigate("/explore"); }}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  if (item === "Vendors") navigate("/explore");
+                }}
               >
                 {item}
               </motion.button>
             ))}
+
+            {/* MERGED AUTH CONTROL (Mobile) */}
+            <div className="p-4 border-t border-gray-200 bg-white/80">
+              {isAuthenticated ? (
+                <button
+                  onClick={() => navigate(`/dashboard/${business._id}`)}
+                  className="w-full px-6 py-3 bg-green-500 text-white rounded-xl font-semibold shadow-lg hover:bg-green-600 transition"
+                >
+                  My Dashboard
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate("/login")}
+                  className="w-full px-6 py-3 bg-blue-500 text-white rounded-xl font-semibold shadow-lg hover:bg-blue-600 transition"
+                >
+                  Login
+                </button>
+              )}
+            </div>
           </motion.div>
         )}
       </motion.header>
@@ -186,10 +289,15 @@ const LandingPage = () => {
             transition={{ delay: 0.2 }}
             className="inline-flex items-center gap-2 px-6 py-3 mb-8 backdrop-blur-xl bg-white/70 border border-green-200 rounded-full shadow-lg"
           >
-            <motion.span animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
+            <motion.span
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            >
               🇳🇬
             </motion.span>
-            <span className="text-gray-700 font-semibold">Made in Nigeria with Love</span>
+            <span className="text-gray-700 font-semibold">
+              Made in Nigeria with Love
+            </span>
           </motion.div>
 
           <motion.h1
@@ -198,7 +306,9 @@ const LandingPage = () => {
             transition={{ duration: 0.8, delay: 0.3 }}
             className="text-6xl md:text-8xl font-black mb-6 leading-tight"
           >
-            <span className="text-5xl sm:text-8xl text-gray-900">Welcome to</span>
+            <span className="text-5xl sm:text-8xl text-gray-900">
+              Welcome to
+            </span>
             <br />
             <motion.span
               initial={{ opacity: 0, scale: 0.5 }}
@@ -219,7 +329,8 @@ const LandingPage = () => {
             Support local. Shop small. Grow together.
             <br />
             <span className="text-orange-600 font-semibold">
-              Discover {stats.businesses}+ amazing vendors and businesses — 24/7!
+              Discover {stats.businesses}+ amazing vendors and businesses —
+              24/7!
             </span>
           </motion.p>
 
@@ -236,7 +347,10 @@ const LandingPage = () => {
                 whileHover={{ scale: 1.02 }}
                 className="flex items-center backdrop-blur-xl bg-white/80 border-2 border-gray-200/50 rounded-full shadow-xl overflow-hidden group-hover:border-green-400 transition-colors"
               >
-                <Search className="ml-6 text-gray-400 group-hover:text-green-500 transition-colors" size={24} />
+                <Search
+                  className="ml-6 text-gray-400 group-hover:text-green-500 transition-colors"
+                  size={24}
+                />
                 <input
                   type="text"
                   value={searchQuery}
@@ -296,9 +410,21 @@ const LandingPage = () => {
           className="mt-20 grid grid-cols-3 gap-8 max-w-3xl w-full"
         >
           {[
-            { value: stats.businesses, label: "Active Businesses", color: "from-green-500 to-emerald-500" },
-            { value: stats.products, label: "Products Listed", color: "from-orange-500 to-yellow-500" },
-            { value: stats.categories, label: "Categories", color: "from-purple-500 to-pink-500" }
+            {
+              value: stats.businesses,
+              label: "Active Businesses",
+              color: "from-green-500 to-emerald-500",
+            },
+            {
+              value: stats.products,
+              label: "Products Listed",
+              color: "from-orange-500 to-yellow-500",
+            },
+            {
+              value: stats.categories,
+              label: "Categories",
+              color: "from-purple-500 to-pink-500",
+            },
           ].map((stat, i) => (
             <motion.div
               key={i}
@@ -313,7 +439,9 @@ const LandingPage = () => {
               >
                 {stat.value}+
               </motion.div>
-              <div className="text-sm text-gray-600 font-medium">{stat.label}</div>
+              <div className="text-sm text-gray-600 font-medium">
+                {stat.label}
+              </div>
             </motion.div>
           ))}
         </motion.div>
@@ -349,10 +477,14 @@ const LandingPage = () => {
                 onClick={() => navigate(`/explore?category=${cat.name}`)}
                 className="relative group"
               >
-                <div className={`absolute inset-0 bg-gradient-to-br ${cat.color} blur-xl opacity-30 group-hover:opacity-60 transition-opacity rounded-2xl`} />
+                <div
+                  className={`absolute inset-0 bg-gradient-to-br ${cat.color} blur-xl opacity-30 group-hover:opacity-60 transition-opacity rounded-2xl`}
+                />
                 <div className="relative backdrop-blur-xl bg-white/80 border border-gray-200/50 p-6 rounded-2xl hover:bg-white transition shadow-lg hover:shadow-2xl">
                   <div className="text-4xl mb-2">{cat.icon}</div>
-                  <div className="font-bold text-sm text-gray-900">{cat.name}</div>
+                  <div className="font-bold text-sm text-gray-900">
+                    {cat.name}
+                  </div>
                 </div>
               </motion.button>
             ))}
@@ -399,20 +531,24 @@ const LandingPage = () => {
                     <div
                       className="h-32 bg-gradient-to-r from-gray-300 to-gray-400"
                       style={{
-                        backgroundImage: business.banner ? `url(${business.banner})` : '',
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center'
+                        backgroundImage: business.banner
+                          ? `url(${business.banner})`
+                          : "",
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
                       }}
                     />
                     <div className="p-4 -mt-10">
                       <motion.img
                         whileHover={{ rotate: 360, scale: 1.1 }}
                         transition={{ duration: 0.6 }}
-                        src={business.logo || 'https://via.placeholder.com/80'}
+                        src={business.logo || "https://via.placeholder.com/80"}
                         alt={business.name}
                         className="w-20 h-20 rounded-full border-4 border-white shadow-lg mb-3 object-cover"
                       />
-                      <h3 className="font-bold text-lg mb-1 truncate">{business.name}</h3>
+                      <h3 className="font-bold text-lg mb-1 truncate">
+                        {business.name}
+                      </h3>
                       <p className="text-sm text-gray-600 mb-2 line-clamp-2 h-10">
                         {business.description}
                       </p>
@@ -454,7 +590,9 @@ const LandingPage = () => {
                 >
                   <feature.icon className="text-white text-3xl" />
                 </motion.div>
-                <h3 className="text-gray-900 font-bold text-xl mb-2">{feature.title}</h3>
+                <h3 className="text-gray-900 font-bold text-xl mb-2">
+                  {feature.title}
+                </h3>
                 <p className="text-gray-600 text-sm">{feature.desc}</p>
               </div>
             </motion.div>
@@ -465,7 +603,11 @@ const LandingPage = () => {
       {/* Footer */}
       <footer className="relative z-10 w-full py-12 backdrop-blur-xl bg-gray-900/95 border-t border-gray-800">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8">
-          <motion.p initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} className="text-sm text-gray-400">
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            className="text-sm text-gray-400"
+          >
             © {new Date().getFullYear()}{" "}
             <span className="bg-gradient-to-r from-green-400 to-yellow-400 bg-clip-text text-transparent font-bold">
               OJA247
@@ -475,9 +617,21 @@ const LandingPage = () => {
 
           <div className="flex gap-6">
             {[
-              { Icon: Facebook, label: "Facebook", color: "from-blue-500 to-blue-600" },
-              { Icon: Twitter, label: "Twitter", color: "from-sky-400 to-sky-500" },
-              { Icon: Instagram, label: "Instagram", color: "from-yellow-500 to-orange-500" },
+              {
+                Icon: Facebook,
+                label: "Facebook",
+                color: "from-blue-500 to-blue-600",
+              },
+              {
+                Icon: Twitter,
+                label: "Twitter",
+                color: "from-sky-400 to-sky-500",
+              },
+              {
+                Icon: Instagram,
+                label: "Instagram",
+                color: "from-yellow-500 to-orange-500",
+              },
             ].map(({ Icon, label, color }) => (
               <motion.a
                 key={label}
@@ -486,7 +640,9 @@ const LandingPage = () => {
                 whileTap={{ scale: 0.9 }}
                 className="group relative"
               >
-                <div className={`absolute inset-0 bg-gradient-to-r ${color} blur-lg opacity-0 group-hover:opacity-60 transition-opacity rounded-full`} />
+                <div
+                  className={`absolute inset-0 bg-gradient-to-r ${color} blur-lg opacity-0 group-hover:opacity-60 transition-opacity rounded-full`}
+                />
                 <div className="relative p-3 backdrop-blur-xl bg-gray-800/80 border border-gray-700 rounded-full hover:bg-gray-700/80 transition">
                   <Icon className="text-white" size={20} />
                 </div>

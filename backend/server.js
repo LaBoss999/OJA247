@@ -8,6 +8,7 @@ import { connectDB } from "./src/db.js";   // Correct import
 import businessRoutes from "./src/routes/businessRoutes.js";
 import productRoutes from './src/routes/productRoutes.js';
 import uploadRoutes from './src/routes/uploadRoutes.js';
+import authRoutes from './src/routes/authRoutes.js';
 
 
 // ADD DEBUG HERE:
@@ -26,6 +27,7 @@ app.use(express.json());
 app.use("/api/businesses", businessRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/auth", authRoutes);
 
 // Connect to MongoDB
 connectDB();
