@@ -20,9 +20,14 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
+  // Redirect admin to admin dashboard
+  if (user?.role === 'admin' && window.location.pathname.includes('/dashboard/')) {
+    return <Navigate to="/admin" replace />;
+  }
+
   // Check if trying to access someone else's dashboard
   const pathBusinessId = window.location.pathname.split('/dashboard/')[1];
-  if (pathBusinessId && user?.businessId !== pathBusinessId) {
+  if (pathBusinessId && user?.businessId !== pathBusinessId && user?.role !== 'admin') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-6">
         <div className="text-center max-w-md">
