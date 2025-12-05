@@ -6,6 +6,7 @@ import BusinessDetails from "./pages/BusinessDetails";
 import BusinessDashboard from "./pages/BusinessDashboard";
 import LoginPage from "./pages/LoginPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/admin" element={<AdminDashboard />} /> 
       </Routes>
     </Router>
   );
