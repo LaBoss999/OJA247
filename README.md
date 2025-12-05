@@ -1,220 +1,397 @@
-
-# 🚀 OJA247 — Small Business Discovery Platform
+# 🚀 OJA247 — Nigerian Multi-Vendor Marketplace
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![GitHub issues](https://img.shields.io/github/issues/LaBoss999/OJA247)](https://github.com/LaBoss999/OJA247/issues)
 [![GitHub stars](https://img.shields.io/github/stars/LaBoss999/OJA247?style=social)](https://github.com/LaBoss999/OJA247/stargazers)
 
-A **MERN-stack web application** that allows users to discover small businesses, view their mini-websites, and explore products or services.  
-Businesses can register and create a profile containing their details, contact info, and images.
+**OJA247** is a full-featured MERN-stack marketplace platform that empowers Nigerian small businesses to create their own online stores, manage products, and connect with customers 24/7.
+
+> **"Support Local. Shop Small. Grow Together."**
 
 ---
 
-## 📷 Demo / Screenshot
+## 📷 Screenshots
 
-![OJA247 Demo Screenshot](website-demo-image/OJA247demo.png "desktop demo")
-![OJA247 Demo Screenshot](website-demo-image/mobile-view.png "mobile demo")
-
----
-
-## 📌 Table of Contents
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [Project Structure](#-project-structure-recommended)
-- [Installation & Setup](#-installation--setup)
-- [API Endpoints](#-api-endpoints)
-- [Deployment](#-deployment-guide-optional)
-- [Contributing](#-contributing)
-- [Issues & Support](#-issues--support)
-- [License](#-license)
+<table>
+  <tr>
+    <td><img src="website-demo-image/OJA247demo.png" alt="Desktop View"/></td>
+    <td><img src="website-demo-image/mobile-view.png" alt="Mobile View"/></td>
+  </tr>
+</table>
 
 ---
 
-## 🚀 Features
+## ✨ Features
 
-### User Features
-- Browse all registered small businesses
-- Search businesses by name, category, or location
-- Open each business as its own “mini-website”
-- View contact info, images, and business details
+### 🛍️ For Customers
+- **Browse businesses** across multiple categories (Food, Fashion, Tech, etc.)
+- **Search & filter** by name, category, or location
+- **View product catalogs** with prices and descriptions
+- **Contact sellers** directly via WhatsApp
+- **Responsive design** - works on all devices
 
-### Business Features
-- Register a new business
-- Store business data in MongoDB
-- Upload images (coming soon)
-- Each business has its own unique page
+### 🏪 For Business Owners
+- **Secure registration** with email & password
+- **Private dashboard** to manage business
+- **Product management** - Add, edit, delete products with images
+- **Image uploads** via Cloudinary
+- **Business mini-website** - Unique page for each business
+- **Real-time updates** - Changes reflect immediately
 
-### Developer Features
-- Fully structured MERN codebase
-- Modular routes, controllers, and models
-- Clean API endpoints
-- Ready to deploy
+### 🔐 Security & Authentication
+- **JWT-based authentication**
+- **Password hashing** with bcrypt
+- **Protected routes** - Only owners can edit their business
+- **Session management** - Stay logged in across visits
 
 ---
 
-## 🏗️ Tech Stack
+## 🛠️ Tech Stack
 
 ### Frontend
-- React
-- React Router
-- Axios
-- TailwindCSS (or your chosen CSS framework)
+- **React 18** - UI framework
+- **React Router** - Navigation
+- **Axios** - API requests
+- **Tailwind CSS** - Styling
+- **Framer Motion** - Animations
 
 ### Backend
-- Node.js
-- Express.js
-- MongoDB + Mongoose
-- dotenv
-- CORS
+- **Node.js** - Runtime
+- **Express.js** - Web framework
+- **MongoDB** - Database
+- **Mongoose** - ODM
+- **JWT** - Authentication
+- **bcryptjs** - Password hashing
+- **Cloudinary** - Image storage
 
 ---
 
-## 📁 Project Structure (Recommended)
+## 📁 Project Structure
 
 ```
-
 OJA247/
-├─ backend/
-│  ├─ src/
-│  │  ├─ models/
-│  │  │  └─ Business.js
-│  │  ├─ routes/
-│  │  │  └─ businessRoutes.js
-│  │  ├─ controllers/
-│  │  │  └─ businessController.js
-│  │  └─ server.js
-│  ├─ package.json
-│  └─ .env
+├── backend/
+│   ├── src/
+│   │   ├── models/
+│   │   │   ├── Business.js
+│   │   │   ├── Product.js
+│   │   │   └── User.js
+│   │   ├── controllers/
+│   │   │   ├── businessController.js
+│   │   │   ├── productController.js
+│   │   │   └── authController.js
+│   │   ├── routes/
+│   │   │   ├── businessRoutes.js
+│   │   │   ├── productRoutes.js
+│   │   │   ├── authRoutes.js
+│   │   │   └── uploadRoutes.js
+│   │   ├── middleware/
+│   │   │   └── authMiddleware.js
+│   │   ├── config/
+│   │   │   └── cloudinaryConfig.js
+│   │   └── db.js
+│   ├── server.js
+│   ├── .env
+│   └── package.json
 │
-└─ oja247/
-├─ src/
-│  ├─ components/
-│  ├─ pages/
-│  ├─ App.jsx
-│  └─ index.js
-├─ package.json
-└─ README.md
-
-````
+└── oja247/ (frontend)
+    ├── src/
+    │   ├── components/
+    │   │   ├── AddProductForm.jsx
+    │   │   ├── ProductList.jsx
+    │   │   ├── ImageUpload.jsx
+    │   │   └── ProtectedRoute.jsx
+    │   ├── pages/
+    │   │   ├── LandingPage.jsx
+    │   │   ├── ExplorePage.jsx
+    │   │   ├── BusinessForm.jsx
+    │   │   ├── BusinessDetails.jsx
+    │   │   ├── BusinessDashboard.jsx
+    │   │   └── LoginPage.jsx
+    │   ├── context/
+    │   │   └── AuthContext.jsx
+    │   ├── App.jsx
+    │   └── main.jsx
+    ├── package.json
+    └── README.md
+```
 
 ---
 
 ## ⚙️ Installation & Setup
 
-### 1. Clone the Repository
+### Prerequisites
+- Node.js v16+ installed
+- MongoDB database (local or MongoDB Atlas)
+- Cloudinary account (for image uploads)
+
+### 1️⃣ Clone Repository
 ```bash
 git clone https://github.com/LaBoss999/OJA247.git
-cd oja247
-````
+cd OJA247
+```
 
-### 🖥️ Backend Setup
+### 2️⃣ Backend Setup
 
 ```bash
 cd backend
 npm install
 ```
 
-Create a `.env` file in `backend/` folder:
-
-```
+Create `.env` file in `backend/`:
+```env
 MONGO_URI=your_mongodb_connection_string
 PORT=5000
+JWT_SECRET=your_super_secret_jwt_key_here
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 ```
 
-Start Backend Server:
-
+Start backend:
 ```bash
 node server.js
 ```
+✅ Backend running at `http://localhost:5000`
 
-Backend will run at:
-👉 [http://localhost:5000](http://localhost:5000)
-
-### 🌐 Frontend Setup
+### 3️⃣ Frontend Setup
 
 ```bash
 cd oja247
 npm install
 npm run dev
 ```
-
-Frontend will run at:
-👉 [http://localhost:5173](http://localhost:5173) (Vite)
-or
-👉 [http://localhost:3000](http://localhost:3000) (CRA)
+✅ Frontend running at `http://localhost:5173`
 
 ---
 
-## 🔌 API Endpoints
+## 🔌 API Documentation
 
-### Create Business
+### Authentication Endpoints
 
-**POST** `/businesses`
+#### Register Business
+```http
+POST /api/auth/register
+Content-Type: application/json
 
-**Body Example:**
-
-```json
 {
-  "name": "Test Shop",
-  "description": "Small business description",
-  "category": "Fashion",
-  "location": "Lagos",
-  "contact": "08123456789",
-  "images": []
+  "email": "owner@business.com",
+  "password": "password123",
+  "businessData": {
+    "name": "My Business",
+    "category": "Food",
+    "location": "Lagos",
+    "contact": "+234 800 000 0000",
+    "description": "Business description"
+  }
 }
 ```
 
-### Get All Businesses
+#### Login
+```http
+POST /api/auth/login
+Content-Type: application/json
 
-**GET** `/businesses`
+{
+  "email": "owner@business.com",
+  "password": "password123"
+}
+```
 
-### Get Business by ID
+#### Get Current User (Protected)
+```http
+GET /api/auth/me
+Authorization: Bearer <token>
+```
 
-**GET** `/businesses/:id`
+### Business Endpoints
 
-### 🧪 Testing With Thunder Client or Postman
+```http
+GET    /api/businesses        # Get all businesses
+GET    /api/businesses/:id    # Get single business
+POST   /api/businesses        # Create business (admin only)
+```
 
-1. Select **POST**
-2. URL: `http://localhost:5000/businesses`
-3. Body → JSON
-4. Click **Send**
-   ✔ If successful, MongoDB will return the saved business.
+### Product Endpoints
+
+```http
+GET    /api/products/business/:businessId  # Get products for a business
+GET    /api/products/:id                   # Get single product
+POST   /api/products                       # Create product (protected)
+PUT    /api/products/:id                   # Update product (protected)
+DELETE /api/products/:id                   # Delete product (protected)
+GET    /api/products/search                # Search products
+GET    /api/products/featured              # Get featured products
+```
+
+### Image Upload Endpoints
+
+```http
+POST   /api/upload/single     # Upload single image
+POST   /api/upload/multiple   # Upload multiple images (max 5)
+```
 
 ---
 
-## 🌍 Deployment Guide (Optional)
+## 🚀 Usage Guide
 
-### Backend
+### For Business Owners:
 
-* Render
-* Railway
-* DigitalOcean
-* MongoDB Atlas (DB)
+1. **Register Your Business**
+   - Go to `/business-form`
+   - Fill in business details + email + password
+   - Submit form
+   - Automatically logged in and redirected to dashboard
 
-### Frontend
+2. **Add Products**
+   - From dashboard, click "Add Product" tab
+   - Upload images (drag & drop or click)
+   - Fill in product details (name, price, description)
+   - Save product
 
-* Vercel (recommended)
-* Netlify
+3. **Manage Products**
+   - View all your products in "My Products" tab
+   - Edit product details inline
+   - Delete products
+   - Track stock levels
+
+4. **Share Your Store**
+   - Your unique store URL: `/business/:yourBusinessId`
+   - Customers can browse products and contact you via WhatsApp
+
+### For Customers:
+
+1. **Browse Businesses**
+   - Visit homepage
+   - Search or filter by category
+   - Click on any business card
+
+2. **View Products**
+   - Browse product catalog
+   - See prices, descriptions, stock status
+   - Click "Contact Seller" to message on WhatsApp
 
 ---
 
-## 🙌 Contributing
+## 🧪 Testing
+
+### Backend API Testing (Postman/Thunder Client)
+
+**Test Registration:**
+```
+POST http://localhost:5000/api/auth/register
+Body: { email, password, businessData }
+Expected: 201 + { token, user, business }
+```
+
+**Test Login:**
+```
+POST http://localhost:5000/api/auth/login
+Body: { email, password }
+Expected: 200 + { token, user, business }
+```
+
+**Test Protected Route:**
+```
+GET http://localhost:5000/api/auth/me
+Headers: { Authorization: Bearer <token> }
+Expected: 200 + { user, business }
+```
+
+---
+
+## 🌍 Deployment
+
+### Backend (Render/Railway)
+1. Push code to GitHub
+2. Create new web service
+3. Add environment variables
+4. Deploy
+
+### Frontend (Vercel - Recommended)
+1. Import repository
+2. Framework: Vite
+3. Build command: `npm run build`
+4. Output directory: `dist`
+5. Deploy
+
+### Database (MongoDB Atlas)
+1. Create free cluster
+2. Get connection string
+3. Add to environment variables
+
+---
+
+## 🔒 Security Notes
+
+- Passwords are hashed with bcrypt (never stored in plain text)
+- JWT tokens expire after 30 days
+- Protected routes require valid authentication
+- Cloudinary credentials are server-side only
+- CORS is configured for security
+
+---
+
+## 🗺️ Roadmap
+
+- [ ] PWA (Progressive Web App) support
+- [ ] Push notifications
+- [ ] Payment integration (Paystack/Flutterwave)
+- [ ] Customer reviews & ratings
+- [ ] Analytics dashboard
+- [ ] Email notifications
+- [ ] Advanced search filters
+- [ ] Business verification badges
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Here's how:
 
 1. Fork the repository
-2. Create a new branch
-3. Commit your work
-4. Submit a Pull Request
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ---
 
-## 🐛 Issues & Support
+## 📝 License
 
-If you find a bug or want a new feature:
-👉 Create an issue on GitHub
-👉 Contact the maintainer
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-<!-- ## ⭐ License
+## 👨‍💻 Author
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details. -->
+**OLanrewaju**
+- GitHub: [@lan647](https://github.com/lanre647)
+
+**Ebenezer**
+- GitHub: [@LaBoss999](https://github.com/LaBoss999)
+
+---
+
+## 🙏 Acknowledgments
+
+- Built with ❤️ for Nigerian small businesses
+- Inspired by the need for accessible e-commerce solutions
+- Thanks to the open-source community
+
+---
+
+## 📞 Support & Contact
+
+- 🐛 **Found a bug?** [Open an issue](https://github.com/LaBoss999/OJA247/issues)
+- 💡 **Feature request?** [Start a discussion](https://github.com/LaBoss999/OJA247/discussions)
+- 📧 **Email:** info@oja247.com
+
+---
+
+<div align="center">
+
+**⭐ Star this repo if you find it helpful!**
+
+Made with 💚 in Nigeria 🇳🇬
+
+</div>
