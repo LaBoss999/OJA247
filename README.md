@@ -13,8 +13,8 @@
 
 <table>
   <tr>
-    <td><img src="website-demo-image/OJA247demo.png" alt="Desktop View"/></td>
-    <td><img src="website-demo-image/mobile-view.png" alt="Mobile View"/></td>
+    <td><img src="oja247/src/assets/website-demo-image/OJA247demo.png" alt="Desktop View"/></td>
+    <td><img src="oja247/src/assets/website-demo-image/mobile-view.png" alt="Mobile View"/></td>
   </tr>
 </table>
 
