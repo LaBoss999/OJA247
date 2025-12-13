@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getAllBusinesses } from "../services/api";
+import { getAllBusinesses } from "../services/api"; // ✅ This is perfect
 import BusinessCard from "../components/BusinessCard";
 
 function Businesses() {
@@ -13,10 +13,8 @@ function Businesses() {
       .catch(err => console.log(err));
   }, []);
 
-  // Get unique categories for the filter dropdown
   const categories = ["All", ...new Set(businesses.map(b => b.category))];
 
-  // Filter businesses based on search term and category
   const filteredBusinesses = businesses.filter(b => {
     const matchesName = b.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === "All" || b.category === categoryFilter;
@@ -27,7 +25,6 @@ function Businesses() {
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">All Businesses</h1>
 
-      {/* Search and Filter */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <input
           type="text"
@@ -47,7 +44,6 @@ function Businesses() {
         </select>
       </div>
 
-      {/* Business Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
         {filteredBusinesses.map(b => (
           <BusinessCard key={b._id} business={b} />

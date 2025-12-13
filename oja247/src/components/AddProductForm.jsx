@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import { createProduct } from '../services/api';
 import ImageUpload from './ImageUpload';
 
 const AddProductForm = ({ businessId, onProductAdded }) => {
@@ -61,7 +61,7 @@ const AddProductForm = ({ businessId, onProductAdded }) => {
         tags: formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag)
       };
 
-      const response = await axios.post('http://localhost:5000/api/products', productData);
+      const response = await createProduct(productData); // ✅ Using centralized API
       
       // Reset form
       setFormData({

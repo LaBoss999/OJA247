@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { getProductsByBusiness, updateProduct, deleteProduct } from '../services/api';
 
 const ProductList = ({ businessId }) => {
   const [products, setProducts] = useState([]);
@@ -13,7 +13,7 @@ const ProductList = ({ businessId }) => {
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/products/business/${businessId}`);
+      const response = await getProductsByBusiness(businessId);
       setProducts(response.data);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -28,7 +28,7 @@ const ProductList = ({ businessId }) => {
     }
 
     try {
-      await axios.delete(`http://localhost:5000/api/products/${productId}`);
+      await deleteProduct(productId);
       setProducts(products.filter(p => p._id !== productId));
       alert('Product deleted successfully!');
     } catch (error) {
@@ -63,7 +63,7 @@ const ProductList = ({ businessId }) => {
 
   const saveEdit = async (productId) => {
     try {
-      const response = await axios.put(`http://localhost:5000/api/products/${productId}`, {
+      const response = await updateProduct(productId, {
         ...editFormData,
         price: parseFloat(editFormData.price),
         stock: parseInt(editFormData.stock)

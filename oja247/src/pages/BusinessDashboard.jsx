@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import axios from "axios";
+import { getBusinessById } from "../services/api";
 import AddProductForm from "../components/AddProductForm.jsx";
 import ProductList from "../components/ProductList.jsx";
 import { useAuth } from "../context/AuthContext";
@@ -24,9 +24,7 @@ const BusinessDashboard = () => {
 
   const fetchBusiness = async () => {
     try {
-      const response = await axios.get(
-        `http://localhost:5000/api/businesses/${businessId}`
-      );
+      const response = await getBusinessById(businessId);
       setBusiness(response.data);
     } catch (error) {
       console.error("Error fetching business:", error);
@@ -63,36 +61,33 @@ const BusinessDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-     <div className="bg-white shadow-sm border-b">
-  <div className="max-w-7xl mx-auto px-4 py-6 flex justify-between items-center">
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 py-6 flex justify-between items-center">
+          {/* Left: Business Info */}
+          <div className="flex items-center gap-4">
+            {business.logo && (
+              <img
+                src={business.logo}
+                alt={business.name}
+                className="w-16 h-16 rounded-lg object-cover"
+              />
+            )}
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">{business.name}</h1>
+              <p className="text-gray-600">{business.category} • {business.location}</p>
+            </div>
+          </div>
 
-    {/* Left: Business Info */}
-    <div className="flex items-center gap-4">
-      {business.logo && (
-        <img
-          src={business.logo}
-          alt={business.name}
-          className="w-16 h-16 rounded-lg object-cover"
-        />
-      )}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">{business.name}</h1>
-        <p className="text-gray-600">{business.category} • {business.location}</p>
+          {/* Right: Logout Button */}
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+          >
+            <LogOut size={20} />
+            Logout
+          </button>
+        </div>
       </div>
-    </div>
-
-    {/* Right: Logout Button */}
-    <button
-      onClick={handleLogout}
-      className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
-    >
-      <LogOut size={20} />
-      Logout
-    </button>
-
-  </div>
-</div>
-
 
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4">

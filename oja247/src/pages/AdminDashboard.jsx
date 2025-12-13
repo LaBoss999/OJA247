@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import {
@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 const AdminDashboard = () => {
-  const { user, token, logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const [stats, setStats] = useState({
@@ -39,15 +39,11 @@ const AdminDashboard = () => {
 
   const fetchAllData = async () => {
     try {
-      const config = {
-        headers: { Authorization: `Bearer ${token}` },
-      };
-
       const [statsRes, bizRes, userRes, prodRes] = await Promise.all([
-        axios.get("http://localhost:5000/api/admin/stats", config),
-        axios.get("http://localhost:5000/api/businesses", config),
-        axios.get("http://localhost:5000/api/admin/users", config),
-        axios.get("http://localhost:5000/api/products/search", config),
+        axiosInstance.get("/api/admin/stats"),
+        axiosInstance.get("/api/businesses"),
+        axiosInstance.get("/api/admin/users"),
+        axiosInstance.get("/api/products/search"),
       ]);
 
       setStats(statsRes.data);
@@ -67,11 +63,9 @@ const AdminDashboard = () => {
 
   const toggleFeatured = async (id, currentStatus) => {
     try {
-      await axios.patch(
-        `http://localhost:5000/api/admin/businesses/${id}/featured`,
-        { featured: !currentStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await axiosInstance.patch(`/api/admin/businesses/${id}/featured`, {
+        featured: !currentStatus,
+      });
       fetchAllData();
     } catch (error) {
       alert("Failed to update featured status");
@@ -88,9 +82,7 @@ const AdminDashboard = () => {
     }
 
     try {
-      await axios.delete(`http://localhost:5000/api/admin/businesses/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axiosInstance.delete(`/api/admin/businesses/${id}`);
       alert("Business deleted successfully");
       fetchAllData();
     } catch (error) {
@@ -104,9 +96,7 @@ const AdminDashboard = () => {
     }
 
     try {
-      await axios.delete(`http://localhost:5000/api/products/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axiosInstance.delete(`/api/products/${id}`);
       alert("Product deleted successfully");
       fetchAllData();
     } catch (error) {
@@ -122,11 +112,9 @@ const AdminDashboard = () => {
     }
 
     try {
-      await axios.patch(
-        `http://localhost:5000/api/admin/users/${id}/ban`,
-        { banned: !currentStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await axiosInstance.patch(`/api/admin/users/${id}/ban`, {
+        banned: !currentStatus,
+      });
       alert(`User ${currentStatus ? "unbanned" : "banned"} successfully`);
       fetchAllData();
     } catch (error) {

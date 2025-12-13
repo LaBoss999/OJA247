@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import axiosInstance from '../services/api';
 
 const ImageUpload = ({ onImagesUploaded, multiple = false, maxFiles = 5 }) => {
   const [uploading, setUploading] = useState(false);
@@ -76,7 +76,7 @@ const ImageUpload = ({ onImagesUploaded, multiple = false, maxFiles = 5 }) => {
           formData.append('images', file);
         });
         
-        const response = await axios.post('http://localhost:5000/api/upload/multiple', formData, {
+        const response = await axiosInstance.post('/api/upload/multiple', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
         
@@ -86,7 +86,7 @@ const ImageUpload = ({ onImagesUploaded, multiple = false, maxFiles = 5 }) => {
         // Single file
         formData.append('image', files[0]);
         
-        const response = await axios.post('http://localhost:5000/api/upload/single', formData, {
+        const response = await axiosInstance.post('/api/upload/single', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
         

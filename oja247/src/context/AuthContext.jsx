@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios';
+import axiosInstance from '../services/api';
 
 const AuthContext = createContext();
 
@@ -17,10 +17,9 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  // Set axios default header
+  // Load user data
   useEffect(() => {
     if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       loadUser();
     } else {
       setLoading(false);
@@ -30,7 +29,7 @@ export const AuthProvider = ({ children }) => {
   // Load user data
   const loadUser = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/auth/me');
+      const response = await axiosInstance.get('/api/auth/me');
       setUser(response.data.user);
       setBusiness(response.data.business);
     } catch (error) {
@@ -44,7 +43,7 @@ export const AuthProvider = ({ children }) => {
   // Register
   const register = async (email, password, businessData) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/register', {
+      const response = await axiosInstance.post('/api/auth/register', {
         email,
         password,
         businessData
@@ -56,8 +55,6 @@ export const AuthProvider = ({ children }) => {
       setToken(token);
       setUser(user);
       setBusiness(business);
-      
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
       return { success: true, business };
     } catch (error) {
@@ -71,7 +68,7 @@ export const AuthProvider = ({ children }) => {
   // Login
   const login = async (email, password) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', {
+      const response = await axiosInstance.post('/api/auth/login', {
         email,
         password
       });
@@ -82,8 +79,6 @@ export const AuthProvider = ({ children }) => {
       setToken(token);
       setUser(user);
       setBusiness(business);
-      
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
       return { success: true, business };
     } catch (error) {
@@ -100,13 +95,12 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     setBusiness(null);
-    delete axios.defaults.headers.common['Authorization'];
   };
 
   // Update password
   const updatePassword = async (currentPassword, newPassword) => {
     try {
-      await axios.put('http://localhost:5000/api/auth/password', {
+      await axiosInstance.put('/api/auth/password', {
         currentPassword,
         newPassword
       });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import axios from 'axios';
+import { getAllBusinesses } from '../services/api';
 import OJA247Logo from '../assets/OJA247.svg'; // <-- Correctly import SVG
 
 const ExplorePage = () => {
@@ -23,7 +23,7 @@ const ExplorePage = () => {
 
   const fetchBusinesses = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/businesses');
+      const response = await getAllBusinesses();
       setBusinesses(response.data);
     } catch (error) {
       console.error('Error fetching businesses:', error);

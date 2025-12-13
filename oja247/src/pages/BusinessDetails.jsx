@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from "axios";
+import { getBusinessById, getProductsByBusiness } from "../services/api";
 
 function BusinessDetails() {
   const { id } = useParams();
@@ -16,11 +16,11 @@ function BusinessDetails() {
   const fetchBusinessAndProducts = async () => {
     try {
       // Fetch business details
-      const businessRes = await axios.get(`http://localhost:5000/api/businesses/${id}`);
+      const businessRes = await getBusinessById(id);
       setBusiness(businessRes.data);
 
       // Fetch products for this business
-      const productsRes = await axios.get(`http://localhost:5000/api/products/business/${id}`);
+      const productsRes = await getProductsByBusiness(id);
       setProducts(productsRes.data);
     } catch (error) {
       console.error('Error fetching data:', error);

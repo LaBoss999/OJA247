@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { motion, useScroll, useTransform } from "framer-motion";
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import {
   Facebook,
   Twitter,
@@ -15,10 +15,11 @@ import {
   TrendingUp,
   MapPin,
   Star,
-} from "lucide-react";
-import { useAuth } from "../context/AuthContext";
-import axios from "axios";
-import Logo from "../assets/OJA247 VX1.png";
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { getAllBusinesses } from '../services/api';
+import axiosInstance from '../services/api';
+import Logo from '../assets/OJA247 VX1.png';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -26,7 +27,7 @@ const LandingPage = () => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [businesses, setBusinesses] = useState([]);
   const [featuredProducts, setFeaturedProducts] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [stats, setStats] = useState({
     businesses: 0,
     products: 0,
@@ -41,8 +42,8 @@ const LandingPage = () => {
     const handleMouseMove = (e) => {
       setMousePosition({ x: e.clientX, y: e.clientY });
     };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
   useEffect(() => {
@@ -51,14 +52,10 @@ const LandingPage = () => {
 
   const fetchData = async () => {
     try {
-      const businessRes = await axios.get(
-        "http://localhost:5000/api/businesses"
-      );
+      const businessRes = await getAllBusinesses();
       setBusinesses(businessRes.data.slice(0, 8));
 
-      const productsRes = await axios.get(
-        "http://localhost:5000/api/products/featured"
-      );
+      const productsRes = await axiosInstance.get('/api/products/featured');
       setFeaturedProducts(productsRes.data.slice(0, 8));
 
       const categories = new Set(businessRes.data.map((b) => b.category));
@@ -68,7 +65,7 @@ const LandingPage = () => {
         categories: categories.size,
       });
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error('Error fetching data:', error);
     }
   };
 
@@ -79,38 +76,38 @@ const LandingPage = () => {
     }
   };
 
-  const navItems = ["Home", "Vendors", "Products", "About"];
+  const navItems = ['Home', 'Vendors', 'Products', 'About'];
 
   const { isAuthenticated, business } = useAuth();
 
   const categories = [
-    { name: "Food", icon: "🍔", color: "from-orange-400 to-red-500" },
-    { name: "Fashion", icon: "👗", color: "from-pink-400 to-purple-500" },
-    { name: "Tech", icon: "💻", color: "from-blue-400 to-indigo-500" },
-    { name: "Beauty", icon: "💄", color: "from-purple-400 to-pink-500" },
-    { name: "Fitness", icon: "💪", color: "from-green-400 to-teal-500" },
-    { name: "Groceries", icon: "🛒", color: "from-yellow-400 to-orange-500" },
-    { name: "Electronics", icon: "📱", color: "from-indigo-400 to-blue-500" },
-    { name: "Other", icon: "🏪", color: "from-gray-400 to-gray-600" },
+    { name: 'Food', icon: '🍔', color: 'from-orange-400 to-red-500' },
+    { name: 'Fashion', icon: '👗', color: 'from-pink-400 to-purple-500' },
+    { name: 'Tech', icon: '💻', color: 'from-blue-400 to-indigo-500' },
+    { name: 'Beauty', icon: '💄', color: 'from-purple-400 to-pink-500' },
+    { name: 'Fitness', icon: '💪', color: 'from-green-400 to-teal-500' },
+    { name: 'Groceries', icon: '🛒', color: 'from-yellow-400 to-orange-500' },
+    { name: 'Electronics', icon: '📱', color: 'from-indigo-400 to-blue-500' },
+    { name: 'Other', icon: '🏪', color: 'from-gray-400 to-gray-600' },
   ];
 
   const features = [
     {
       icon: Store,
-      title: "Local Vendors",
-      desc: "Discover amazing local businesses",
+      title: 'Local Vendors',
+      desc: 'Discover amazing local businesses',
     },
     {
       icon: Bike,
-      title: "Fast Delivery",
-      desc: "Quick riders at your service",
+      title: 'Fast Delivery',
+      desc: 'Quick riders at your service',
     },
     {
       icon: Package,
-      title: "Quality Products",
-      desc: "Curated selection of goods",
+      title: 'Quality Products',
+      desc: 'Curated selection of goods',
     },
-    { icon: Rocket, title: "24/7 Available", desc: "Shop anytime, anywhere" },
+    { icon: Rocket, title: '24/7 Available', desc: 'Shop anytime, anywhere' },
   ];
 
   return (
@@ -120,20 +117,20 @@ const LandingPage = () => {
         <motion.div
           className="absolute w-96 h-96 bg-green-400/10 rounded-full blur-3xl"
           animate={{ x: mousePosition.x / 20, y: mousePosition.y / 20 }}
-          transition={{ type: "spring", damping: 30 }}
-          style={{ left: "10%", top: "20%" }}
+          transition={{ type: 'spring', damping: 30 }}
+          style={{ left: '10%', top: '20%' }}
         />
         <motion.div
           className="absolute w-96 h-96 bg-yellow-400/10 rounded-full blur-3xl"
           animate={{ x: -mousePosition.x / 30, y: -mousePosition.y / 30 }}
-          transition={{ type: "spring", damping: 30 }}
-          style={{ right: "10%", bottom: "20%" }}
+          transition={{ type: 'spring', damping: 30 }}
+          style={{ right: '10%', bottom: '20%' }}
         />
         <motion.div
           className="absolute w-64 h-64 bg-orange-400/10 rounded-full blur-3xl"
           animate={{ x: mousePosition.x / 40, y: -mousePosition.y / 40 }}
-          transition={{ type: "spring", damping: 30 }}
-          style={{ left: "50%", top: "50%" }}
+          transition={{ type: 'spring', damping: 30 }}
+          style={{ left: '50%', top: '50%' }}
         />
       </div>
 
@@ -154,7 +151,7 @@ const LandingPage = () => {
           transition={{
             duration: Math.random() * 10 + 10,
             repeat: Infinity,
-            ease: "linear",
+            ease: 'linear',
           }}
         />
       ))}
@@ -163,7 +160,7 @@ const LandingPage = () => {
       <motion.header
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ type: "spring", stiffness: 100, damping: 20 }}
+        transition={{ type: 'spring', stiffness: 100, damping: 20 }}
         className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-6xl"
       >
         <div className="backdrop-blur-xl bg-white/70 border border-gray-200/50 rounded-3xl shadow-2xl px-6 py-4">
@@ -190,10 +187,10 @@ const LandingPage = () => {
                   transition={{ delay: i * 0.1 }}
                   whileHover={{ scale: 1.1, y: -2 }}
                   onClick={() =>
-                    item === "Home"
-                      ? navigate("/")
-                      : item === "Vendors"
-                      ? navigate("/explore")
+                    item === 'Home'
+                      ? navigate('/')
+                      : item === 'Vendors'
+                      ? navigate('/explore')
                       : null
                   }
                   className="px-6 py-2.5 text-gray-700 font-medium hover:text-gray-900 transition relative group"
@@ -215,7 +212,7 @@ const LandingPage = () => {
               ) : (
                 <motion.button
                   whileHover={{ scale: 1.1 }}
-                  onClick={() => navigate("/login")}
+                  onClick={() => navigate('/login')}
                   className="px-6 py-2 bg-blue-500 text-white rounded-xl font-semibold shadow-lg hover:bg-blue-600 transition"
                 >
                   Login
@@ -251,7 +248,7 @@ const LandingPage = () => {
                 className="block w-full text-left px-8 py-4 text-gray-700 font-medium hover:bg-green-50 transition"
                 onClick={() => {
                   setMobileMenuOpen(false);
-                  if (item === "Vendors") navigate("/explore");
+                  if (item === 'Vendors') navigate('/explore');
                 }}
               >
                 {item}
@@ -269,7 +266,7 @@ const LandingPage = () => {
                 </button>
               ) : (
                 <button
-                  onClick={() => navigate("/login")}
+                  onClick={() => navigate('/login')}
                   className="w-full px-6 py-3 bg-blue-500 text-white rounded-xl font-semibold shadow-lg hover:bg-blue-600 transition"
                 >
                   Login
@@ -281,17 +278,18 @@ const LandingPage = () => {
       </motion.header>
 
       {/* Hero Section */}
-      <main className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-32 pb-20 text-center">
-        <motion.div style={{ opacity, scale }} className="relative z-10">
+      <main className="relative min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 pt-24 sm:pt-32 pb-12 sm:pb-20 text-center">
+        <motion.div style={{ opacity, scale }} className="relative z-10 w-full">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="inline-flex items-center gap-2 px-6 py-3 mb-8 backdrop-blur-xl bg-white/70 border border-green-200 rounded-full shadow-lg"
+            className="inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 mb-6 sm:mb-8 backdrop-blur-xl bg-white/70 border border-green-200 rounded-full shadow-lg text-xs sm:text-sm"
           >
             <motion.span
               animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+              className="text-base sm:text-xl"
             >
               🇳🇬
             </motion.span>
@@ -304,16 +302,16 @@ const LandingPage = () => {
             initial={{ opacity: 0, y: 50 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
-            className="text-6xl md:text-8xl font-black mb-6 leading-tight"
+            className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black mb-4 sm:mb-6 leading-tight"
           >
-            <span className="text-5xl sm:text-8xl text-gray-900">
+            <span className="text-3xl sm:text-5xl md:text-6xl lg:text-8xl text-gray-900">
               Welcome to
             </span>
             <br />
             <motion.span
               initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.6, type: "spring", stiffness: 200 }}
+              transition={{ delay: 0.6, type: 'spring', stiffness: 200 }}
               className="bg-gradient-to-r from-green-400 via-yellow-400 to-orange-500 bg-clip-text text-transparent inline-block"
             >
               OJA247
@@ -324,7 +322,7 @@ const LandingPage = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.8, duration: 0.8 }}
-            className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed font-light"
+            className="text-base sm:text-xl md:text-2xl text-gray-600 mb-6 sm:mb-8 max-w-3xl mx-auto leading-relaxed font-light px-4"
           >
             Support local. Shop small. Grow together.
             <br />
@@ -340,7 +338,7 @@ const LandingPage = () => {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1 }}
-            className="max-w-2xl mx-auto mb-8"
+            className="max-w-2xl mx-auto mb-6 sm:mb-8 px-4"
           >
             <div className="relative group">
               <motion.div
@@ -348,21 +346,21 @@ const LandingPage = () => {
                 className="flex items-center backdrop-blur-xl bg-white/80 border-2 border-gray-200/50 rounded-full shadow-xl overflow-hidden group-hover:border-green-400 transition-colors"
               >
                 <Search
-                  className="ml-6 text-gray-400 group-hover:text-green-500 transition-colors"
-                  size={24}
+                  className="ml-4 sm:ml-6 text-gray-400 group-hover:text-green-500 transition-colors flex-shrink-0"
+                  size={20}
                 />
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search for products, businesses..."
-                  className="flex-1 px-6 py-5 bg-transparent text-gray-900 text-lg focus:outline-none"
+                  className="flex-1 px-3 sm:px-6 py-3 sm:py-5 bg-transparent text-gray-900 text-sm sm:text-lg focus:outline-none min-w-0"
                 />
                 <motion.button
                   type="submit"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="m-2 px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition"
+                  className="m-1.5 sm:m-2 px-4 sm:px-8 py-2 sm:py-3 text-sm sm:text-base bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition flex-shrink-0"
                 >
                   Search
                 </motion.button>
@@ -372,7 +370,7 @@ const LandingPage = () => {
 
           {/* CTA Buttons */}
           <motion.div
-            className="flex flex-col sm:flex-row gap-6 justify-center"
+            className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center px-4"
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 1.2 }}
@@ -380,23 +378,26 @@ const LandingPage = () => {
             <motion.button
               whileHover={{ scale: 1.05, y: -5 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => navigate("/business-form")}
-              className="group relative px-10 py-5 overflow-hidden rounded-2xl"
+              onClick={() => navigate('/business-form')}
+              className="group relative px-6 sm:px-10 py-3 sm:py-5 overflow-hidden rounded-2xl"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-500 transition-transform group-hover:scale-110" />
-              <span className="relative z-10 text-white font-bold text-lg flex items-center gap-2 justify-center">
-                <Rocket /> Register Your Business
+              <span className="relative z-10 text-white font-bold text-sm sm:text-lg flex items-center gap-2 justify-center">
+                <Rocket size={18} className="sm:w-6 sm:h-6" />
+                <span className="whitespace-nowrap">
+                  Register Your Business
+                </span>
               </span>
             </motion.button>
 
             <motion.button
               whileHover={{ scale: 1.05, y: -5 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => navigate("/explore")}
-              className="group relative px-10 py-5 bg-white border-2 border-orange-500 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl"
+              onClick={() => navigate('/explore')}
+              className="group relative px-6 sm:px-10 py-3 sm:py-5 bg-white border-2 border-orange-500 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl"
             >
-              <span className="relative z-10 text-orange-600 font-bold text-lg flex items-center gap-2 justify-center">
-                <Store /> Explore Vendors
+              <span className="relative z-10 text-orange-600 font-bold text-sm sm:text-lg flex items-center gap-2 justify-center">
+                <Store size={18} className="sm:w-6 sm:h-6" /> Explore Vendors
               </span>
             </motion.button>
           </motion.div>
@@ -407,39 +408,39 @@ const LandingPage = () => {
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.4 }}
-          className="mt-20 grid grid-cols-3 gap-8 max-w-3xl w-full"
+          className="mt-12 sm:mt-20 grid grid-cols-3 gap-3 sm:gap-8 max-w-3xl w-full px-4"
         >
           {[
             {
               value: stats.businesses,
-              label: "Active Businesses",
-              color: "from-green-500 to-emerald-500",
+              label: 'Active Businesses',
+              color: 'from-green-500 to-emerald-500',
             },
             {
               value: stats.products,
-              label: "Products Listed",
-              color: "from-orange-500 to-yellow-500",
+              label: 'Products Listed',
+              color: 'from-orange-500 to-yellow-500',
             },
             {
               value: stats.categories,
-              label: "Categories",
-              color: "from-purple-500 to-pink-500",
+              label: 'Categories',
+              color: 'from-purple-500 to-pink-500',
             },
           ].map((stat, i) => (
             <motion.div
               key={i}
               whileHover={{ y: -10, scale: 1.05 }}
-              className="backdrop-blur-xl bg-white/60 border border-gray-200/50 rounded-3xl p-6 shadow-lg"
+              className="backdrop-blur-xl bg-white/60 border border-gray-200/50 rounded-2xl sm:rounded-3xl p-3 sm:p-6 shadow-lg"
             >
               <motion.div
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 1.6 + i * 0.1, type: "spring" }}
-                className={`text-4xl font-black bg-gradient-to-r ${stat.color} bg-clip-text text-transparent mb-2`}
+                transition={{ delay: 1.6 + i * 0.1, type: 'spring' }}
+                className={`text-2xl sm:text-4xl font-black bg-gradient-to-r ${stat.color} bg-clip-text text-transparent mb-1 sm:mb-2`}
               >
                 {stat.value}+
               </motion.div>
-              <div className="text-sm text-gray-600 font-medium">
+              <div className="text-xs sm:text-sm text-gray-600 font-medium">
                 {stat.label}
               </div>
             </motion.div>
@@ -471,7 +472,7 @@ const LandingPage = () => {
                 initial={{ opacity: 0, scale: 0.5, rotate: -10 }}
                 whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.05, type: "spring" }}
+                transition={{ delay: i * 0.05, type: 'spring' }}
                 whileHover={{ y: -10, rotate: 5, scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => navigate(`/explore?category=${cat.name}`)}
@@ -507,7 +508,7 @@ const LandingPage = () => {
               </h2>
               <motion.button
                 whileHover={{ x: 10 }}
-                onClick={() => navigate("/explore")}
+                onClick={() => navigate('/explore')}
                 className="text-green-600 font-bold flex items-center gap-2 hover:gap-4 transition-all"
               >
                 View All <TrendingUp />
@@ -533,16 +534,16 @@ const LandingPage = () => {
                       style={{
                         backgroundImage: business.banner
                           ? `url(${business.banner})`
-                          : "",
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
+                          : '',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
                       }}
                     />
                     <div className="p-4 -mt-10">
                       <motion.img
                         whileHover={{ rotate: 360, scale: 1.1 }}
                         transition={{ duration: 0.6 }}
-                        src={business.logo || "https://via.placeholder.com/80"}
+                        src={business.logo || 'https://via.placeholder.com/80'}
                         alt={business.name}
                         className="w-20 h-20 rounded-full border-4 border-white shadow-lg mb-3 object-cover"
                       />
@@ -608,7 +609,7 @@ const LandingPage = () => {
             whileInView={{ opacity: 1 }}
             className="text-sm text-gray-400"
           >
-            © {new Date().getFullYear()}{" "}
+            © {new Date().getFullYear()}{' '}
             <span className="bg-gradient-to-r from-green-400 to-yellow-400 bg-clip-text text-transparent font-bold">
               OJA247
             </span>
@@ -619,18 +620,18 @@ const LandingPage = () => {
             {[
               {
                 Icon: Facebook,
-                label: "Facebook",
-                color: "from-blue-500 to-blue-600",
+                label: 'Facebook',
+                color: 'from-blue-500 to-blue-600',
               },
               {
                 Icon: Twitter,
-                label: "Twitter",
-                color: "from-sky-400 to-sky-500",
+                label: 'Twitter',
+                color: 'from-sky-400 to-sky-500',
               },
               {
                 Icon: Instagram,
-                label: "Instagram",
-                color: "from-yellow-500 to-orange-500",
+                label: 'Instagram',
+                color: 'from-yellow-500 to-orange-500',
               },
             ].map(({ Icon, label, color }) => (
               <motion.a
