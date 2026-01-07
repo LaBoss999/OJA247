@@ -294,7 +294,7 @@ const LandingPage = () => {
               🇳🇬
             </motion.span>
             <span className="text-gray-700 font-semibold">
-              Made in Nigeria with Love
+              Made in Nigeria with Love for food
             </span>
           </motion.div>
 
