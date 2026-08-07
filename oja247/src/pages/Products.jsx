@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { getAllProducts } from "../services/api";
+import { useCart } from "../context/CartContext";
 
 function Products() {
+  const { addToCart, itemCount } = useCart();
   const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
@@ -30,9 +32,34 @@ function Products() {
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6">
-          All Products
-        </h1>
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+            All Products
+          </h1>
+
+          <a
+            href="/cart"
+            className="inline-flex items-center justify-center bg-gray-900 hover:bg-gray-800 text-white p-3 rounded-full shadow-sm relative"
+            aria-label="View cart"
+          >
+            <svg
+              className="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth="2"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 6M17 13l1.5 6M9 19h.01M15 19h.01"
+              />
+            </svg>
+            <span className="absolute -top-2 -right-2 bg-green-600 text-white rounded-full min-w-5 h-5 flex items-center justify-center text-[10px] font-bold">
+              {itemCount}
+            </span>
+          </a>
+        </div>
 
         {/* Search + Filter */}
         <div className="flex flex-col sm:flex-row gap-4 mb-8 sticky top-0 z-20 bg-gray-50/90 backdrop-blur-sm py-2">
@@ -55,14 +82,14 @@ function Products() {
               placeholder="Search products..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="p-2 pl-10 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="p-2 pl-10 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
             />
           </div>
 
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="p-2 border border-gray-300 rounded-lg w-full sm:w-1/4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="p-2 border border-gray-300 rounded-lg w-full sm:w-1/4 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
           >
             {categories.map((cat) => (
               <option key={cat} value={cat}>
@@ -83,7 +110,7 @@ function Products() {
         {/* Loading state */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-10 h-10 border-4 border-blue-200 border-t-blue-500 rounded-full animate-spin" />
+            <div className="w-10 h-10 border-4 border-green-200 border-t-green-500 rounded-full animate-spin" />
             <p className="text-gray-500 text-sm mt-3">Loading products…</p>
           </div>
         ) : (
@@ -154,19 +181,34 @@ function Products() {
                   </p>
 
                   <div className="flex items-center justify-between mb-3">
-                    <span className="text-lg sm:text-2xl font-bold text-green-600">
+                    <span className="text-lg sm:text-2xl font-bold text-gray-900">
                       ₦{product.price.toLocaleString()}
                     </span>
                   </div>
 
-                  {getBusinessId(product) && (
-                    <a
-                      href={`/business/${getBusinessId(product)}`}
-                      className="flex items-center justify-center w-full text-center bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg text-sm sm:text-base font-medium transition-colors"
+                  <div className="mt-3 space-y-2">
+                    <button
+                      type="button"
+                      onClick={() => addToCart(product)}
+                      disabled={!product.inStock}
+                      className={`w-full py-2 rounded-lg text-sm sm:text-base font-medium transition-colors ${
+                        product.inStock
+                          ? "bg-green-600 hover:bg-green-700 text-white"
+                          : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      }`}
                     >
-                      View Store
-                    </a>
-                  )}
+                      {product.inStock ? "Add to Cart" : "Out of Stock"}
+                    </button>
+
+                    {getBusinessId(product) && (
+                      <a
+                        href={`/business/${getBusinessId(product)}`}
+                        className="flex items-center justify-center w-full text-center bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors"
+                      >
+                        View Store
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

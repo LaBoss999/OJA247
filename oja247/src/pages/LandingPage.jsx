@@ -222,7 +222,7 @@ const LandingPage = () => {
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   onClick={() => navigate("/login")}
-                  className="px-6 py-2 bg-blue-500 text-white rounded-xl font-semibold shadow-lg hover:bg-blue-600 transition"
+                  className="px-6 py-2 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition"
                 >
                   Login
                 </motion.button>
@@ -279,7 +279,7 @@ const LandingPage = () => {
               ) : (
                 <button
                   onClick={() => navigate("/login")}
-                  className="w-full px-6 py-3 bg-blue-500 text-white rounded-xl font-semibold shadow-lg hover:bg-blue-600 transition"
+                  className="w-full px-6 py-3 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition"
                 >
                   Login
                 </button>

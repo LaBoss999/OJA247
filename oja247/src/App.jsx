@@ -9,6 +9,7 @@ import LoginPage from "./pages/LoginPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminDashboard from "./pages/AdminDashboard";
 import About from "./pages/About";
+import CartPage from "./pages/CartPage";
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/products" element={<Products />} />
         <Route path="/about" element={<About />} />
         <Route path="/business/:id" element={<BusinessDetails />} />
+        <Route path="/cart" element={<CartPage />} />
 
         {/* Auth Routes */}
         <Route path="/login" element={<LoginPage />} />

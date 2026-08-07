@@ -13,7 +13,7 @@ const BusinessForm = () => {
     email: "",
     password: "",
     confirmPassword: "",
-    
+
     // Business fields
     name: "",
     description: "",
@@ -22,17 +22,18 @@ const BusinessForm = () => {
     contact: "",
     logo: "",
     banner: "",
-    themeColor: "#10B981",
-    socialLinks: { 
-      facebook: "", 
-      instagram: "", 
-      twitter: "", 
-      website: "" 
+    socialLinks: {
+      facebook: "",
+      instagram: "",
+      twitter: "",
+      website: "",
     },
-    highlights: []
+    highlights: [],
   });
 
   const [highlightInput, setHighlightInput] = useState("");
+  const [logoPreview, setLogoPreview] = useState("");
+  const [bannerPreview, setBannerPreview] = useState("");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -47,11 +48,40 @@ const BusinessForm = () => {
     }
   };
 
+  // Converts a selected image file to a base64 string and stores it on
+  // formData (plus a local preview). Swap the FileReader logic for an
+  // actual upload call if/when a file-storage endpoint is available.
+  const handleImageUpload = (e) => {
+    const { name, files } = e.target;
+    const file = files && files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Please select an image file.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      setFormData((prev) => ({ ...prev, [name]: result }));
+      if (name === "logo") setLogoPreview(result);
+      if (name === "banner") setBannerPreview(result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = (field) => {
+    setFormData((prev) => ({ ...prev, [field]: "" }));
+    if (field === "logo") setLogoPreview("");
+    if (field === "banner") setBannerPreview("");
+  };
+
   const addHighlight = () => {
     if (highlightInput.trim()) {
       setFormData({
         ...formData,
-        highlights: [...formData.highlights, highlightInput.trim()]
+        highlights: [...formData.highlights, highlightInput.trim()],
       });
       setHighlightInput("");
     }
@@ -60,7 +90,7 @@ const BusinessForm = () => {
   const removeHighlight = (index) => {
     setFormData({
       ...formData,
-      highlights: formData.highlights.filter((_, i) => i !== index)
+      highlights: formData.highlights.filter((_, i) => i !== index),
     });
   };
 
@@ -91,9 +121,8 @@ const BusinessForm = () => {
       contact: formData.contact,
       logo: formData.logo,
       banner: formData.banner,
-      themeColor: formData.themeColor,
       socialLinks: formData.socialLinks,
-      highlights: formData.highlights
+      highlights: formData.highlights,
     };
 
     // Register with auth
@@ -105,7 +134,7 @@ const BusinessForm = () => {
     } else {
       setError(result.message);
     }
-    
+
     setLoading(false);
   };
 
@@ -128,7 +157,7 @@ const BusinessForm = () => {
             {/* Authentication Section */}
             <div className="border-b pb-6">
               <h3 className="text-xl font-bold mb-4 text-gray-900">Account Information</h3>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -184,7 +213,7 @@ const BusinessForm = () => {
             {/* Business Information Section */}
             <div className="border-b pb-6">
               <h3 className="text-xl font-bold mb-4 text-gray-900">Business Information</h3>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -276,47 +305,66 @@ const BusinessForm = () => {
             {/* Branding Section */}
             <div className="border-b pb-6">
               <h3 className="text-xl font-bold mb-4 text-gray-900">Branding (Optional)</h3>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Logo URL
+                    Logo Image
                   </label>
-                  <input
-                    type="url"
-                    name="logo"
-                    placeholder="https://example.com/logo.png"
-                    value={formData.logo}
-                    onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
+                  {logoPreview ? (
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={logoPreview}
+                        alt="Logo preview"
+                        className="w-20 h-20 object-cover rounded-lg border border-gray-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage("logo")}
+                        className="text-sm text-red-600 hover:text-red-700 font-medium"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="file"
+                      name="logo"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-green-50 file:text-green-700 file:font-medium hover:file:bg-green-100"
+                    />
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Banner Image URL
+                    Banner Image
                   </label>
-                  <input
-                    type="url"
-                    name="banner"
-                    placeholder="https://example.com/banner.png"
-                    value={formData.banner}
-                    onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Theme Color
-                  </label>
-                  <input
-                    type="color"
-                    name="themeColor"
-                    value={formData.themeColor}
-                    onChange={handleChange}
-                    className="w-20 h-12 rounded-lg border border-gray-300"
-                  />
+                  {bannerPreview ? (
+                    <div className="space-y-2">
+                      <img
+                        src={bannerPreview}
+                        alt="Banner preview"
+                        className="w-full h-32 object-cover rounded-lg border border-gray-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage("banner")}
+                        className="text-sm text-red-600 hover:text-red-700 font-medium"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="file"
+                      name="banner"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-green-50 file:text-green-700 file:font-medium hover:file:bg-green-100"
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -324,7 +372,7 @@ const BusinessForm = () => {
             {/* Social Links Section */}
             <div className="border-b pb-6">
               <h3 className="text-xl font-bold mb-4 text-gray-900">Social Media (Optional)</h3>
-              
+
               <div className="space-y-4">
                 <input
                   type="url"
@@ -352,8 +400,8 @@ const BusinessForm = () => {
                 />
                 <input
                   type="url"
-                  name="socialLinks.website"
-                  placeholder="Website URL"
+                  name="socialLinks.threads"
+                  placeholder="Threads URL"
                   value={formData.socialLinks.website}
                   onChange={handleChange}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
@@ -364,7 +412,7 @@ const BusinessForm = () => {
             {/* Highlights Section */}
             <div className="pb-6">
               <h3 className="text-xl font-bold mb-4 text-gray-900">Business Highlights (Optional)</h3>
-              
+
               <div className="flex gap-2 mb-4">
                 <input
                   type="text"
