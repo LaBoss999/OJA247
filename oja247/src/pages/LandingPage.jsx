@@ -20,6 +20,7 @@ import { useAuth } from "../context/AuthContext";
 import { getAllBusinesses, getAllProducts } from "../services/api";
 import axiosInstance from "../services/api";
 import Logo from "../assets/OJA247 VX1.png";
+import Logo1 from "../assets/OJA247..PNG";
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -197,7 +198,9 @@ const LandingPage = () => {
                         ? navigate("/explore")
                         : item === "Products"
                           ? navigate("/products")
-                          : null
+                          : item === "About"
+                            ? navigate("/about")
+                            : null
                   }
                   className="px-6 py-2.5 text-gray-700 font-medium hover:text-gray-900 transition relative group"
                 >
@@ -254,8 +257,10 @@ const LandingPage = () => {
                 className="block w-full text-left px-8 py-4 text-gray-700 font-medium hover:bg-green-50 transition"
                 onClick={() => {
                   setMobileMenuOpen(false);
+                  if (item === "Home") navigate("/");
                   if (item === "Vendors") navigate("/explore");
                   if (item === "Products") navigate("/products");
+                  if (item === "About") navigate("/about");
                 }}
               >
                 {item}
@@ -301,7 +306,7 @@ const LandingPage = () => {
               🇳🇬
             </motion.span>
             <span className="text-gray-700 font-semibold">
-              Made in Nigeria with Love for food
+              Proudly Nigerian. Built for Business
             </span>
           </motion.div>
 
@@ -688,57 +693,291 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="relative z-10 w-full py-12 backdrop-blur-xl bg-gray-900/95 border-t border-gray-800">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8">
-          <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            className="text-sm text-gray-400"
-          >
-            © {new Date().getFullYear()}{" "}
-            <span className="bg-gradient-to-r from-green-400 to-yellow-400 bg-clip-text text-transparent font-bold">
-              OJA247
-            </span>
-            . Made with ❤ in Nigeria
-          </motion.p>
+      {/* Premium Footer */}
+<footer className="relative z-10 overflow-hidden bg-gray-950 text-white">
 
-          <div className="flex gap-6">
-            {[
-              {
-                Icon: Facebook,
-                label: "Facebook",
-                color: "from-blue-500 to-blue-600",
-              },
-              {
-                Icon: Twitter,
-                label: "Twitter",
-                color: "from-sky-400 to-sky-500",
-              },
-              {
-                Icon: Instagram,
-                label: "Instagram",
-                color: "from-yellow-500 to-orange-500",
-              },
-            ].map(({ Icon, label, color }) => (
-              <motion.a
-                key={label}
-                href="#"
-                whileHover={{ scale: 1.3, rotate: 10, y: -5 }}
-                whileTap={{ scale: 0.9 }}
-                className="group relative"
-              >
-                <div
-                  className={`absolute inset-0 bg-gradient-to-r ${color} blur-lg opacity-0 group-hover:opacity-60 transition-opacity rounded-full`}
-                />
-                <div className="relative p-3 backdrop-blur-xl bg-gray-800/80 border border-gray-700 rounded-full hover:bg-gray-700/80 transition">
-                  <Icon className="text-white" size={20} />
-                </div>
-              </motion.a>
-            ))}
-          </div>
+  {/* Glow Effects */}
+  <div className="absolute inset-0">
+    <div className="absolute top-0 left-1/4 w-96 h-96 bg-green-500/20 rounded-full blur-3xl" />
+    <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl" />
+  </div>
+
+
+  <div className="relative max-w-7xl mx-auto px-6 py-16">
+
+    {/* Top Footer */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
+
+
+      {/* Brand */}
+      <div className="lg:col-span-2">
+
+        <div className="flex items-center gap-3 mb-5">
+          <img
+            src={Logo1}
+            alt="OJA247.."
+            className="w-20 object-contain"
+          />
+
+          <span className="text-4xl font-black bg-gradient-to-r from-green-400 to-yellow-400 bg-clip-text text-transparent">
+            OJA247
+          </span>
         </div>
-      </footer>
+
+
+        <p className="text-gray-400 leading-relaxed max-w-sm">
+          Nigeria's digital marketplace connecting customers with local
+          businesses. Discover products, support entrepreneurs, and grow
+          together with OJA247.
+        </p>
+
+
+        <div className="mt-6 flex gap-4">
+
+          {[
+            {Icon:Facebook},
+            {Icon:Twitter},
+            {Icon:Instagram}
+          ].map(({Icon},i)=>(
+
+            <motion.a
+              key={i}
+              whileHover={{
+                y:-5,
+                scale:1.15
+              }}
+              href="#"
+              className="
+              w-11 h-11 rounded-full
+              bg-white/10
+              backdrop-blur-xl
+              border border-white/10
+              flex items-center justify-center
+              hover:bg-green-500
+              transition
+              "
+            >
+              <Icon size={20}/>
+            </motion.a>
+
+          ))}
+
+        </div>
+
+      </div>
+
+
+
+      {/* Marketplace */}
+      <div>
+
+        <h3 className="font-bold text-lg mb-5">
+          Marketplace
+        </h3>
+
+        <ul className="space-y-3 text-gray-400">
+
+          <li className="hover:text-green-400 cursor-pointer">
+            Explore Vendors
+          </li>
+
+          <li className="hover:text-green-400 cursor-pointer">
+            Shop Products
+          </li>
+
+          <li className="hover:text-green-400 cursor-pointer">
+            Categories
+          </li>
+
+          <li className="hover:text-green-400 cursor-pointer">
+            Become a Seller
+          </li>
+
+        </ul>
+
+      </div>
+
+
+
+
+      {/* Company */}
+      <div>
+
+        <h3 className="font-bold text-lg mb-5">
+          Company
+        </h3>
+
+        <ul className="space-y-3 text-gray-400">
+
+          <li className="hover:text-green-400 cursor-pointer">
+            About OJA247
+          </li>
+
+          <li className="hover:text-green-400 cursor-pointer">
+            Our Story
+          </li>
+
+          <li className="hover:text-green-400 cursor-pointer">
+            Careers
+          </li>
+
+          <li className="hover:text-green-400 cursor-pointer">
+            Contact
+          </li>
+
+        </ul>
+
+      </div>
+
+
+
+
+      {/* Support */}
+      <div>
+
+        <h3 className="font-bold text-lg mb-5">
+          Support
+        </h3>
+
+
+        <ul className="space-y-3 text-gray-400">
+
+          <li className="hover:text-green-400 cursor-pointer">
+            Help Center
+          </li>
+
+          <li className="hover:text-green-400 cursor-pointer">
+            Delivery Information
+          </li>
+
+          <li className="hover:text-green-400 cursor-pointer">
+            Privacy Policy
+          </li>
+
+          <li className="hover:text-green-400 cursor-pointer">
+            Terms & Conditions
+          </li>
+
+        </ul>
+
+      </div>
+
+
+    </div>
+
+
+
+    {/* Newsletter */}
+    <div
+      className="
+      mt-16
+      p-8
+      rounded-3xl
+      bg-white/5
+      border border-white/10
+      backdrop-blur-xl
+      flex
+      flex-col
+      md:flex-row
+      items-center
+      justify-between
+      gap-6
+      "
+    >
+
+      <div>
+
+        <h3 className="text-2xl font-bold">
+          Join the OJA247 community 🚀
+        </h3>
+
+        <p className="text-gray-400 mt-2">
+          Get updates about new vendors, products and offers.
+        </p>
+
+      </div>
+
+
+
+      <div className="flex w-full md:w-auto">
+
+        <input
+          type="email"
+          placeholder="Enter your email"
+          className="
+          px-5
+          py-3
+          rounded-l-xl
+          bg-white/10
+          border border-white/10
+          outline-none
+          text-white
+          w-full
+          md:w-72
+          "
+        />
+
+
+        <button
+          className="
+          px-6
+          py-3
+          rounded-r-xl
+          bg-gradient-to-r
+          from-green-500
+          to-emerald-500
+          font-bold
+          hover:scale-105
+          transition
+          "
+        >
+          Subscribe
+        </button>
+
+
+      </div>
+
+    </div>
+
+
+
+    {/* Bottom */}
+    <div
+      className="
+      mt-12
+      pt-6
+      border-t border-white/10
+      flex
+      flex-col
+      md:flex-row
+      justify-between
+      items-center
+      gap-4
+      text-sm
+      text-gray-500
+      "
+    >
+
+      <p>
+        © {new Date().getFullYear()} 
+        <span className="text-green-400 font-bold">
+          {" "}OJA247
+        </span>
+        . Made with ❤️ in Nigeria 🇳🇬
+      </p>
+
+
+      <p>
+        Built for Sellers. Made for Buyers.
+      </p>
+
+
+    </div>
+
+
+  </div>
+
+</footer>
     </div>
   );
 };
