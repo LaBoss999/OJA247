@@ -1,12 +1,13 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import ExplorePage from "./pages/ExplorePage";
+import Products from "./pages/Products";
 import BusinessForm from "./pages/BusinessForm";
 import BusinessDetails from "./pages/BusinessDetails";
 import BusinessDashboard from "./pages/BusinessDashboard";
 import LoginPage from "./pages/LoginPage";
 import ProtectedRoute from "./components/ProtectedRoute";
-import AdminDashboard from './pages/AdminDashboard';
+import AdminDashboard from "./pages/AdminDashboard";
 
 function App() {
   return (
@@ -14,12 +15,13 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/explore" element={<ExplorePage />} />
+        <Route path="/products" element={<Products />} />
         <Route path="/business/:id" element={<BusinessDetails />} />
-        
+
         {/* Auth Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/business-form" element={<BusinessForm />} />
-        
+
         {/* Protected Routes */}
         <Route
           path="/dashboard/:businessId"
@@ -29,7 +31,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/admin" element={<AdminDashboard />} /> 
+        <Route path="/admin" element={<AdminDashboard />} />
       </Routes>
     </Router>
   );

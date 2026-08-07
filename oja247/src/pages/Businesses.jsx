@@ -9,15 +9,16 @@ function Businesses() {
 
   useEffect(() => {
     getAllBusinesses()
-      .then(res => setBusinesses(res.data))
-      .catch(err => console.log(err));
+      .then((res) => setBusinesses(res.data))
+      .catch((err) => console.log(err));
   }, []);
 
-  const categories = ["All", ...new Set(businesses.map(b => b.category))];
+  const categories = ["All", ...new Set(businesses.map((b) => b.category))];
 
-  const filteredBusinesses = businesses.filter(b => {
+  const filteredBusinesses = businesses.filter((b) => {
     const matchesName = b.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === "All" || b.category === categoryFilter;
+    const matchesCategory =
+      categoryFilter === "All" || b.category === categoryFilter;
     return matchesName && matchesCategory;
   });
 
@@ -30,22 +31,24 @@ function Businesses() {
           type="text"
           placeholder="Search by business name..."
           value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
+          onChange={(e) => setSearchTerm(e.target.value)}
           className="p-2 border border-gray-300 rounded w-full sm:w-1/2"
         />
         <select
           value={categoryFilter}
-          onChange={e => setCategoryFilter(e.target.value)}
+          onChange={(e) => setCategoryFilter(e.target.value)}
           className="p-2 border border-gray-300 rounded w-full sm:w-1/4"
         >
-          {categories.map(cat => (
-            <option key={cat} value={cat}>{cat}</option>
+          {categories.map((cat) => (
+            <option key={cat} value={cat}>
+              {cat}
+            </option>
           ))}
         </select>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        {filteredBusinesses.map(b => (
+        {filteredBusinesses.map((b) => (
           <BusinessCard key={b._id} business={b} />
         ))}
         {filteredBusinesses.length === 0 && (

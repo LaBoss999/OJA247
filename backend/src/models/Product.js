@@ -5,50 +5,50 @@ const ProductSchema = new mongoose.Schema(
     businessId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Business",
-      required: true
+      required: true,
     },
     name: {
       type: String,
       required: true,
-      trim: true
+      trim: true,
     },
     description: {
       type: String,
-      required: true
+      required: true,
     },
     price: {
       type: Number,
       required: true,
-      min: 0
+      min: 0,
     },
     category: {
       type: String,
-      required: true
+      required: true,
     },
     images: {
       type: [String],
-      default: []
+      default: [],
     },
     stock: {
       type: Number,
       default: 0,
-      min: 0
+      min: 0,
     },
     inStock: {
       type: Boolean,
-      default: true
+      default: true,
     },
     specifications: {
       type: Map,
-      of: String
+      of: String,
     },
     tags: [String],
     featured: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // Index for faster queries
