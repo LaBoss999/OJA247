@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 import LandingPage from "./pages/LandingPage";
 import ExplorePage from "./pages/ExplorePage";
 import Products from "./pages/Products";
@@ -16,6 +18,7 @@ import PaymentStatusPage from "./pages/PaymentStatusPage";
 function App() {
   return (
     <Router>
+      <Navbar />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/explore" element={<ExplorePage />} />
@@ -25,11 +28,9 @@ function App() {
         <Route path="/cart" element={<CartPage />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/payment-status" element={<PaymentStatusPage />} />
-
         {/* Auth Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/business-form" element={<BusinessForm />} />
-
         {/* Protected Routes */}
         <Route
           path="/dashboard/:businessId"
@@ -41,6 +42,7 @@ function App() {
         />
         <Route path="/admin" element={<AdminDashboard />} />
       </Routes>
+      <Footer />
     </Router>
   );
 }
