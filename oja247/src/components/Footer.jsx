@@ -1,9 +1,56 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Facebook, Twitter, Instagram } from "lucide-react";
 import Logo1 from "../assets/OJA247..PNG";
 
+const marketplaceLinks = [
+  { label: "Explore Vendors", path: "/explore" },
+  { label: "Shop Products", path: "/products" },
+  { label: "Categories", path: "/explore" },
+  { label: "Become a Seller", path: "/business-form" },
+];
+
+const companyLinks = [
+  { label: "About OJA247", path: "/about" },
+  { label: "Our Story", path: "/about" }, // TODO: point to a dedicated page once it exists
+  { label: "Careers", path: "/about" }, // TODO: point to a dedicated page once it exists
+  { label: "Contact", path: "/about" }, // TODO: point to a dedicated page once it exists
+];
+
+const supportLinks = [
+  { label: "Help Center", path: "/about" }, // TODO: point to a dedicated page once it exists
+  { label: "Delivery Information", path: "/about" }, // TODO: point to a dedicated page once it exists
+  { label: "Privacy Policy", path: "/about" }, // TODO: point to a dedicated page once it exists
+  { label: "Terms & Conditions", path: "/about" }, // TODO: point to a dedicated page once it exists
+];
+
+const socialLinks = [
+  { Icon: Facebook, href: "https://facebook.com" },
+  { Icon: Twitter, href: "https://twitter.com" },
+  { Icon: Instagram, href: "https://instagram.com" },
+];
+
 const Footer = () => {
+  const navigate = useNavigate();
+
+  const FooterLinkGroup = ({ title, links }) => (
+    <div>
+      <h3 className="font-bold text-lg mb-5">{title}</h3>
+      <ul className="space-y-3 text-gray-400">
+        {links.map(({ label, path }) => (
+          <li
+            key={label}
+            onClick={() => navigate(path)}
+            className="hover:text-green-400 cursor-pointer transition-colors"
+          >
+            {label}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+
   return (
     <footer className="relative z-10 overflow-hidden bg-gray-950 text-white">
       {/* Glow Effects */}
@@ -17,7 +64,10 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <div className="flex items-center gap-3 mb-5">
+            <div
+              className="flex items-center gap-3 mb-5 cursor-pointer w-fit"
+              onClick={() => navigate("/")}
+            >
               <img src={Logo1} alt="OJA247.." className="w-20 object-contain" />
               <span className="text-4xl font-black bg-gradient-to-r from-green-400 to-yellow-400 bg-clip-text text-transparent">
                 OJA247
@@ -31,71 +81,24 @@ const Footer = () => {
             </p>
 
             <div className="mt-6 flex gap-4">
-              {[{ Icon: Facebook }, { Icon: Twitter }, { Icon: Instagram }].map(
-                ({ Icon }, i) => (
-                  <motion.a
-                    key={i}
-                    whileHover={{ y: -5, scale: 1.15 }}
-                    href="#"
-                    className="w-11 h-11 rounded-full bg-white/10 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-green-500 transition"
-                  >
-                    <Icon size={20} />
-                  </motion.a>
-                ),
-              )}
+              {socialLinks.map(({ Icon, href }, i) => (
+                <motion.a
+                  key={i}
+                  whileHover={{ y: -5, scale: 1.15 }}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-11 h-11 rounded-full bg-white/10 backdrop-blur-xl border border-white/10 flex items-center justify-center hover:bg-green-500 transition"
+                >
+                  <Icon size={20} />
+                </motion.a>
+              ))}
             </div>
           </div>
 
-          {/* Marketplace */}
-          <div>
-            <h3 className="font-bold text-lg mb-5">Marketplace</h3>
-            <ul className="space-y-3 text-gray-400">
-              <li className="hover:text-green-400 cursor-pointer">
-                Explore Vendors
-              </li>
-              <li className="hover:text-green-400 cursor-pointer">
-                Shop Products
-              </li>
-              <li className="hover:text-green-400 cursor-pointer">
-                Categories
-              </li>
-              <li className="hover:text-green-400 cursor-pointer">
-                Become a Seller
-              </li>
-            </ul>
-          </div>
-
-          {/* Company */}
-          <div>
-            <h3 className="font-bold text-lg mb-5">Company</h3>
-            <ul className="space-y-3 text-gray-400">
-              <li className="hover:text-green-400 cursor-pointer">
-                About OJA247
-              </li>
-              <li className="hover:text-green-400 cursor-pointer">Our Story</li>
-              <li className="hover:text-green-400 cursor-pointer">Careers</li>
-              <li className="hover:text-green-400 cursor-pointer">Contact</li>
-            </ul>
-          </div>
-
-          {/* Support */}
-          <div>
-            <h3 className="font-bold text-lg mb-5">Support</h3>
-            <ul className="space-y-3 text-gray-400">
-              <li className="hover:text-green-400 cursor-pointer">
-                Help Center
-              </li>
-              <li className="hover:text-green-400 cursor-pointer">
-                Delivery Information
-              </li>
-              <li className="hover:text-green-400 cursor-pointer">
-                Privacy Policy
-              </li>
-              <li className="hover:text-green-400 cursor-pointer">
-                Terms & Conditions
-              </li>
-            </ul>
-          </div>
+          <FooterLinkGroup title="Marketplace" links={marketplaceLinks} />
+          <FooterLinkGroup title="Company" links={companyLinks} />
+          <FooterLinkGroup title="Support" links={supportLinks} />
         </div>
 
         {/* Newsletter */}
