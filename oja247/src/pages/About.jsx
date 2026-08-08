@@ -12,6 +12,8 @@ import { useState, useEffect } from "react";
 import EbenImage from "../assets/EBEN001.PNG";
 import LanreImage from "../assets/LANRE001.PNG";
 import TeamImage from "../assets/TEAM001.jpeg";
+import Loader from "../components/Loader";
+import useMinimumLoadingTime from "../hooks/useMinimumLoadingTime";
 
 
 const About = () => {
@@ -20,6 +22,15 @@ const About = () => {
     x: 0,
     y: 0,
   });
+
+  // No data to fetch on this page — this just keeps the loading
+  // animation consistent with the rest of the site for a beat on mount.
+  const [loading, setLoading] = useState(true);
+  const showLoader = useMinimumLoadingTime(loading);
+
+  useEffect(() => {
+    setLoading(false);
+  }, []);
 
 
   useEffect(() => {
@@ -49,6 +60,10 @@ const About = () => {
 
   }, []);
 
+
+  if (showLoader) {
+    return <Loader text="Loading..." />;
+  }
 
 
   return (
@@ -818,13 +833,40 @@ const About = () => {
 
 
       <section className="
+      relative
       bg-[#0B8F4D]
       text-white
       py-20
       px-6
       text-center
+      overflow-hidden
       ">
 
+        {/* Water ripple effect — concentric rings expanding outward from center */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          {[0, 1, 2, 3].map((i) => (
+            <motion.span
+              key={i}
+              className="absolute rounded-full border-2"
+              style={{
+                borderColor: i % 2 === 0 ? "#F59E0B" : "#ffffff",
+                opacity: 0.35,
+              }}
+              initial={{ width: 0, height: 0, opacity: 0.6 }}
+              animate={{
+                width: 900,
+                height: 900,
+                opacity: 0,
+              }}
+              transition={{
+                duration: 4,
+                repeat: Infinity,
+                ease: "easeOut",
+                delay: i * 1,
+              }}
+            />
+          ))}
+        </div>
 
         <motion.div
 
@@ -842,15 +884,44 @@ const About = () => {
           once:true
         }}
 
+        className="relative"
+
         >
 
-          <FaUsers
-          className="
-          mx-auto
-          text-5xl
-          mb-5
-          "
-          />
+          <motion.div
+            whileHover={{ scale: 1.15 }}
+            className="relative inline-block mb-5"
+          >
+            {/* Ripple rings on hover, centered on the icon */}
+            <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              {[0, 1, 2].map((i) => (
+                <motion.span
+                  key={i}
+                  className="absolute rounded-full border-2"
+                  style={{ borderColor: "#F59E0B" }}
+                  initial={{ width: 0, height: 0, opacity: 0 }}
+                  whileHover={{
+                    width: 120,
+                    height: 120,
+                    opacity: [0.7, 0],
+                  }}
+                  transition={{
+                    duration: 1.2,
+                    repeat: Infinity,
+                    ease: "easeOut",
+                    delay: i * 0.3,
+                  }}
+                />
+              ))}
+            </span>
+
+            <FaUsers
+            className="
+            relative
+            text-5xl
+            "
+            />
+          </motion.div>
 
 
 

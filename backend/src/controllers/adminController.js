@@ -1,6 +1,7 @@
 import User from "../models/User.js";
 import Business from "../models/Business.js";
 import Product from "../models/Product.js";
+import Order from "../models/Order.js";
 
 // Get all users
 export const getAllUsers = async (req, res) => {
@@ -23,23 +24,43 @@ export const getStats = async (req, res) => {
       totalBusinesses,
       totalProducts,
       totalUsers,
-      businessesByCategory
+      totalOrders,
+      totalRevenue,
+      businessesByCategory,
     ] = await Promise.all([
       Business.countDocuments(),
       Product.countDocuments(),
       User.countDocuments(),
+      Order.countDocuments(),
+      Order.aggregate([
+        { $match: { paymentStatus: "paid" } },
+        { $group: { _id: null, total: { $sum: "$total" } } },
+      ]),
       Business.aggregate([
         { $group: { _id: "$category", count: { $sum: 1 } } },
-        { $sort: { count: -1 } }
-      ])
+        { $sort: { count: -1 } },
+      ]),
     ]);
+
+    const revenue = totalRevenue[0]?.total || 0;
 
     res.json({
       totalBusinesses,
       totalProducts,
       totalUsers,
-      businessesByCategory
+      totalOrders,
+      totalRevenue: revenue,
+      businessesByCategory,
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getAllOrders = async (req, res) => {
+  try {
+    const orders = await Order.find().sort({ createdAt: -1 });
+    res.json(orders);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

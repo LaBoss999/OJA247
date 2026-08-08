@@ -31,3 +31,44 @@ export const createBusiness = async (req, res) => {
     res.status(400).json({ message: "Error creating business" });
   }
 };
+
+// PUT update
+export const updateBusiness = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    const allowedFields = [
+      "name",
+      "description",
+      "category",
+      "location",
+      "contact",
+      "logo",
+      "banner",
+      "themeColor",
+      "socialLinks",
+      "highlights",
+    ];
+
+    const sanitizedUpdates = {};
+    allowedFields.forEach((field) => {
+      if (updates[field] !== undefined) {
+        sanitizedUpdates[field] = updates[field];
+      }
+    });
+
+    const updatedBusiness = await Business.findByIdAndUpdate(id, sanitizedUpdates, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!updatedBusiness) {
+      return res.status(404).json({ message: "Business not found" });
+    }
+
+    res.json(updatedBusiness);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};

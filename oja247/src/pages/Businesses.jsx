@@ -1,16 +1,22 @@
 import { useEffect, useState } from "react";
-import { getAllBusinesses } from "../services/api"; // ✅ This is perfect
+import { getAllBusinesses } from "../services/api";
 import BusinessCard from "../components/BusinessCard";
+import Loader from "../components/Loader";
+import useMinimumLoadingTime from "../hooks/useMinimumLoadingTime";
 
 function Businesses() {
   const [businesses, setBusinesses] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [loading, setLoading] = useState(true);
+
+  const showLoader = useMinimumLoadingTime(loading);
 
   useEffect(() => {
     getAllBusinesses()
       .then((res) => setBusinesses(res.data))
-      .catch((err) => console.log(err));
+      .catch((err) => console.log(err))
+      .finally(() => setLoading(false));
   }, []);
 
   const categories = ["All", ...new Set(businesses.map((b) => b.category))];
@@ -21,6 +27,10 @@ function Businesses() {
       categoryFilter === "All" || b.category === categoryFilter;
     return matchesName && matchesCategory;
   });
+
+  if (showLoader) {
+    return <Loader text="Loading businesses..." />;
+  }
 
   return (
     <div className="p-6">

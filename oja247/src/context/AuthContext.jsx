@@ -50,17 +50,20 @@ export const AuthProvider = ({ children }) => {
       });
 
       const { token, user, business } = response.data;
-      
+
       localStorage.setItem('token', token);
       setToken(token);
       setUser(user);
       setBusiness(business);
-      
+
       return { success: true, business };
     } catch (error) {
+      const backendMessage = error.response?.data?.message;
+      const backendDetails = error.response?.data?.details;
+
       return {
         success: false,
-        message: error.response?.data?.message || 'Registration failed'
+        message: backendMessage || backendDetails || error.message || 'Registration failed'
       };
     }
   };

@@ -13,30 +13,53 @@ const generateToken = (id) => {
 export const register = async (req, res) => {
   try {
     console.log("Register request received:", req.body);
-    
+
     const { email, password, businessData } = req.body;
 
-    // Validate input
     if (!email || !password || !businessData) {
-      return res.status(400).json({ message: "Missing required fields" });
+      return res.status(400).json({
+        message: "Registration failed: email, password, and business details are required."
+      });
     }
 
-    // Check if user already exists
-    const userExists = await User.findOne({ email });
+    if (!businessData.name || !businessData.category || !businessData.location || !businessData.contact) {
+      return res.status(400).json({
+        message: "Registration failed: business name, category, location, and contact are required."
+      });
+    }
+
+    const userExists = await User.findOne({ email: email.toLowerCase().trim() });
     if (userExists) {
-      return res.status(400).json({ message: "Email already registered" });
+      return res.status(400).json({ message: "Registration failed: this email is already registered." });
     }
 
-    // Create business first
+    const normalizedBusinessData = {
+      ...businessData,
+      name: String(businessData.name).trim(),
+      description: businessData.description ? String(businessData.description).trim() : "",
+      category: String(businessData.category).trim(),
+      location: String(businessData.location).trim(),
+      contact: String(businessData.contact).trim(),
+      logo: businessData.logo || "",
+      banner: businessData.banner || "",
+      socialLinks: {
+        facebook: businessData.socialLinks?.facebook || "",
+        instagram: businessData.socialLinks?.instagram || "",
+        twitter: businessData.socialLinks?.twitter || "",
+        website: businessData.socialLinks?.website || "",
+        threads: businessData.socialLinks?.threads || ""
+      },
+      highlights: Array.isArray(businessData.highlights) ? businessData.highlights.filter(Boolean) : []
+    };
+
     console.log("Creating business...");
-    const business = new Business(businessData);
+    const business = new Business(normalizedBusinessData);
     const savedBusiness = await business.save();
     console.log("Business created:", savedBusiness._id);
 
-    // Create user and link to business
     console.log("Creating user...");
     const user = new User({
-      email,
+      email: email.toLowerCase().trim(),
       password,
       businessId: savedBusiness._id
     });
@@ -44,7 +67,6 @@ export const register = async (req, res) => {
     const savedUser = await user.save();
     console.log("User created:", savedUser._id);
 
-    // Generate token
     const token = generateToken(savedUser._id);
 
     res.status(201).json({
@@ -60,8 +82,21 @@ export const register = async (req, res) => {
     });
   } catch (error) {
     console.error("Registration error:", error);
-    res.status(500).json({ 
-      message: error.message,
+
+    let message = "Registration failed. Please review your details and try again.";
+    if (error?.code === 11000) {
+      message = "Registration failed: this email is already in use.";
+    } else if (error?.name === "ValidationError") {
+      message = `Registration failed: ${Object.values(error.errors)
+        .map((item) => item.message)
+        .join("; ")}`;
+    } else if (error?.message) {
+      message = `Registration failed: ${error.message}`;
+    }
+
+    res.status(400).json({
+      message,
+      details: error?.message,
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }

@@ -10,6 +10,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AdminDashboard from "./pages/AdminDashboard";
 import About from "./pages/About";
 import CartPage from "./pages/CartPage";
+import Checkout from "./pages/Checkout";
+import PaymentStatusPage from "./pages/PaymentStatusPage";
 
 function App() {
   return (
@@ -21,6 +23,8 @@ function App() {
         <Route path="/about" element={<About />} />
         <Route path="/business/:id" element={<BusinessDetails />} />
         <Route path="/cart" element={<CartPage />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/payment-status" element={<PaymentStatusPage />} />
 
         {/* Auth Routes */}
         <Route path="/login" element={<LoginPage />} />

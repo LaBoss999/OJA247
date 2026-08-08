@@ -57,7 +57,12 @@ const BusinessForm = () => {
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      setError("Please select an image file.");
+      setError("Please select a valid image file for your logo or banner.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Please upload an image smaller than 5MB so registration can complete successfully.");
       return;
     }
 
@@ -67,6 +72,7 @@ const BusinessForm = () => {
       setFormData((prev) => ({ ...prev, [name]: result }));
       if (name === "logo") setLogoPreview(result);
       if (name === "banner") setBannerPreview(result);
+      setError("");
     };
     reader.readAsDataURL(file);
   };

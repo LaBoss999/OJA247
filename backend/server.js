@@ -14,6 +14,7 @@ import productRoutes from "./src/routes/productRoutes.js";
 import uploadRoutes from "./src/routes/uploadRoutes.js";
 import authRoutes from "./src/routes/authRoutes.js";
 import adminRoutes from "./src/routes/adminRoutes.js";
+import orderRoutes from "./src/routes/orderRoutes.js";
 
 console.log("=== Environment Variables Check ===");
 console.log("CLOUDINARY_CLOUD_NAME:", process.env.CLOUDINARY_CLOUD_NAME);
@@ -51,6 +52,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/orders", orderRoutes);
 
 // Connect to MongoDB
 connectDB();

@@ -4,9 +4,10 @@ import { requireAdmin } from "../middleware/adminMiddleware.js";
 import {
   getAllUsers,
   getStats,
+  getAllOrders,
   toggleFeatured,
   deleteBusiness,
-  toggleUserBan
+  toggleUserBan,
 } from "../controllers/adminController.js";
 
 const router = express.Router();
@@ -18,6 +19,7 @@ router.use(requireAdmin);
 // Admin routes
 router.get("/users", getAllUsers);
 router.get("/stats", getStats);
+router.get("/orders", getAllOrders);
 router.patch("/businesses/:id/featured", toggleFeatured);
 router.delete("/businesses/:id", deleteBusiness);
 router.patch("/users/:id/ban", toggleUserBan);

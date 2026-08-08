@@ -2,6 +2,8 @@ import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getBusinessById, getProductsByBusiness } from "../services/api";
 import { useCart } from "../context/CartContext";
+import Loader from "../components/Loader";
+import useMinimumLoadingTime from "../hooks/useMinimumLoadingTime";
 
 function BusinessDetails() {
   const { id } = useParams();
@@ -10,6 +12,8 @@ function BusinessDetails() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("all");
+
+  const showLoader = useMinimumLoadingTime(loading);
 
   useEffect(() => {
     fetchBusinessAndProducts();
@@ -40,15 +44,8 @@ function BusinessDetails() {
       ? products
       : products.filter((p) => p.category === selectedCategory);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-green-200 border-t-green-500 rounded-full animate-spin" />
-          <p className="text-gray-500 text-sm tracking-wide">Loading store…</p>
-        </div>
-      </div>
-    );
+  if (showLoader) {
+    return <Loader text="Loading store..." />;
   }
 
   if (!business) {
