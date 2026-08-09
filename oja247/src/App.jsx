@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import PageWrapper from "./components/PageWrapper.jsx";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import LandingPage from "./pages/LandingPage";
@@ -19,29 +20,31 @@ function App() {
   return (
     <Router>
       <Navbar />
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/explore" element={<ExplorePage />} />
-        <Route path="/products" element={<Products />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/business/:id" element={<BusinessDetails />} />
-        <Route path="/cart" element={<CartPage />} />
-        <Route path="/checkout" element={<Checkout />} />
-        <Route path="/payment-status" element={<PaymentStatusPage />} />
-        {/* Auth Routes */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/business-form" element={<BusinessForm />} />
-        {/* Protected Routes */}
-        <Route
-          path="/dashboard/:businessId"
-          element={
-            <ProtectedRoute>
-              <BusinessDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/admin" element={<AdminDashboard />} />
-      </Routes>
+      <PageWrapper>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/explore" element={<ExplorePage />} />
+          <Route path="/products" element={<Products />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/business/:id" element={<BusinessDetails />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/payment-status" element={<PaymentStatusPage />} />
+          {/* Auth Routes */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/business-form" element={<BusinessForm />} />
+          {/* Protected Routes */}
+          <Route
+            path="/dashboard/:businessId"
+            element={
+              <ProtectedRoute>
+                <BusinessDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/admin" element={<AdminDashboard />} />
+        </Routes>
+      </PageWrapper>
       <Footer />
     </Router>
   );
