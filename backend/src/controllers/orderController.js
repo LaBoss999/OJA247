@@ -7,7 +7,10 @@ export const createOrder = async (req, res) => {
       customer,
       items,
       subtotal,
+      serviceFee,
+      vat,
       deliveryFee,
+      deliveryBreakdown,
       total,
       deliveryMethod,
     } = req.body;
@@ -24,11 +27,32 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    // Build the per-vendor breakdown the Order model expects (vendors[]),
+    // from what Checkout.jsx sends as deliveryBreakdown ([{businessId, businessName, fee}]).
+    // itemsSubtotal is derived here since the frontend doesn't currently send it per vendor.
+    const vendors = Array.isArray(deliveryBreakdown)
+      ? deliveryBreakdown.map((v) => {
+          const vendorItemsSubtotal = (items || [])
+            .filter((item) => (item.businessId || null) === (v.businessId || null))
+            .reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0);
+
+          return {
+            businessId: v.businessId || null,
+            businessName: v.businessName || "",
+            itemsSubtotal: vendorItemsSubtotal,
+            deliveryFee: Number(v.fee || 0),
+          };
+        })
+      : [];
+
     const order = await Order.create({
       reference,
       customer,
       items,
+      vendors,
       subtotal,
+      serviceFee: serviceFee || 0,
+      vat: vat || 0,
       deliveryFee,
       total,
       deliveryMethod,
@@ -145,5 +169,26 @@ export const getOrderByReference = async (req, res) => {
   } catch (error) {
     console.error("Get order error:", error);
     res.status(500).json({ message: "Error fetching order" });
+  }
+};
+
+// Orders containing at least one item belonging to this business.
+// Used by the vendor's Orders tab in BusinessDashboard.jsx.
+export const getOrdersByBusiness = async (req, res) => {
+  try {
+    const { businessId } = req.params;
+
+    if (!businessId) {
+      return res.status(400).json({ message: "businessId is required" });
+    }
+
+    const orders = await Order.find({ "items.businessId": businessId }).sort({
+      createdAt: -1,
+    });
+
+    res.json(orders);
+  } catch (error) {
+    console.error("Get orders by business error:", error);
+    res.status(500).json({ message: "Error fetching business orders" });
   }
 };

@@ -87,11 +87,11 @@ const AddProductForm = ({ businessId, onProductAdded }) => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold mb-6 text-gray-800">Add New Product</h2>
+    <div className="max-w-2xl mx-auto p-6 sm:p-8 bg-white rounded-2xl shadow-sm border border-green-100">
+      <h2 className="text-2xl font-bold mb-6 text-gray-900">Add New Product</h2>
       
       {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
           {error}
         </div>
       )}
@@ -108,7 +108,7 @@ const AddProductForm = ({ businessId, onProductAdded }) => {
             value={formData.name}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
             placeholder="e.g., Nike Air Max Shoes"
           />
         </div>
@@ -124,7 +124,7 @@ const AddProductForm = ({ businessId, onProductAdded }) => {
             onChange={handleChange}
             required
             rows="4"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
             placeholder="Describe your product..."
           />
         </div>
@@ -143,7 +143,7 @@ const AddProductForm = ({ businessId, onProductAdded }) => {
               required
               min="0"
               step="0.01"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="5000"
             />
           </div>
@@ -158,7 +158,7 @@ const AddProductForm = ({ businessId, onProductAdded }) => {
               value={formData.stock}
               onChange={handleChange}
               min="0"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
               placeholder="100"
             />
           </div>
@@ -174,7 +174,7 @@ const AddProductForm = ({ businessId, onProductAdded }) => {
             value={formData.category}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
           >
             <option value="">Select a category</option>
             {categories.map(cat => (
@@ -202,7 +202,7 @@ const AddProductForm = ({ businessId, onProductAdded }) => {
                   <img
                     src={url}
                     alt={`Product ${index + 1}`}
-                    className="w-full h-20 object-cover rounded border"
+                    className="w-full h-20 object-cover rounded-lg border border-gray-200"
                   />
                   <button
                     type="button"
@@ -227,7 +227,7 @@ const AddProductForm = ({ businessId, onProductAdded }) => {
             name="tags"
             value={formData.tags}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
             placeholder="new, trending, sale"
           />
         </div>
@@ -236,10 +236,10 @@ const AddProductForm = ({ businessId, onProductAdded }) => {
         <button
           type="submit"
           disabled={loading}
-          className={`w-full py-3 rounded-md text-white font-medium ${
+          className={`w-full py-3 rounded-xl text-white font-semibold transition ${
             loading 
               ? 'bg-gray-400 cursor-not-allowed' 
-              : 'bg-blue-600 hover:bg-blue-700'
+              : 'bg-gradient-to-r from-green-600 to-yellow-500 hover:opacity-90'
           }`}
         >
           {loading ? 'Adding Product...' : 'Add Product'}

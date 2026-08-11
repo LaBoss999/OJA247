@@ -88,7 +88,7 @@ const ProductList = ({ businessId }) => {
 
   if (products.length === 0) {
     return (
-      <div className="text-center py-12 bg-gray-50 rounded-lg">
+      <div className="text-center py-12 bg-green-50/50 rounded-2xl border border-green-100">
         <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
         </svg>
@@ -106,9 +106,9 @@ const ProductList = ({ businessId }) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {products.map(product => (
-          <div key={product._id} className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div key={product._id} className="bg-white rounded-2xl shadow-sm border border-green-100 overflow-hidden">
             {/* Product Image */}
-            <div className="h-48 bg-gray-200 overflow-hidden">
+            <div className="h-48 bg-gray-100 overflow-hidden">
               {product.images && product.images[0] ? (
                 <img
                   src={product.images[0]}
@@ -134,14 +134,14 @@ const ProductList = ({ businessId }) => {
                     name="name"
                     value={editFormData.name}
                     onChange={handleEditChange}
-                    className="w-full px-2 py-1 border rounded"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                   <textarea
                     name="description"
                     value={editFormData.description}
                     onChange={handleEditChange}
                     rows="2"
-                    className="w-full px-2 py-1 border rounded"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                   <div className="grid grid-cols-2 gap-2">
                     <input
@@ -149,26 +149,26 @@ const ProductList = ({ businessId }) => {
                       name="price"
                       value={editFormData.price}
                       onChange={handleEditChange}
-                      className="px-2 py-1 border rounded"
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
                     <input
                       type="number"
                       name="stock"
                       value={editFormData.stock}
                       onChange={handleEditChange}
-                      className="px-2 py-1 border rounded"
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => saveEdit(product._id)}
-                      className="flex-1 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                      className="flex-1 py-2 bg-gradient-to-r from-green-600 to-yellow-500 text-white rounded-lg font-medium hover:opacity-90 transition"
                     >
                       Save
                     </button>
                     <button
                       onClick={cancelEdit}
-                      className="flex-1 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
+                      className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition"
                     >
                       Cancel
                     </button>
@@ -187,10 +187,10 @@ const ProductList = ({ businessId }) => {
                     <span className="text-lg font-bold text-green-600">
                       ₦{product.price.toLocaleString()}
                     </span>
-                    <span className={`text-sm px-2 py-1 rounded ${
+                    <span className={`text-sm px-2 py-1 rounded-full font-medium ${
                       product.inStock 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
+                        ? 'bg-green-100 text-green-800 border border-green-200' 
+                        : 'bg-red-100 text-red-800 border border-red-200'
                     }`}>
                       {product.inStock ? `${product.stock} in stock` : 'Out of stock'}
                     </span>
@@ -198,13 +198,13 @@ const ProductList = ({ businessId }) => {
                   <div className="flex gap-2">
                     <button
                       onClick={() => startEdit(product)}
-                      className="flex-1 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium"
+                      className="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium transition"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDelete(product._id)}
-                      className="flex-1 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm font-medium"
+                      className="flex-1 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 text-sm font-medium transition"
                     >
                       Delete
                     </button>
