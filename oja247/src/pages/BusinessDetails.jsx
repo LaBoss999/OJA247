@@ -373,7 +373,7 @@ function BusinessDetails() {
                   {/* Add to cart button */}
                   <button
                     type="button"
-                    onClick={() => addToCart(product)}
+                    onClick={() => addToCart(product, business)}
                     disabled={!product.inStock}
                     className={`flex items-center justify-center gap-2 w-full text-center py-2 rounded-lg text-sm sm:text-base font-medium transition-colors ${
                       product.inStock

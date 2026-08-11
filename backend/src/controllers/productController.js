@@ -5,10 +5,11 @@ import Business from "../models/Business.js";
 export const getAllProducts = async (req, res) => {
   try {
     const products = await Product.find()
-      .populate("businessId", "name logo location")
+      .populate("businessId", "name logo location deliveryFeeInState deliveryFeeOutState")
       .sort({ createdAt: -1 });
     res.json(products);
   } catch (error) {
+    console.error("Get all products error:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -17,9 +18,12 @@ export const getAllProducts = async (req, res) => {
 export const getProductsByBusiness = async (req, res) => {
   try {
     const { businessId } = req.params;
-    const products = await Product.find({ businessId }).sort({ createdAt: -1 });
+    const products = await Product.find({ businessId })
+      .populate("businessId", "name logo location deliveryFeeInState deliveryFeeOutState")
+      .sort({ createdAt: -1 });
     res.json(products);
   } catch (error) {
+    console.error("Get products by business error:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -29,13 +33,14 @@ export const getProduct = async (req, res) => {
   try {
     const product = await Product.findById(req.params.id).populate(
       "businessId",
-      "name logo contact",
+      "name logo contact location deliveryFeeInState deliveryFeeOutState"
     );
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
     res.json(product);
   } catch (error) {
+    console.error("Get product error:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -54,11 +59,17 @@ export const createProduct = async (req, res) => {
       specifications,
       tags,
     } = req.body;
+
+    if (!businessId) {
+      return res.status(400).json({ message: "businessId is required" });
+    }
+
     // Verify business exists
     const business = await Business.findById(businessId);
     if (!business) {
       return res.status(404).json({ message: "Business not found" });
     }
+
     const product = new Product({
       businessId,
       name,
@@ -71,9 +82,11 @@ export const createProduct = async (req, res) => {
       specifications,
       tags,
     });
+
     const savedProduct = await product.save();
     res.status(201).json(savedProduct);
   } catch (error) {
+    console.error("Create product error:", error);
     res.status(400).json({ message: error.message });
   }
 };
@@ -83,19 +96,23 @@ export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
-    // If stock is being updated, update inStock status
+
     if (updates.stock !== undefined) {
       updates.inStock = updates.stock > 0;
     }
+
     const product = await Product.findByIdAndUpdate(id, updates, {
       new: true,
       runValidators: true,
     });
+
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
+
     res.json(product);
   } catch (error) {
+    console.error("Update product error:", error);
     res.status(400).json({ message: error.message });
   }
 };
@@ -109,6 +126,7 @@ export const deleteProduct = async (req, res) => {
     }
     res.json({ message: "Product deleted successfully" });
   } catch (error) {
+    console.error("Delete product error:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -117,28 +135,27 @@ export const deleteProduct = async (req, res) => {
 export const searchProducts = async (req, res) => {
   try {
     const { query, category, minPrice, maxPrice } = req.query;
-
     let filter = {};
 
     if (query) {
       filter.$text = { $search: query };
     }
-
     if (category) {
       filter.category = category;
     }
-
     if (minPrice || maxPrice) {
       filter.price = {};
       if (minPrice) filter.price.$gte = Number(minPrice);
       if (maxPrice) filter.price.$lte = Number(maxPrice);
     }
+
     const products = await Product.find(filter)
-      .populate("businessId", "name logo location")
+      .populate("businessId", "name logo location deliveryFeeInState deliveryFeeOutState")
       .sort({ createdAt: -1 });
 
     res.json(products);
   } catch (error) {
+    console.error("Search products error:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -147,12 +164,13 @@ export const searchProducts = async (req, res) => {
 export const getFeaturedProducts = async (req, res) => {
   try {
     const products = await Product.find({ featured: true })
-      .populate("businessId", "name logo")
+      .populate("businessId", "name logo location deliveryFeeInState deliveryFeeOutState")
       .limit(12)
       .sort({ createdAt: -1 });
 
     res.json(products);
   } catch (error) {
+    console.error("Get featured products error:", error);
     res.status(500).json({ message: error.message });
   }
 };

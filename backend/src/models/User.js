@@ -18,7 +18,10 @@ const UserSchema = new mongoose.Schema(
     businessId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Business",
-      required: true
+      required: function () {
+        return this.role !== "admin"; // only owners need a business
+      },
+      default: null
     },
     role: {
       type: String,
@@ -35,11 +38,10 @@ const UserSchema = new mongoose.Schema(
 
 // Hash password before saving
 UserSchema.pre("save", async function () {
-  // Only hash if password is modified
   if (!this.isModified("password")) {
     return;
   }
-  
+
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });

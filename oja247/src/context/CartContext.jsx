@@ -14,7 +14,10 @@ export function CartProvider({ children }) {
     localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
 
-  const addToCart = (product) => {
+  // `business` is optional but should be passed whenever available —
+  // it's used at checkout to calculate per-vendor delivery fees.
+  // Expected shape: { _id, name, location, deliveryFeeInState, deliveryFeeOutState }
+  const addToCart = (product, business = null) => {
     setCart((prev) => {
       const existing = prev.find((item) => item._id === product._id);
 
@@ -26,7 +29,7 @@ export function CartProvider({ children }) {
         );
       }
 
-      return [...prev, { ...product, quantity: 1 }];
+      return [...prev, { ...product, business, quantity: 1 }];
     });
   };
 

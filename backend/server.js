@@ -1,5 +1,4 @@
 import dns from "node:dns";
-
 // Force Node.js to use Google's public DNS servers
 dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
@@ -35,7 +34,9 @@ app.use(
   })
 );
 
-app.use(express.json());
+// Increased body size limit (default is 100kb, bumped up for image/file payloads)
+app.use(express.json({ limit: "25mb" }));
+app.use(express.urlencoded({ limit: "25mb", extended: true }));
 
 // Health check route
 app.get("/", (req, res) => {

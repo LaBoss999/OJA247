@@ -6,7 +6,8 @@ export const getBusinesses = async (req, res) => {
     const businesses = await Business.find();
     res.json(businesses);
   } catch (error) {
-    res.status(500).json({ message: "Error fetching businesses" });
+    console.error("Get businesses error:", error);
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -17,7 +18,8 @@ export const getBusiness = async (req, res) => {
     if (!business) return res.status(404).json({ message: "Not found" });
     res.json(business);
   } catch (error) {
-    res.status(500).json({ message: "Error fetching business" });
+    console.error("Get business error:", error);
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -28,7 +30,8 @@ export const createBusiness = async (req, res) => {
     const saved = await newBusiness.save();
     res.status(201).json(saved);
   } catch (error) {
-    res.status(400).json({ message: "Error creating business" });
+    console.error("Create business error:", error);
+    res.status(400).json({ message: error.message });
   }
 };
 
@@ -49,6 +52,8 @@ export const updateBusiness = async (req, res) => {
       "themeColor",
       "socialLinks",
       "highlights",
+      "deliveryFeeInState",
+      "deliveryFeeOutState",
     ];
 
     const sanitizedUpdates = {};
@@ -58,10 +63,14 @@ export const updateBusiness = async (req, res) => {
       }
     });
 
-    const updatedBusiness = await Business.findByIdAndUpdate(id, sanitizedUpdates, {
-      new: true,
-      runValidators: true,
-    });
+    const updatedBusiness = await Business.findByIdAndUpdate(
+      id,
+      sanitizedUpdates,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
 
     if (!updatedBusiness) {
       return res.status(404).json({ message: "Business not found" });
@@ -69,6 +78,7 @@ export const updateBusiness = async (req, res) => {
 
     res.json(updatedBusiness);
   } catch (error) {
+    console.error("Update business error:", error);
     res.status(400).json({ message: error.message });
   }
 };

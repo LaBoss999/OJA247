@@ -8,7 +8,7 @@ import Logo from '../assets/OJA247 VX1.png';
 const LoginPage = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -32,18 +32,20 @@ const LoginPage = () => {
     const result = await login(formData.email, formData.password);
 
     if (result.success) {
-      // Redirect to dashboard
-      navigate(`/dashboard/${result.business._id}`);
+      if (result.user?.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate(`/dashboard/${result.business._id}`);
+      }
     } else {
       setError(result.message);
     }
-    
+
     setLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-yellow-50 flex items-center justify-center px-6 py-12">
-      {/* Background Decorations */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div
           animate={{ scale: [1, 1.2, 1], rotate: [0, 90, 0] }}
@@ -57,7 +59,6 @@ const LoginPage = () => {
         />
       </div>
 
-      {/* Login Card */}
       <motion.div
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
@@ -65,7 +66,6 @@ const LoginPage = () => {
         className="relative w-full max-w-md"
       >
         <div className="backdrop-blur-xl bg-white/80 border border-gray-200/50 rounded-3xl shadow-2xl p-8">
-          {/* Logo */}
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
@@ -75,7 +75,6 @@ const LoginPage = () => {
             <img src={Logo} alt="OJA247" className="w-32" />
           </motion.div>
 
-          {/* Title */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -88,7 +87,6 @@ const LoginPage = () => {
             <p className="text-gray-600">Login to manage your business</p>
           </motion.div>
 
-          {/* Error Message */}
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
@@ -99,9 +97,7 @@ const LoginPage = () => {
             </motion.div>
           )}
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email Input */}
             <motion.div
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
@@ -124,7 +120,6 @@ const LoginPage = () => {
               </div>
             </motion.div>
 
-            {/* Password Input */}
             <motion.div
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
@@ -154,7 +149,6 @@ const LoginPage = () => {
               </div>
             </motion.div>
 
-            {/* Login Button */}
             <motion.button
               type="submit"
               disabled={loading}
@@ -180,7 +174,6 @@ const LoginPage = () => {
             </motion.button>
           </form>
 
-          {/* Register Link */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -198,7 +191,6 @@ const LoginPage = () => {
             </p>
           </motion.div>
 
-          {/* Back to Home */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

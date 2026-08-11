@@ -1,6 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 
+const SERVICE_FEE_RATE = 0.05; // 5% PSS / Platform Service Fee
+const VAT_RATE = 0.075; // Nigeria standard VAT — confirm taxable base with your accountant
+
 function CartPage() {
   const navigate = useNavigate();
   const { cartItems, removeFromCart, updateQuantity, subtotal, clearCart } = useCart();
@@ -21,6 +24,10 @@ function CartPage() {
       </div>
     );
   }
+
+  const serviceFee = subtotal * SERVICE_FEE_RATE;
+  const vat = (subtotal + serviceFee) * VAT_RATE; // confirm taxable base with your accountant
+  const estimatedTotal = subtotal + serviceFee + vat; // delivery added at checkout, once state/vendor is known
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
@@ -97,13 +104,24 @@ function CartPage() {
                 <span>₦{subtotal.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
+                <span>Service Fee (5%)</span>
+                <span>₦{serviceFee.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>VAT (7.5%)</span>
+                <span>₦{vat.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+              </div>
+              <div className="flex justify-between">
                 <span>Delivery</span>
                 <span>Calculated at checkout</span>
               </div>
               <div className="border-t border-gray-200 pt-3 flex justify-between font-bold text-lg text-gray-900">
-                <span>Total</span>
-                <span>₦{subtotal.toLocaleString()}</span>
+                <span>Estimated Total</span>
+                <span>₦{estimatedTotal.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
               </div>
+              <p className="text-xs text-gray-400 pt-1">
+                Final total includes delivery, calculated at checkout based on vendor and location.
+              </p>
             </div>
 
             <button

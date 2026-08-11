@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../services/api";
 import { useCart } from "../context/CartContext";
+
+const SERVICE_FEE_RATE = 0.05; // 5% PSS / Platform Service Fee
+const VAT_RATE = 0.075; // Nigeria standard VAT
 
 function Checkout() {
   const navigate = useNavigate();
@@ -14,6 +17,7 @@ function Checkout() {
     email: "",
     address: "",
     city: "",
+    state: "",
     note: "",
   });
 
@@ -38,6 +42,66 @@ function Checkout() {
     document.body.appendChild(script);
   }, []);
 
+  // Group cart items by business, so each vendor's delivery fee can be
+  // calculated independently based on the buyer's state.
+  // Falls back to businessId (a populated ref from the product) when
+  // `business` wasn't attached at add-to-cart time.
+  const vendorGroups = useMemo(() => {
+    const groups = {};
+
+    cartItems.forEach((item) => {
+      const business = item.business || item.businessId;
+      const key = business?._id || "unknown";
+
+      if (!groups[key]) {
+        groups[key] = {
+          business,
+          items: [],
+          itemsSubtotal: 0,
+        };
+      }
+
+      groups[key].items.push(item);
+      groups[key].itemsSubtotal += Number(item.price || 0) * item.quantity;
+    });
+
+    return Object.values(groups);
+  }, [cartItems]);
+
+  // Delivery fee per vendor: compares buyer's state to the vendor's location.
+  // Falls back to 0 if a vendor has no fees set, and skips entirely on pickup.
+  const getVendorDeliveryFee = (business) => {
+    if (deliveryMethod === "pickup") return 0;
+    if (!business) return 0;
+
+    const buyerState = formData.state.trim().toLowerCase();
+    const vendorState = (business.location || "").trim().toLowerCase();
+
+    if (!buyerState) return 0; // buyer hasn't picked a state yet
+
+    const isInState = buyerState === vendorState;
+    const fee = isInState ? business.deliveryFeeInState : business.deliveryFeeOutState;
+    return Number(fee) || 0;
+  };
+
+  const vendorGroupsWithFees = useMemo(
+    () =>
+      vendorGroups.map((group) => ({
+        ...group,
+        deliveryFee: getVendorDeliveryFee(group.business),
+      })),
+    [vendorGroups, formData.state, deliveryMethod]
+  );
+
+  const totalDeliveryFee = useMemo(
+    () => vendorGroupsWithFees.reduce((sum, group) => sum + group.deliveryFee, 0),
+    [vendorGroupsWithFees]
+  );
+
+  const serviceFee = subtotal * SERVICE_FEE_RATE;
+  const vat = (subtotal + serviceFee) * VAT_RATE;
+  const total = subtotal + serviceFee + vat + totalDeliveryFee;
+
   if (cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
@@ -55,9 +119,6 @@ function Checkout() {
     );
   }
 
-  const deliveryFee = deliveryMethod === "pickup" ? 0 : 2500;
-  const total = subtotal + deliveryFee;
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -65,6 +126,11 @@ function Checkout() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (deliveryMethod === "delivery" && !formData.state.trim()) {
+      alert("Please enter your state so we can calculate delivery fees.");
+      return;
+    }
 
     if (!paystackPublicKey) {
       alert("Paystack public key is missing. Add VITE_PAYSTACK_PUBLIC_KEY to your .env file.");
@@ -83,18 +149,28 @@ function Checkout() {
           email: formData.email,
           address: formData.address,
           city: formData.city,
+          state: formData.state,
           note: formData.note,
         },
         items: cartItems.map((item) => ({
           productId: item._id,
+          businessId: (item.business || item.businessId)?._id || null,
           name: item.name,
           category: item.category || "",
           quantity: item.quantity,
           price: Number(item.price || 0),
           image: item.images?.[0] || item.image || "",
         })),
+        vendors: vendorGroupsWithFees.map((group) => ({
+          businessId: group.business?._id || null,
+          businessName: group.business?.name || "",
+          itemsSubtotal: group.itemsSubtotal,
+          deliveryFee: group.deliveryFee,
+        })),
         subtotal: Number(subtotal),
-        deliveryFee: Number(deliveryFee),
+        serviceFee: Number(serviceFee),
+        vat: Number(vat),
+        deliveryFee: Number(totalDeliveryFee),
         total: Number(total),
         deliveryMethod,
       });
@@ -121,6 +197,7 @@ function Checkout() {
           { display_name: "Phone", variable_name: "phone", value: formData.phone },
           { display_name: "Address", variable_name: "address", value: formData.address },
           { display_name: "City", variable_name: "city", value: formData.city },
+          { display_name: "State", variable_name: "state", value: formData.state },
           { display_name: "Delivery Method", variable_name: "delivery_method", value: deliveryMethod },
           { display_name: "Order Note", variable_name: "order_note", value: formData.note || "" },
         ],
@@ -230,6 +307,19 @@ function Checkout() {
                   value={formData.city}
                   onChange={handleChange}
                   className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
+                  placeholder="Ikeja"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
+                <input
+                  type="text"
+                  name="state"
+                  required={deliveryMethod === "delivery"}
+                  value={formData.state}
+                  onChange={handleChange}
+                  className="w-full px-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
                   placeholder="Lagos"
                 />
               </div>
@@ -270,32 +360,61 @@ function Checkout() {
           <aside className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6 h-fit">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Order Summary</h2>
 
-            <div className="space-y-3 mb-5">
-              {cartItems.map((item) => (
-                <div key={item._id} className="flex items-start justify-between gap-3 border-b border-gray-100 pb-3 last:border-none last:pb-0">
-                  <div>
-                    <p className="font-medium text-gray-800">{item.name}</p>
-                    <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
-                  </div>
-                  <p className="font-medium text-gray-900">
-                    ₦{(Number(item.price || 0) * item.quantity).toLocaleString()}
+            <div className="space-y-5 mb-5">
+              {vendorGroupsWithFees.map((group) => (
+                <div key={group.business?._id || "unknown"} className="border border-gray-100 rounded-xl p-3">
+                  <p className="text-sm font-semibold text-gray-800 mb-2">
+                    {group.business?.name || "Unknown vendor"}
                   </p>
+
+                  <div className="space-y-2">
+                    {group.items.map((item) => (
+                      <div key={item._id} className="flex items-start justify-between gap-3 text-sm">
+                        <div>
+                          <p className="text-gray-700">{item.name}</p>
+                          <p className="text-gray-400">Qty: {item.quantity}</p>
+                        </div>
+                        <p className="text-gray-900">
+                          ₦{(Number(item.price || 0) * item.quantity).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {deliveryMethod === "delivery" && (
+                    <div className="flex justify-between text-xs text-gray-500 mt-2 pt-2 border-t border-gray-100">
+                      <span>Delivery ({group.business?.name || "vendor"})</span>
+                      <span>
+                        {formData.state
+                          ? `₦${group.deliveryFee.toLocaleString()}`
+                          : "Enter state to calculate"}
+                      </span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
 
             <div className="space-y-2 text-sm text-gray-600">
               <div className="flex justify-between">
-                <span>Subtotal</span>
+                <span>Items Subtotal</span>
                 <span>₦{subtotal.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span>Delivery</span>
-                <span>₦{deliveryFee.toLocaleString()}</span>
+                <span>Service Fee (5%)</span>
+                <span>₦{serviceFee.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>VAT (7.5%)</span>
+                <span>₦{vat.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Total Delivery</span>
+                <span>₦{totalDeliveryFee.toLocaleString()}</span>
               </div>
               <div className="border-t border-gray-200 pt-3 flex justify-between text-lg font-bold text-gray-900">
                 <span>Total</span>
-                <span>₦{total.toLocaleString()}</span>
+                <span>₦{total.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
               </div>
             </div>
           </aside>

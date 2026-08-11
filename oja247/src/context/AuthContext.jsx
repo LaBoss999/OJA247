@@ -17,7 +17,6 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  // Load user data
   useEffect(() => {
     if (token) {
       loadUser();
@@ -26,7 +25,6 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
-  // Load user data
   const loadUser = async () => {
     try {
       const response = await axiosInstance.get('/api/auth/me');
@@ -34,13 +32,12 @@ export const AuthProvider = ({ children }) => {
       setBusiness(response.data.business);
     } catch (error) {
       console.error('Load user error:', error);
-      logout(); // Clear invalid token
+      logout();
     } finally {
       setLoading(false);
     }
   };
 
-  // Register
   const register = async (email, password, businessData) => {
     try {
       const response = await axiosInstance.post('/api/auth/register', {
@@ -68,7 +65,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Login
   const login = async (email, password) => {
     try {
       const response = await axiosInstance.post('/api/auth/login', {
@@ -77,13 +73,13 @@ export const AuthProvider = ({ children }) => {
       });
 
       const { token, user, business } = response.data;
-      
+
       localStorage.setItem('token', token);
       setToken(token);
       setUser(user);
       setBusiness(business);
-      
-      return { success: true, business };
+
+      return { success: true, user, business };
     } catch (error) {
       return {
         success: false,
@@ -92,7 +88,6 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout
   const logout = () => {
     localStorage.removeItem('token');
     setToken(null);
@@ -100,7 +95,6 @@ export const AuthProvider = ({ children }) => {
     setBusiness(null);
   };
 
-  // Update password
   const updatePassword = async (currentPassword, newPassword) => {
     try {
       await axiosInstance.put('/api/auth/password', {

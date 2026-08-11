@@ -17,8 +17,10 @@ const BusinessSchema = new mongoose.Schema(
       twitter: String,
       website: String
     },
-       // ❌ REMOVED: products: [...]
-    highlights: [String]
+    highlights: [String],
+    deliveryFeeInState: { type: Number, default: 0 },
+    deliveryFeeOutState: { type: Number, default: 0 },
+    isHidden: { type: Boolean, default: false } // hides this business from public listings
   },
   { timestamps: true }
 );

@@ -30,6 +30,8 @@ const BusinessDashboard = () => {
     contact: "",
     logo: "",
     banner: "",
+    deliveryFeeInState: "",
+    deliveryFeeOutState: "",
   });
 
   const showLoader = useMinimumLoadingTime(loading);
@@ -48,6 +50,8 @@ const BusinessDashboard = () => {
         contact: business.contact || "",
         logo: business.logo || "",
         banner: business.banner || "",
+        deliveryFeeInState: business.deliveryFeeInState ?? "",
+        deliveryFeeOutState: business.deliveryFeeOutState ?? "",
       });
     }
   }, [business]);
@@ -103,6 +107,8 @@ const BusinessDashboard = () => {
 
       const response = await axiosInstance.put(`/api/businesses/${businessId}`, {
         ...editForm,
+        deliveryFeeInState: Number(editForm.deliveryFeeInState) || 0,
+        deliveryFeeOutState: Number(editForm.deliveryFeeOutState) || 0,
         socialLinks: business.socialLinks || {},
         highlights: business.highlights || [],
       });
@@ -265,6 +271,18 @@ const BusinessDashboard = () => {
                       <p className="mt-1 text-gray-900">{business.contact}</p>
                     </div>
                     <div>
+                      <label className="block text-sm font-medium text-gray-700">Delivery Fee (within your state)</label>
+                      <p className="mt-1 text-gray-900">
+                        {business.deliveryFeeInState ? `₦${Number(business.deliveryFeeInState).toLocaleString()}` : "Not set"}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Delivery Fee (outside your state)</label>
+                      <p className="mt-1 text-gray-900">
+                        {business.deliveryFeeOutState ? `₦${Number(business.deliveryFeeOutState).toLocaleString()}` : "Not set"}
+                      </p>
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium text-gray-700">Profile image</label>
                       <div className="mt-2 flex items-center gap-3">
                         {business.logo ? (
@@ -340,6 +358,7 @@ const BusinessDashboard = () => {
                       name="location"
                       value={editForm.location}
                       onChange={handleEditFieldChange}
+                      placeholder="e.g. Lagos"
                       className="w-full rounded-xl border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
                   </div>
@@ -354,6 +373,40 @@ const BusinessDashboard = () => {
                     />
                   </div>
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Delivery Fee — within your state (₦)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      name="deliveryFeeInState"
+                      value={editForm.deliveryFeeInState}
+                      onChange={handleEditFieldChange}
+                      placeholder="e.g. 1500"
+                      className="w-full rounded-xl border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Delivery Fee — outside your state (₦)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      name="deliveryFeeOutState"
+                      value={editForm.deliveryFeeOutState}
+                      onChange={handleEditFieldChange}
+                      placeholder="e.g. 3500"
+                      className="w-full rounded-xl border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 -mt-3">
+                  Your "Location" state above determines which fee buyers are charged — the in-state fee applies to buyers in {editForm.location || "your state"}, and the outside-state fee applies everywhere else.
+                </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>

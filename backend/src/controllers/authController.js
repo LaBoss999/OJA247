@@ -130,10 +130,10 @@ export const login = async (req, res) => {
       user: {
         id: user._id,
         email: user.email,
-        businessId: user.businessId._id,
+        businessId: user.businessId?._id || null,
         role: user.role
       },
-      business: user.businessId
+      business: user.businessId || null
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -153,10 +153,10 @@ export const getMe = async (req, res) => {
       user: {
         id: user._id,
         email: user.email,
-        businessId: user.businessId._id,
+        businessId: user.businessId?._id || null,
         role: user.role
       },
-      business: user.businessId
+      business: user.businessId || null
     });
   } catch (error) {
     console.error("Get me error:", error);
