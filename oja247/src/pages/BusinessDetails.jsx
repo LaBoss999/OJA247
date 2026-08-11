@@ -5,6 +5,86 @@ import { useCart } from "../context/CartContext";
 import Loader from "../components/Loader";
 import useMinimumLoadingTime from "../hooks/useMinimumLoadingTime";
 
+const DAY_KEYS = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
+const DAY_LABELS = {
+  sunday: "Sun",
+  monday: "Mon",
+  tuesday: "Tue",
+  wednesday: "Wed",
+  thursday: "Thu",
+  friday: "Fri",
+  saturday: "Sat",
+};
+
+// business.hours expected shape:
+// { monday: { open: "09:00", close: "18:00", closed: false }, ... }
+function getOpenStatus(hours) {
+  if (!hours) return null;
+
+  const now = new Date();
+  const todayKey = DAY_KEYS[now.getDay()];
+  const today = hours[todayKey];
+
+  if (!today || today.closed) {
+    return { isOpen: false, label: "Closed today" };
+  }
+
+  const [openH, openM] = today.open.split(":").map(Number);
+  const [closeH, closeM] = today.close.split(":").map(Number);
+  const openMinutes = openH * 60 + openM;
+  const closeMinutes = closeH * 60 + closeM;
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const isOpen = nowMinutes >= openMinutes && nowMinutes < closeMinutes;
+
+  return {
+    isOpen,
+    label: isOpen
+      ? `Open now · closes ${formatTime(today.close)}`
+      : `Closed · opens ${formatTime(today.open)}`,
+  };
+}
+
+function formatTime(t) {
+  const [h, m] = t.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  return m === 0 ? `${hour12}${period}` : `${hour12}:${String(m).padStart(2, "0")}${period}`;
+}
+
+function formatMemberSince(dateString) {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
+function StarRating({ rating }) {
+  const rounded = Math.round(rating * 2) / 2; // nearest half star
+  return (
+    <span className="inline-flex items-center gap-0.5" aria-hidden="true">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <svg
+          key={i}
+          viewBox="0 0 20 20"
+          className="w-4 h-4"
+          fill={i <= rounded ? "#f59e0b" : "#e5e7eb"}
+        >
+          <path d="M10 1.5l2.6 5.27 5.82.85-4.21 4.1.99 5.79L10 14.9l-5.2 2.61.99-5.79-4.21-4.1 5.82-.85L10 1.5z" />
+        </svg>
+      ))}
+    </span>
+  );
+}
+
 function BusinessDetails() {
   const { id } = useParams();
   const { addToCart, itemCount } = useCart();
@@ -12,6 +92,9 @@ function BusinessDetails() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [copyFeedback, setCopyFeedback] = useState(false);
 
   const showLoader = useMinimumLoadingTime(loading);
 
@@ -24,6 +107,8 @@ function BusinessDetails() {
       // Fetch business details
       const businessRes = await getBusinessById(id);
       setBusiness(businessRes.data);
+      setIsFollowing(Boolean(businessRes.data.isFollowedByUser));
+      setFollowerCount(businessRes.data.followerCount || 0);
 
       // Fetch products for this business
       const productsRes = await getProductsByBusiness(id);
@@ -44,6 +129,38 @@ function BusinessDetails() {
       ? products
       : products.filter((p) => p.category === selectedCategory);
 
+  const handleShare = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: business?.name, url });
+        return;
+      }
+      await navigator.clipboard.writeText(url);
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 2000);
+    } catch (error) {
+      console.error("Error sharing:", error);
+    }
+  };
+
+  const handleFollowToggle = async () => {
+    // Optimistic update
+    const nextFollowing = !isFollowing;
+    setIsFollowing(nextFollowing);
+    setFollowerCount((c) => (nextFollowing ? c + 1 : Math.max(0, c - 1)));
+
+    try {
+      // Replace with your actual follow/unfollow endpoint, e.g.:
+      // nextFollowing ? await followBusiness(id) : await unfollowBusiness(id);
+    } catch (error) {
+      console.error("Error updating follow status:", error);
+      // Roll back on failure
+      setIsFollowing(!nextFollowing);
+      setFollowerCount((c) => (!nextFollowing ? c + 1 : Math.max(0, c - 1)));
+    }
+  };
+
   if (showLoader) {
     return <Loader text="Loading store..." />;
   }
@@ -55,6 +172,9 @@ function BusinessDetails() {
       </div>
     );
   }
+
+  const openStatus = getOpenStatus(business.hours);
+  const memberSince = formatMemberSince(business.createdAt);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -86,13 +206,62 @@ function BusinessDetails() {
           />
 
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 truncate">
-              {business.name}
-            </h1>
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+              <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 truncate">
+                {business.name}
+              </h1>
+              {business.isVerified && (
+                <span
+                  className="inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 bg-blue-500 rounded-full flex-shrink-0"
+                  title="Verified business"
+                >
+                  <svg
+                    className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth="3"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </span>
+              )}
+            </div>
+
+            {/* Rating + Member since */}
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1 mt-1.5">
+              {typeof business.rating === "number" && (
+                <span className="inline-flex items-center gap-1.5 text-sm text-gray-700">
+                  <StarRating rating={business.rating} />
+                  <span className="font-semibold">{business.rating.toFixed(1)}</span>
+                  {typeof business.reviewCount === "number" && (
+                    <span className="text-gray-400">({business.reviewCount})</span>
+                  )}
+                </span>
+              )}
+              {memberSince && (
+                <span className="text-sm text-gray-400">Member since {memberSince}</span>
+              )}
+            </div>
+
             {business.description && (
               <p className="text-gray-600 mt-2 text-base sm:text-lg leading-relaxed">
                 {business.description}
               </p>
+            )}
+
+            {/* Tags */}
+            {business.tags && business.tags.length > 0 && (
+              <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-3">
+                {business.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="text-xs font-medium px-3 py-1 rounded-full bg-green-50 text-green-700 border border-green-100"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
             )}
 
             <div className="flex flex-wrap justify-center sm:justify-start gap-x-6 gap-y-2 mt-4 text-sm text-gray-500">
@@ -156,69 +325,128 @@ function BusinessDetails() {
                   {business.contact}
                 </span>
               )}
+              {openStatus && (
+                <span className="flex items-center gap-2">
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      openStatus.isOpen ? "bg-green-500" : "bg-gray-400"
+                    }`}
+                  />
+                  <span className={openStatus.isOpen ? "text-green-700 font-medium" : ""}>
+                    {openStatus.label}
+                  </span>
+                </span>
+              )}
             </div>
 
-            {/* Social Links */}
-            {(business.socialLinks?.facebook ||
-              business.socialLinks?.instagram ||
-              business.socialLinks?.website) && (
-              <div className="flex justify-center sm:justify-start gap-4 mt-4">
-                {business.socialLinks?.facebook && (
-                  <a
-                    href={business.socialLinks.facebook}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <svg
-                      className="w-6 h-6"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                    </svg>
-                  </a>
-                )}
-                {business.socialLinks?.instagram && (
-                  <a
-                    href={business.socialLinks.instagram}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <svg
-                      className="w-6 h-6"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
-                    </svg>
-                  </a>
-                )}
-                {business.socialLinks?.website && (
-                  <a
-                    href={business.socialLinks.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
-                      />
-                    </svg>
-                  </a>
-                )}
+            {/* Delivery info */}
+            {business.delivery?.available && (
+              <div className="inline-flex items-center gap-3 mt-3 px-3 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm text-gray-600">
+                <svg
+                  className="w-5 h-5 text-gray-400 flex-shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1m0 0a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 11-4 0m4 0a2 2 0 10-4 0"
+                  />
+                </svg>
+                <span>
+                  Delivery available
+                  {business.delivery.estimatedTime && ` · ${business.delivery.estimatedTime}`}
+                  {typeof business.delivery.fee === "number" &&
+                    ` · ₦${business.delivery.fee.toLocaleString()} fee`}
+                </span>
               </div>
             )}
+
+            {/* Social Links + Share + Follow */}
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 mt-4">
+              {business.socialLinks?.facebook && (
+                <a
+                  href={business.socialLinks.facebook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                  </svg>
+                </a>
+              )}
+              {business.socialLinks?.instagram && (
+                <a
+                  href={business.socialLinks.instagram}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+                  </svg>
+                </a>
+              )}
+              {business.socialLinks?.website && (
+                <a
+                  href={business.socialLinks.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+                    />
+                  </svg>
+                </a>
+              )}
+
+              {/* Share button */}
+              <button
+                type="button"
+                onClick={handleShare}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 border border-gray-200 hover:bg-gray-50 rounded-full px-3 py-1.5 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M8.684 13.342a3 3 0 100-2.684m0 2.684a3 3 0 100 2.684m0-2.684l6.632-3.316m-6.632 6l6.632 3.316m0-9.632a3 3 0 100 2.684m0-2.684a3 3 0 100 2.684"
+                  />
+                </svg>
+                {copyFeedback ? "Link copied!" : "Share"}
+              </button>
+
+              {/* Follow button */}
+              <button
+                type="button"
+                onClick={handleFollowToggle}
+                className={`inline-flex items-center gap-1.5 text-sm font-medium rounded-full px-4 py-1.5 transition-colors ${
+                  isFollowing
+                    ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    : "bg-green-600 text-white hover:bg-green-700"
+                }`}
+              >
+                {isFollowing ? "Following" : "Follow store"}
+                {followerCount > 0 && (
+                  <span className={isFollowing ? "text-gray-400" : "text-green-100"}>
+                    · {followerCount}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </div>
