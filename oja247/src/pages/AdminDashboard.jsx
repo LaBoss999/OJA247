@@ -14,7 +14,19 @@ import {
   Ban,
   CheckCircle,
   ShoppingCart,
+  Menu,
+  X,
+  LogOut,
+  ExternalLink,
 } from "lucide-react";
+
+const NAV_ITEMS = [
+  { id: "overview", label: "Overview", icon: TrendingUp },
+  { id: "businesses", label: "Businesses", icon: Store },
+  { id: "products", label: "Products", icon: Package },
+  { id: "orders", label: "Orders", icon: ShoppingCart },
+  { id: "users", label: "Users", icon: Users },
+];
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
@@ -35,6 +47,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const showLoader = useMinimumLoadingTime(loading);
 
@@ -142,457 +155,445 @@ const AdminDashboard = () => {
     return <Loader text="Loading Admin Dashboard..." />;
   }
 
+  const activeLabel = NAV_ITEMS.find((n) => n.id === activeTab)?.label || "";
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold flex items-center gap-2">
-                🔐 Admin Dashboard
-              </h1>
-              <p className="text-green-100 mt-1">
-                Full platform control & monitoring
-              </p>
-            </div>
-            <div className="flex gap-4">
-              <button
-                onClick={() => navigate("/")}
-                className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-medium transition"
-              >
-                View Site
-              </button>
-              <button
-                onClick={logout}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-lg font-medium transition"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-[#05070a] text-white relative overflow-x-hidden">
+      {/* Ambient glow orbs — same device as the storefront footer, carried into the admin surface */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -top-32 left-1/4 w-96 h-96 bg-green-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 -right-32 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl" />
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex gap-8">
-            {[
-              { id: "overview", label: "Overview", icon: TrendingUp },
-              { id: "businesses", label: "Businesses", icon: Store },
-              { id: "products", label: "Products", icon: Package },
-              { id: "orders", label: "Orders", icon: ShoppingCart },
-              { id: "users", label: "Users", icon: Users },
-            ].map((tab) => (
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed top-0 left-0 h-full w-72 bg-white/5 backdrop-blur-2xl border-r border-white/10 z-50 transform transition-transform duration-300 lg:translate-x-0 flex flex-col ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex items-center justify-between px-6 py-6 border-b border-white/10">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.25em] text-green-400 font-semibold">
+              OJA247
+            </p>
+            <h1 className="text-xl font-black bg-gradient-to-r from-green-400 to-yellow-400 bg-clip-text text-transparent">
+              Control Room
+            </h1>
+          </div>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden p-1.5 rounded-lg hover:bg-white/10 text-gray-400"
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        <nav className="flex-1 px-4 py-6 space-y-1.5">
+          {NAV_ITEMS.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 py-4 px-2 border-b-2 font-medium transition ${
-                  activeTab === tab.id
-                    ? "border-green-600 text-green-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setSidebarOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+                  isActive
+                    ? "bg-gradient-to-r from-green-500/20 to-yellow-500/10 text-white border border-green-400/30 shadow-[0_0_20px_rgba(34,197,94,0.15)]"
+                    : "text-gray-400 hover:text-white hover:bg-white/5 border border-transparent"
                 }`}
               >
-                <tab.icon size={20} />
+                <tab.icon size={18} className={isActive ? "text-green-400" : ""} />
                 {tab.label}
               </button>
-            ))}
+            );
+          })}
+        </nav>
+
+        <div className="px-4 py-6 border-t border-white/10 space-y-2">
+          <button
+            onClick={() => navigate("/")}
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition"
+          >
+            <ExternalLink size={16} />
+            View Site
+          </button>
+          <button
+            onClick={logout}
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition"
+          >
+            <LogOut size={16} />
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <div className="lg:pl-72 relative z-10">
+        {/* Top bar */}
+        <div className="sticky top-0 z-30 bg-[#05070a]/80 backdrop-blur-xl border-b border-white/10">
+          <div className="flex items-center gap-4 px-4 sm:px-8 py-5">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden p-2 rounded-lg hover:bg-white/10 text-gray-300"
+            >
+              <Menu size={22} />
+            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
+                </span>
+                <span className="text-[11px] uppercase tracking-[0.2em] text-gray-500 font-semibold">
+                  Live
+                </span>
+              </div>
+              <h2 className="text-2xl font-bold text-white mt-0.5">{activeLabel}</h2>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {activeTab === "overview" && (
-          <div>
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-green-500">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-600 text-sm font-medium">
-                      Total Businesses
-                    </p>
-                    <p className="text-3xl font-bold text-gray-900 mt-1">
-                      {stats.totalBusinesses}
-                    </p>
-                  </div>
-                  <Store className="text-green-600" size={40} />
-                </div>
-              </div>
-
-              <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-yellow-500">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-600 text-sm font-medium">
-                      Total Products
-                    </p>
-                    <p className="text-3xl font-bold text-gray-900 mt-1">
-                      {stats.totalProducts}
-                    </p>
-                  </div>
-                  <Package className="text-yellow-500" size={40} />
-                </div>
-              </div>
-
-              <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-emerald-500">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-600 text-sm font-medium">
-                      Total Users
-                    </p>
-                    <p className="text-3xl font-bold text-gray-900 mt-1">
-                      {stats.totalUsers}
-                    </p>
-                  </div>
-                  <Users className="text-emerald-500" size={40} />
-                </div>
-              </div>
-
-              <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-yellow-500">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-600 text-sm font-medium">
-                      Total Orders
-                    </p>
-                    <p className="text-3xl font-bold text-gray-900 mt-1">
-                      {stats.totalOrders}
-                    </p>
-                  </div>
-                  <ShoppingCart className="text-yellow-500" size={40} />
-                </div>
-              </div>
-            </div>
-
-            <div className="mb-8 bg-white rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-bold mb-2">Revenue</h2>
-              <p className="text-3xl font-bold text-green-600">
-                ₦{Number(stats.totalRevenue || 0).toLocaleString()}
-              </p>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-md p-6">
-              <h2 className="text-xl font-bold mb-4">Businesses by Category</h2>
-              <div className="space-y-3">
-                {stats.businessesByCategory.map((cat) => (
-                  <div
-                    key={cat._id}
-                    className="flex items-center justify-between"
-                  >
-                    <span className="font-medium text-gray-700">
-                      {cat._id || "Uncategorized"}
-                    </span>
-                    <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full font-semibold">
-                      {cat.count}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "orders" && (
-          <div className="bg-white rounded-xl shadow-md overflow-hidden">
-            <div className="p-6 border-b flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <h2 className="text-2xl font-bold">Recent Orders ({filteredOrders.length})</h2>
-              <div className="flex flex-wrap gap-2">
+        <div className="px-4 sm:px-8 py-8 max-w-7xl">
+          {activeTab === "overview" && (
+            <div>
+              {/* Stats Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
                 {[
-                  { value: "all", label: "All" },
-                  { value: "paid", label: "Paid" },
-                  { value: "pending", label: "Pending" },
-                  { value: "failed", label: "Failed" },
-                ].map((filter) => (
-                  <button
-                    key={filter.value}
-                    onClick={() => setOrderStatusFilter(filter.value)}
-                    className={`px-3 py-2 rounded-full text-sm font-medium transition border ${
-                      orderStatusFilter === filter.value
-                        ? "bg-green-600 border-green-600 text-white shadow-sm"
-                        : "bg-white border-yellow-200 text-yellow-700 hover:bg-yellow-50"
-                    }`}
+                  { label: "Total Businesses", value: stats.totalBusinesses, icon: Store, accent: "from-green-500 to-emerald-500" },
+                  { label: "Total Products", value: stats.totalProducts, icon: Package, accent: "from-yellow-500 to-amber-500" },
+                  { label: "Total Users", value: stats.totalUsers, icon: Users, accent: "from-emerald-500 to-green-400" },
+                  { label: "Total Orders", value: stats.totalOrders, icon: ShoppingCart, accent: "from-yellow-400 to-yellow-600" },
+                ].map((card) => (
+                  <div
+                    key={card.label}
+                    className="relative bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5 sm:p-6 overflow-hidden group hover:border-white/20 transition-colors"
                   >
-                    {filter.label}
-                  </button>
+                    <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${card.accent}`} />
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-gray-400 text-xs sm:text-sm font-medium">{card.label}</p>
+                        <p className="text-2xl sm:text-3xl font-black text-white mt-2">{card.value}</p>
+                      </div>
+                      <div className={`p-2.5 rounded-xl bg-gradient-to-br ${card.accent} bg-opacity-10 shrink-0`}>
+                        <card.icon className="text-white/90" size={20} />
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="text-left p-4 font-semibold text-gray-700">Reference</th>
-                    <th className="text-left p-4 font-semibold text-gray-700">Customer</th>
-                    <th className="text-left p-4 font-semibold text-gray-700">Items</th>
-                    <th className="text-left p-4 font-semibold text-gray-700">Total</th>
-                    <th className="text-left p-4 font-semibold text-gray-700">Payment</th>
-                    <th className="text-left p-4 font-semibold text-gray-700">Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredOrders.map((order) => (
-                    <tr key={order._id} className="border-b hover:bg-gray-50">
-                      <td className="p-4 font-medium text-sm">{order.reference}</td>
-                      <td className="p-4">
-                        <div>
-                          <p className="font-medium">{order.customer?.fullName}</p>
-                          <p className="text-sm text-gray-500">{order.customer?.email}</p>
-                        </div>
-                      </td>
-                      <td className="p-4 text-sm text-gray-600">{order.items?.length || 0}</td>
-                      <td className="p-4 font-semibold text-gray-900">₦{Number(order.total || 0).toLocaleString()}</td>
-                      <td className="p-4">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            order.paymentStatus === "paid"
-                              ? "bg-green-100 text-green-700 border border-green-200"
-                              : order.paymentStatus === "failed"
-                              ? "bg-red-100 text-red-700 border border-red-200"
-                              : "bg-yellow-100 text-yellow-700 border border-yellow-200"
-                          }`}
-                        >
-                          {order.paymentStatus}
-                        </span>
-                      </td>
-                      <td className="p-4 text-sm text-gray-600">
-                        {new Date(order.createdAt).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
 
-        {activeTab === "businesses" && (
-          <div className="bg-white rounded-xl shadow-md overflow-hidden">
-            <div className="p-6 border-b">
-              <h2 className="text-2xl font-bold">
-                All Businesses ({businesses.length})
-              </h2>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="text-left p-4 font-semibold text-gray-700">
-                      Business
-                    </th>
-                    <th className="text-left p-4 font-semibold text-gray-700">
-                      Category
-                    </th>
-                    <th className="text-left p-4 font-semibold text-gray-700">
-                      Location
-                    </th>
-                    <th className="text-left p-4 font-semibold text-gray-700">
-                      Contact
-                    </th>
-                    <th className="text-left p-4 font-semibold text-gray-700">
-                      Featured
-                    </th>
-                    <th className="text-left p-4 font-semibold text-gray-700">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {businesses.map((biz) => (
-                    <tr key={biz._id} className="border-b hover:bg-gray-50">
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          {biz.logo && (
-                            <img
-                              src={biz.logo}
-                              alt=""
-                              className="w-10 h-10 rounded-full object-cover"
-                            />
-                          )}
-                          <span className="font-medium">{biz.name}</span>
-                        </div>
-                      </td>
-                      <td className="p-4">{biz.category}</td>
-                      <td className="p-4">{biz.location}</td>
-                      <td className="p-4">{biz.contact}</td>
-                      <td className="p-4">
-                        <button
-                          onClick={() => toggleFeatured(biz._id, biz.featured)}
-                          className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border ${
-                            biz.featured
-                              ? "bg-yellow-100 text-yellow-800 border-yellow-200"
-                              : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
-                          }`}
-                        >
-                          <Star
-                            size={14}
-                            fill={biz.featured ? "currentColor" : "none"}
-                          />
-                          {biz.featured ? "Featured" : "Not Featured"}
-                        </button>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => navigate(`/dashboard/${biz._id}`)}
-                            className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
-                          >
-                            View
-                          </button>
-                          <button
-                            onClick={() => deleteBusiness(biz._id, biz.name)}
-                            className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm flex items-center gap-1"
-                          >
-                            <Trash2 size={14} />
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+              {/* Revenue */}
+              <div className="mb-8 relative bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 sm:p-8 overflow-hidden">
+                <div className="absolute -right-10 -top-10 w-40 h-40 bg-green-500/10 rounded-full blur-3xl" />
+                <h2 className="text-sm uppercase tracking-widest text-gray-400 font-semibold mb-2">
+                  Total Revenue
+                </h2>
+                <p className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-green-400 to-yellow-400 bg-clip-text text-transparent">
+                  ₦{Number(stats.totalRevenue || 0).toLocaleString()}
+                </p>
+              </div>
 
-        {activeTab === "products" && (
-          <div className="bg-white rounded-xl shadow-md overflow-hidden">
-            <div className="p-6 border-b">
-              <h2 className="text-2xl font-bold">
-                All Products ({products.length})
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
-              {products.map((product) => (
-                <div
-                  key={product._id}
-                  className="border rounded-lg overflow-hidden hover:shadow-lg transition"
-                >
-                  <div className="h-48 bg-gray-200">
-                    {product.images?.[0] ? (
-                      <img
-                        src={product.images[0]}
-                        alt={product.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Package className="text-gray-400" size={48} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-bold text-lg mb-1 truncate">
-                      {product.name}
-                    </h3>
-                    <p className="text-green-600 font-bold text-xl mb-2">
-                      ₦{product.price?.toLocaleString()}
-                    </p>
-                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                      {product.description}
-                    </p>
-                    <button
-                      onClick={() => deleteProduct(product._id, product.name)}
-                      className="w-full px-4 py-2 bg-yellow-400 text-yellow-900 rounded hover:bg-yellow-500 flex items-center justify-center gap-2 font-medium"
+              {/* Categories */}
+              <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 sm:p-8">
+                <h2 className="text-lg font-bold text-white mb-5">Businesses by Category</h2>
+                <div className="space-y-3">
+                  {stats.businessesByCategory.map((cat) => (
+                    <div
+                      key={cat._id}
+                      className="flex items-center justify-between bg-white/5 rounded-xl px-4 py-3 border border-white/5"
                     >
-                      <Trash2 size={16} />
-                      Delete Product
-                    </button>
-                  </div>
+                      <span className="font-medium text-gray-300">
+                        {cat._id || "Uncategorized"}
+                      </span>
+                      <span className="px-3 py-1 bg-green-500/15 text-green-400 border border-green-500/30 rounded-full font-semibold text-sm">
+                        {cat.count}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {activeTab === "users" && (
-          <div className="bg-white rounded-xl shadow-md overflow-hidden">
-            <div className="p-6 border-b">
-              <h2 className="text-2xl font-bold">All Users ({users.length})</h2>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="text-left p-4 font-semibold text-gray-700">
-                      Email
-                    </th>
-                    <th className="text-left p-4 font-semibold text-gray-700">
-                      Business
-                    </th>
-                    <th className="text-left p-4 font-semibold text-gray-700">
-                      Role
-                    </th>
-                    <th className="text-left p-4 font-semibold text-gray-700">
-                      Status
-                    </th>
-                    <th className="text-left p-4 font-semibold text-gray-700">
-                      Joined
-                    </th>
-                    <th className="text-left p-4 font-semibold text-gray-700">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((u) => (
-                    <tr key={u._id} className="border-b hover:bg-gray-50">
-                      <td className="p-4 font-medium">{u.email}</td>
-                      <td className="p-4">
-                        {u.businessId?.name || "No business"}
-                      </td>
-                      <td className="p-4">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            u.role === "admin"
-                              ? "bg-purple-100 text-purple-700"
-                              : "bg-blue-100 text-blue-700"
-                          }`}
-                        >
-                          {u.role}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <span
-                          className={`flex items-center gap-1 ${
-                            u.banned ? "text-red-600" : "text-green-600"
-                          }`}
-                        >
-                          {u.banned ? (
-                            <Ban size={16} />
-                          ) : (
-                            <CheckCircle size={16} />
-                          )}
-                          {u.banned ? "Banned" : "Active"}
-                        </span>
-                      </td>
-                      <td className="p-4 text-sm text-gray-600">
-                        {new Date(u.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="p-4">
-                        {u.role !== "admin" && (
-                          <button
-                            onClick={() =>
-                              toggleUserBan(u._id, u.banned, u.email)
-                            }
-                            className={`px-3 py-1 rounded text-sm font-medium ${
-                              u.banned
-                                ? "bg-green-500 text-white hover:bg-green-600"
-                                : "bg-red-500 text-white hover:bg-red-600"
+          {activeTab === "orders" && (
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+              <div className="p-6 border-b border-white/10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <h2 className="text-xl font-bold text-white">
+                  Recent Orders <span className="text-gray-500 font-normal">({filteredOrders.length})</span>
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: "all", label: "All" },
+                    { value: "paid", label: "Paid" },
+                    { value: "pending", label: "Pending" },
+                    { value: "failed", label: "Failed" },
+                  ].map((filter) => (
+                    <button
+                      key={filter.value}
+                      onClick={() => setOrderStatusFilter(filter.value)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition border ${
+                        orderStatusFilter === filter.value
+                          ? "bg-green-500 border-green-500 text-white shadow-[0_0_15px_rgba(34,197,94,0.4)]"
+                          : "bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10"
+                      }`}
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px]">
+                  <thead className="bg-white/5">
+                    <tr>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Reference</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Customer</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Items</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Total</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Payment</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredOrders.map((order) => (
+                      <tr key={order._id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                        <td className="p-4 font-medium text-sm text-gray-300">{order.reference}</td>
+                        <td className="p-4">
+                          <div>
+                            <p className="font-medium text-white">{order.customer?.fullName}</p>
+                            <p className="text-sm text-gray-500">{order.customer?.email}</p>
+                          </div>
+                        </td>
+                        <td className="p-4 text-sm text-gray-400">{order.items?.length || 0}</td>
+                        <td className="p-4 font-semibold text-white">₦{Number(order.total || 0).toLocaleString()}</td>
+                        <td className="p-4">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                              order.paymentStatus === "paid"
+                                ? "bg-green-500/15 text-green-400 border-green-500/30"
+                                : order.paymentStatus === "failed"
+                                ? "bg-red-500/15 text-red-400 border-red-500/30"
+                                : "bg-yellow-500/15 text-yellow-400 border-yellow-500/30"
                             }`}
                           >
-                            {u.banned ? "Unban" : "Ban User"}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                            {order.paymentStatus}
+                          </span>
+                        </td>
+                        <td className="p-4 text-sm text-gray-500">
+                          {new Date(order.createdAt).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {activeTab === "businesses" && (
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+              <div className="p-6 border-b border-white/10">
+                <h2 className="text-xl font-bold text-white">
+                  All Businesses <span className="text-gray-500 font-normal">({businesses.length})</span>
+                </h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px]">
+                  <thead className="bg-white/5">
+                    <tr>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Business</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Category</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Location</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Contact</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Featured</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {businesses.map((biz) => (
+                      <tr key={biz._id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
+                            {biz.logo && (
+                              <img
+                                src={biz.logo}
+                                alt=""
+                                className="w-9 h-9 rounded-full object-cover border border-white/10"
+                              />
+                            )}
+                            <span className="font-medium text-white">{biz.name}</span>
+                          </div>
+                        </td>
+                        <td className="p-4 text-gray-400">{biz.category}</td>
+                        <td className="p-4 text-gray-400">{biz.location}</td>
+                        <td className="p-4 text-gray-400">{biz.contact}</td>
+                        <td className="p-4">
+                          <button
+                            onClick={() => toggleFeatured(biz._id, biz.featured)}
+                            className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border transition ${
+                              biz.featured
+                                ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/30"
+                                : "bg-white/5 text-gray-400 border-white/10 hover:bg-white/10"
+                            }`}
+                          >
+                            <Star size={14} fill={biz.featured ? "currentColor" : "none"} />
+                            {biz.featured ? "Featured" : "Not Featured"}
+                          </button>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => navigate(`/dashboard/${biz._id}`)}
+                              className="px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm font-medium transition"
+                            >
+                              View
+                            </button>
+                            <button
+                              onClick={() => deleteBusiness(biz._id, biz.name)}
+                              className="px-3 py-1.5 bg-red-500/15 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/25 text-sm font-medium flex items-center gap-1 transition"
+                            >
+                              <Trash2 size={14} />
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "products" && (
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+              <div className="p-6 border-b border-white/10">
+                <h2 className="text-xl font-bold text-white">
+                  All Products <span className="text-gray-500 font-normal">({products.length})</span>
+                </h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 p-6">
+                {products.map((product) => (
+                  <div
+                    key={product._id}
+                    className="bg-white/5 border border-white/10 rounded-xl overflow-hidden hover:border-white/20 hover:-translate-y-0.5 transition-all"
+                  >
+                    <div className="h-44 bg-white/5">
+                      {product.images?.[0] ? (
+                        <img
+                          src={product.images[0]}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="text-gray-600" size={40} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-bold text-white mb-1 truncate">{product.name}</h3>
+                      <p className="text-green-400 font-bold text-lg mb-2">
+                        ₦{product.price?.toLocaleString()}
+                      </p>
+                      <p className="text-sm text-gray-500 mb-4 line-clamp-2">
+                        {product.description}
+                      </p>
+                      <button
+                        onClick={() => deleteProduct(product._id, product.name)}
+                        className="w-full px-4 py-2 bg-yellow-500/15 text-yellow-400 border border-yellow-500/30 rounded-lg hover:bg-yellow-500/25 flex items-center justify-center gap-2 font-medium text-sm transition"
+                      >
+                        <Trash2 size={15} />
+                        Delete Product
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === "users" && (
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+              <div className="p-6 border-b border-white/10">
+                <h2 className="text-xl font-bold text-white">
+                  All Users <span className="text-gray-500 font-normal">({users.length})</span>
+                </h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[720px]">
+                  <thead className="bg-white/5">
+                    <tr>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Email</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Business</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Role</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Status</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Joined</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u._id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                        <td className="p-4 font-medium text-white">{u.email}</td>
+                        <td className="p-4 text-gray-400">{u.businessId?.name || "No business"}</td>
+                        <td className="p-4">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                              u.role === "admin"
+                                ? "bg-purple-500/15 text-purple-300 border-purple-500/30"
+                                : "bg-blue-500/15 text-blue-300 border-blue-500/30"
+                            }`}
+                          >
+                            {u.role}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <span
+                            className={`flex items-center gap-1.5 text-sm font-medium ${
+                              u.banned ? "text-red-400" : "text-green-400"
+                            }`}
+                          >
+                            {u.banned ? <Ban size={15} /> : <CheckCircle size={15} />}
+                            {u.banned ? "Banned" : "Active"}
+                          </span>
+                        </td>
+                        <td className="p-4 text-sm text-gray-500">
+                          {new Date(u.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="p-4">
+                          {u.role !== "admin" && (
+                            <button
+                              onClick={() => toggleUserBan(u._id, u.banned, u.email)}
+                              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                                u.banned
+                                  ? "bg-green-500/15 text-green-400 border border-green-500/30 hover:bg-green-500/25"
+                                  : "bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25"
+                              }`}
+                            >
+                              {u.banned ? "Unban" : "Ban User"}
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
