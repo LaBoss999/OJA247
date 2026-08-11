@@ -5,12 +5,11 @@ import { Menu, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import Logo from "../assets/OJA247 VX1.png";
 
-const navItems = ["Home", "Vendors", "Products", "About"];
+// Removed "Home" from the array
+const navItems = ["Vendors", "Products", "About"];
 
 const routeFor = (item) => {
   switch (item) {
-    case "Home":
-      return "/";
     case "Vendors":
       return "/explore";
     case "Products":
@@ -36,10 +35,12 @@ const Navbar = () => {
     >
       <div className="backdrop-blur-xl bg-white/70 border border-gray-200/50 rounded-3xl shadow-2xl px-6 py-4">
         <div className="flex items-center justify-between">
-          {/* Logo */}
+          {/* Logo linked to Home */}
           <motion.div
             whileHover={{ scale: 1.05, rotate: 5 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => navigate("/")}
+            className="cursor-pointer"
           >
             <img src={Logo} alt="OJA247" className="w-[78px] object-contain" />
           </motion.div>
