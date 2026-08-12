@@ -48,9 +48,6 @@ const BusinessForm = () => {
     }
   };
 
-  // Converts a selected image file to a base64 string and stores it on
-  // formData (plus a local preview). Swap the FileReader logic for an
-  // actual upload call if/when a file-storage endpoint is available.
   const handleImageUpload = (e) => {
     const { name, files } = e.target;
     const file = files && files[0];
@@ -62,7 +59,9 @@ const BusinessForm = () => {
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setError("Please upload an image smaller than 5MB so registration can complete successfully.");
+      setError(
+        "Please upload an image smaller than 5MB so registration can complete successfully.",
+      );
       return;
     }
 
@@ -105,7 +104,6 @@ const BusinessForm = () => {
     setError("");
     setLoading(true);
 
-    // Validation
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match!");
       setLoading(false);
@@ -118,7 +116,6 @@ const BusinessForm = () => {
       return;
     }
 
-    // Prepare business data (exclude auth fields)
     const businessData = {
       name: formData.name,
       description: formData.description,
@@ -131,8 +128,11 @@ const BusinessForm = () => {
       highlights: formData.highlights,
     };
 
-    // Register with auth
-    const result = await register(formData.email, formData.password, businessData);
+    const result = await register(
+      formData.email,
+      formData.password,
+      businessData,
+    );
 
     if (result.success) {
       alert("Business registered successfully!");
@@ -145,24 +145,28 @@ const BusinessForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-3xl mx-auto px-6">
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-3xl font-bold mb-2 bg-gradient-to-r from-green-600 to-yellow-600 bg-clip-text text-transparent">
+    <div className="min-h-screen bg-gray-50 py-6 sm:py-12">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6">
+        <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-8">
+          <h2 className="text-2xl sm:text-3xl font-bold mb-2 bg-gradient-to-r from-green-600 to-yellow-600 bg-clip-text text-transparent">
             Register Your Business
           </h2>
-          <p className="text-gray-600 mb-6">Join OJA247 and reach thousands of customers</p>
+          <p className="text-sm sm:text-base text-gray-600 mb-6">
+            Join OJA247 and reach thousands of customers
+          </p>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600">
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Authentication Section */}
+            {/* Account Information Section */}
             <div className="border-b pb-6">
-              <h3 className="text-xl font-bold mb-4 text-gray-900">Account Information</h3>
+              <h3 className="text-lg sm:text-xl font-bold mb-4 text-gray-900">
+                Account Information
+              </h3>
 
               <div className="space-y-4">
                 <div>
@@ -175,10 +179,12 @@ const BusinessForm = () => {
                     placeholder="your@email.com"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
                     required
                   />
-                  <p className="text-xs text-gray-500 mt-1">You'll use this to login to your dashboard</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    You'll use this to login to your dashboard
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -192,7 +198,7 @@ const BusinessForm = () => {
                       placeholder="••••••••"
                       value={formData.password}
                       onChange={handleChange}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
                       required
                       minLength={6}
                     />
@@ -208,7 +214,7 @@ const BusinessForm = () => {
                       placeholder="••••••••"
                       value={formData.confirmPassword}
                       onChange={handleChange}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
                       required
                     />
                   </div>
@@ -218,7 +224,9 @@ const BusinessForm = () => {
 
             {/* Business Information Section */}
             <div className="border-b pb-6">
-              <h3 className="text-xl font-bold mb-4 text-gray-900">Business Information</h3>
+              <h3 className="text-lg sm:text-xl font-bold mb-4 text-gray-900">
+                Business Information
+              </h3>
 
               <div className="space-y-4">
                 <div>
@@ -231,7 +239,7 @@ const BusinessForm = () => {
                     placeholder="e.g., Mama Chinedu Kitchen"
                     value={formData.name}
                     onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
                     required
                   />
                 </div>
@@ -246,7 +254,7 @@ const BusinessForm = () => {
                     value={formData.description}
                     onChange={handleChange}
                     rows="3"
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
                     required
                   />
                 </div>
@@ -260,7 +268,7 @@ const BusinessForm = () => {
                       name="category"
                       value={formData.category}
                       onChange={handleChange}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
                       required
                     >
                       <option value="">Select a category</option>
@@ -284,7 +292,7 @@ const BusinessForm = () => {
                       placeholder="e.g., Lagos"
                       value={formData.location}
                       onChange={handleChange}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
                       required
                     />
                   </div>
@@ -300,17 +308,21 @@ const BusinessForm = () => {
                     placeholder="e.g., +234 800 000 0000"
                     value={formData.contact}
                     onChange={handleChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
                     required
                   />
-                  <p className="text-xs text-gray-500 mt-1">WhatsApp number recommended</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    WhatsApp number recommended
+                  </p>
                 </div>
               </div>
             </div>
 
             {/* Branding Section */}
             <div className="border-b pb-6">
-              <h3 className="text-xl font-bold mb-4 text-gray-900">Branding (Optional)</h3>
+              <h3 className="text-lg sm:text-xl font-bold mb-4 text-gray-900">
+                Branding (Optional)
+              </h3>
 
               <div className="space-y-4">
                 <div>
@@ -322,7 +334,7 @@ const BusinessForm = () => {
                       <img
                         src={logoPreview}
                         alt="Logo preview"
-                        className="w-20 h-20 object-cover rounded-lg border border-gray-300"
+                        className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border border-gray-300"
                       />
                       <button
                         type="button"
@@ -338,7 +350,7 @@ const BusinessForm = () => {
                       name="logo"
                       accept="image/*"
                       onChange={handleImageUpload}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-green-50 file:text-green-700 file:font-medium hover:file:bg-green-100"
+                      className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-xs sm:text-sm file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-3 sm:file:px-4 file:rounded-lg file:border-0 file:bg-green-50 file:text-green-700 file:font-medium hover:file:bg-green-100"
                     />
                   )}
                 </div>
@@ -352,7 +364,7 @@ const BusinessForm = () => {
                       <img
                         src={bannerPreview}
                         alt="Banner preview"
-                        className="w-full h-32 object-cover rounded-lg border border-gray-300"
+                        className="w-full h-28 sm:h-32 object-cover rounded-lg border border-gray-300"
                       />
                       <button
                         type="button"
@@ -368,7 +380,7 @@ const BusinessForm = () => {
                       name="banner"
                       accept="image/*"
                       onChange={handleImageUpload}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-green-50 file:text-green-700 file:font-medium hover:file:bg-green-100"
+                      className="w-full p-2 sm:p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-xs sm:text-sm file:mr-2 sm:file:mr-4 file:py-1.5 sm:file:py-2 file:px-3 sm:file:px-4 file:rounded-lg file:border-0 file:bg-green-50 file:text-green-700 file:font-medium hover:file:bg-green-100"
                     />
                   )}
                 </div>
@@ -377,7 +389,9 @@ const BusinessForm = () => {
 
             {/* Social Links Section */}
             <div className="border-b pb-6">
-              <h3 className="text-xl font-bold mb-4 text-gray-900">Social Media (Optional)</h3>
+              <h3 className="text-lg sm:text-xl font-bold mb-4 text-gray-900">
+                Social Media (Optional)
+              </h3>
 
               <div className="space-y-4">
                 <input
@@ -386,7 +400,7 @@ const BusinessForm = () => {
                   placeholder="Facebook URL"
                   value={formData.socialLinks.facebook}
                   onChange={handleChange}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
                 />
                 <input
                   type="url"
@@ -394,7 +408,7 @@ const BusinessForm = () => {
                   placeholder="Instagram URL"
                   value={formData.socialLinks.instagram}
                   onChange={handleChange}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
                 />
                 <input
                   type="url"
@@ -402,36 +416,40 @@ const BusinessForm = () => {
                   placeholder="Twitter URL"
                   value={formData.socialLinks.twitter}
                   onChange={handleChange}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
                 />
                 <input
                   type="url"
-                  name="socialLinks.threads"
-                  placeholder="Threads URL"
+                  name="socialLinks.website"
+                  placeholder="Website URL"
                   value={formData.socialLinks.website}
                   onChange={handleChange}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
                 />
               </div>
             </div>
 
             {/* Highlights Section */}
             <div className="pb-6">
-              <h3 className="text-xl font-bold mb-4 text-gray-900">Business Highlights (Optional)</h3>
+              <h3 className="text-lg sm:text-xl font-bold mb-4 text-gray-900">
+                Business Highlights (Optional)
+              </h3>
 
-              <div className="flex gap-2 mb-4">
+              <div className="flex flex-col sm:flex-row gap-2 mb-4">
                 <input
                   type="text"
                   value={highlightInput}
                   onChange={(e) => setHighlightInput(e.target.value)}
                   placeholder="e.g., Fast Delivery, Affordable Prices"
-                  className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addHighlight())}
+                  className="flex-1 p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base"
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && (e.preventDefault(), addHighlight())
+                  }
                 />
                 <button
                   type="button"
                   onClick={addHighlight}
-                  className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium"
+                  className="w-full sm:w-auto px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium transition-colors"
                 >
                   Add
                 </button>
@@ -442,7 +460,7 @@ const BusinessForm = () => {
                   {formData.highlights.map((highlight, index) => (
                     <span
                       key={index}
-                      className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-full"
+                      className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 bg-green-100 text-green-700 rounded-full text-xs sm:text-sm"
                     >
                       {highlight}
                       <button
@@ -458,35 +476,35 @@ const BusinessForm = () => {
               )}
             </div>
 
-            {/* Submit Button */}
-            <div className="flex gap-4">
+            {/* Submit Button Section */}
+            <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4">
               <button
                 type="button"
                 onClick={() => navigate("/")}
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                className="w-full sm:w-auto px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className={`flex-1 py-3 rounded-lg font-bold text-white ${
+                className={`w-full flex-1 py-3 rounded-lg font-bold text-white transition-colors ${
                   loading
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700'
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
                 } shadow-lg`}
               >
-                {loading ? 'Registering...' : 'Register Business'}
+                {loading ? "Registering..." : "Register Business"}
               </button>
             </div>
 
             {/* Login Link */}
             <div className="text-center pt-4 border-t">
-              <p className="text-gray-600">
-                Already have an account?{' '}
+              <p className="text-xs sm:text-sm text-gray-600">
+                Already have an account?{" "}
                 <button
                   type="button"
-                  onClick={() => navigate('/login')}
+                  onClick={() => navigate("/login")}
                   className="text-green-600 font-semibold hover:text-green-700"
                 >
                   Login here
@@ -501,3 +519,4 @@ const BusinessForm = () => {
 };
 
 export default BusinessForm;
+
