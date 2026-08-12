@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import PageWrapper from "./components/PageWrapper.jsx";
+import ScrollToTop from "./components/ScrollToTop.jsx";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import LandingPage from "./pages/LandingPage";
@@ -20,6 +21,7 @@ function App() {
   return (
     <Router>
       <Navbar />
+      <ScrollToTop />
       <PageWrapper>
         <Routes>
           <Route path="/" element={<LandingPage />} />
@@ -58,3 +60,4 @@ function App() {
 }
 
 export default App;
+
