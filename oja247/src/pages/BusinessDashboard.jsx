@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import axiosInstance, { getBusinessById, uploadImage } from "../services/api";
+import axiosInstance, { getBusinessById } from "../services/api";
 import AddProductForm from "../components/AddProductForm.jsx";
 import ProductList from "../components/ProductList.jsx";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { LogOut, ShoppingBag, Clock, CheckCircle2, XCircle, Copy, Check, Share2 } from "lucide-react";
 import Loader from "../components/Loader";
 import useMinimumLoadingTime from "../hooks/useMinimumLoadingTime";
 
@@ -21,7 +21,6 @@ const BusinessDashboard = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
-  const [uploadingField, setUploadingField] = useState(null); // 'logo' | 'banner' | null
   const [editForm, setEditForm] = useState({
     name: "",
     description: "",
@@ -32,7 +31,15 @@ const BusinessDashboard = () => {
     banner: "",
     deliveryFeeInState: "",
     deliveryFeeOutState: "",
+    slug: "",
   });
+
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersError, setOrdersError] = useState("");
+  const [orderStatusFilter, setOrderStatusFilter] = useState("all");
+  const [ordersFetched, setOrdersFetched] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   const showLoader = useMinimumLoadingTime(loading);
 
@@ -52,9 +59,16 @@ const BusinessDashboard = () => {
         banner: business.banner || "",
         deliveryFeeInState: business.deliveryFeeInState ?? "",
         deliveryFeeOutState: business.deliveryFeeOutState ?? "",
+        slug: business.slug || "",
       });
     }
   }, [business]);
+
+  useEffect(() => {
+    if (activeTab === "orders" && !ordersFetched) {
+      fetchOrders();
+    }
+  }, [activeTab, ordersFetched]);
 
   const fetchBusiness = async () => {
     try {
@@ -67,6 +81,26 @@ const BusinessDashboard = () => {
     }
   };
 
+  const fetchOrders = async () => {
+    try {
+      setOrdersLoading(true);
+      setOrdersError("");
+      // NOTE: this endpoint needs to exist on the backend — a route that
+      // returns only orders containing items from this businessId, e.g.
+      // GET /api/orders/business/:businessId
+      const response = await axiosInstance.get(`/api/orders/business/${businessId}`);
+      setOrders(response.data);
+      setOrdersFetched(true);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      setOrdersError(
+        error.response?.data?.message || "Unable to load orders right now."
+      );
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
   const handleProductAdded = () => {
     setActiveTab("products");
   };
@@ -76,9 +110,7 @@ const BusinessDashboard = () => {
     setEditForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Uploads directly to Cloudinary via /api/upload/single and stores the
-  // returned URL — never sends raw image data through the business update.
-  const handleEditImageUpload = async (event) => {
+  const handleEditImageUpload = (event) => {
     const { name, files } = event.target;
     const file = files && files[0];
     if (!file) return;
@@ -93,22 +125,13 @@ const BusinessDashboard = () => {
       return;
     }
 
-    setFormError("");
-    setUploadingField(name);
-
-    try {
-      const formData = new FormData();
-      formData.append("image", file);
-
-      const response = await uploadImage(formData);
-
-      setEditForm((prev) => ({ ...prev, [name]: response.data.url }));
-    } catch (error) {
-      console.error("Image upload error:", error);
-      setFormError("Failed to upload image. Please try again.");
-    } finally {
-      setUploadingField(null);
-    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      setEditForm((prev) => ({ ...prev, [name]: result }));
+      setFormError("");
+    };
+    reader.readAsDataURL(file);
   };
 
   const saveBusinessChanges = async () => {
@@ -148,6 +171,33 @@ const BusinessDashboard = () => {
   const handleLogout = () => {
     logout();
     navigate("/");
+  };
+
+  const storeLink = `${window.location.origin}/business/${business.slug || business._id}`;
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(storeLink);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch (error) {
+      console.error("Copy failed:", error);
+    }
+  };
+
+  const filteredOrders =
+    orderStatusFilter === "all"
+      ? orders
+      : orders.filter((o) => o.paymentStatus === orderStatusFilter);
+
+  const orderStats = {
+    total: orders.length,
+    pending: orders.filter((o) => o.paymentStatus === "pending").length,
+    paid: orders.filter((o) => o.paymentStatus === "paid").length,
+    failed: orders.filter((o) => o.paymentStatus === "failed").length,
+    revenue: orders
+      .filter((o) => o.paymentStatus === "paid")
+      .reduce((sum, o) => sum + Number(o.total || 0), 0),
   };
 
   return (
@@ -215,6 +265,17 @@ const BusinessDashboard = () => {
             </button>
 
             <button
+              onClick={() => setActiveTab("orders")}
+              className={`py-4 px-2 border-b-2 font-semibold transition-colors whitespace-nowrap ${
+                activeTab === "orders"
+                  ? "border-green-600 text-green-700"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Orders
+            </button>
+
+            <button
               onClick={() => setActiveTab("settings")}
               className={`py-4 px-2 border-b-2 font-semibold transition-colors whitespace-nowrap ${
                 activeTab === "settings"
@@ -238,6 +299,134 @@ const BusinessDashboard = () => {
           />
         )}
 
+        {activeTab === "orders" && (
+          <div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="bg-white rounded-2xl border border-green-100 shadow-sm p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-gray-500">Total Orders</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{orderStats.total}</p>
+                  </div>
+                  <ShoppingBag className="text-green-600" size={26} />
+                </div>
+              </div>
+              <div className="bg-white rounded-2xl border border-yellow-100 shadow-sm p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-gray-500">Pending</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{orderStats.pending}</p>
+                  </div>
+                  <Clock className="text-yellow-500" size={26} />
+                </div>
+              </div>
+              <div className="bg-white rounded-2xl border border-green-100 shadow-sm p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-gray-500">Paid</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">{orderStats.paid}</p>
+                  </div>
+                  <CheckCircle2 className="text-green-600" size={26} />
+                </div>
+              </div>
+              <div className="bg-white rounded-2xl border border-green-100 shadow-sm p-5">
+                <p className="text-xs font-medium text-gray-500">Revenue (Paid)</p>
+                <p className="text-2xl font-bold text-green-700 mt-1">
+                  ₦{orderStats.revenue.toLocaleString()}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-green-100 overflow-hidden">
+              <div className="p-5 sm:p-6 border-b border-gray-100 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <h2 className="text-lg font-bold text-gray-900">
+                  Orders <span className="text-gray-400 font-normal">({filteredOrders.length})</span>
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: "all", label: "All" },
+                    { value: "paid", label: "Paid" },
+                    { value: "pending", label: "Pending" },
+                    { value: "failed", label: "Failed" },
+                  ].map((filter) => (
+                    <button
+                      key={filter.value}
+                      onClick={() => setOrderStatusFilter(filter.value)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition border ${
+                        orderStatusFilter === filter.value
+                          ? "bg-green-600 border-green-600 text-white"
+                          : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {ordersLoading ? (
+                <div className="p-10 text-center text-gray-500">Loading orders...</div>
+              ) : ordersError ? (
+                <div className="p-6 m-5 rounded-xl border border-red-200 bg-red-50 text-sm text-red-700">
+                  {ordersError}
+                </div>
+              ) : filteredOrders.length === 0 ? (
+                <div className="p-10 text-center">
+                  <ShoppingBag className="mx-auto text-gray-300 mb-3" size={40} />
+                  <p className="text-gray-500">No orders yet in this category.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="text-left p-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Reference</th>
+                        <th className="text-left p-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Customer</th>
+                        <th className="text-left p-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Items</th>
+                        <th className="text-left p-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</th>
+                        <th className="text-left p-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                        <th className="text-left p-4 text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredOrders.map((order) => (
+                        <tr key={order._id} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="p-4 text-sm font-medium text-gray-700">{order.reference}</td>
+                          <td className="p-4">
+                            <p className="font-medium text-gray-900">{order.customer?.fullName}</p>
+                            <p className="text-sm text-gray-500">{order.customer?.phone}</p>
+                          </td>
+                          <td className="p-4 text-sm text-gray-600">{order.items?.length || 0}</td>
+                          <td className="p-4 font-semibold text-gray-900">₦{Number(order.total || 0).toLocaleString()}</td>
+                          <td className="p-4">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                order.paymentStatus === "paid"
+                                  ? "bg-green-100 text-green-700 border border-green-200"
+                                  : order.paymentStatus === "failed"
+                                  ? "bg-red-100 text-red-700 border border-red-200"
+                                  : "bg-yellow-100 text-yellow-700 border border-yellow-200"
+                              }`}
+                            >
+                              {order.paymentStatus === "paid" && <CheckCircle2 size={12} />}
+                              {order.paymentStatus === "failed" && <XCircle size={12} />}
+                              {order.paymentStatus === "pending" && <Clock size={12} />}
+                              {order.paymentStatus}
+                            </span>
+                          </td>
+                          <td className="p-4 text-sm text-gray-500">
+                            {new Date(order.createdAt).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {activeTab === "settings" && (
           <div className="bg-white rounded-2xl shadow-md p-6 sm:p-8 border border-green-100">
             <div className="flex items-center justify-between mb-6">
@@ -252,6 +441,32 @@ const BusinessDashboard = () => {
                 {formError}
               </div>
             )}
+
+            {/* Store link — shown in both view and edit mode */}
+            <div className="mb-6 bg-gradient-to-r from-green-50 to-yellow-50 border border-green-100 rounded-2xl p-4 sm:p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Share2 size={16} className="text-green-600" />
+                <p className="text-sm font-semibold text-gray-700">Your store link</p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="flex-1 px-3 py-2 bg-white rounded-xl border border-gray-200 text-sm text-gray-700 truncate">
+                  {storeLink}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-xl font-medium text-sm hover:bg-green-700 transition shrink-0"
+                >
+                  {copiedLink ? <Check size={16} /> : <Copy size={16} />}
+                  {copiedLink ? "Copied!" : "Copy Link"}
+                </button>
+              </div>
+              {!business.slug && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Edit your business info below to set a custom store name for this link.
+                </p>
+              )}
+            </div>
 
             {!isEditing ? (
               <>
@@ -310,7 +525,7 @@ const BusinessDashboard = () => {
                   <button
                     type="button"
                     onClick={() => setIsEditing(true)}
-                    className="px-6 py-3 bg-gradient-to-r from-green-600 to-yellow-500 text-white font-semibold rounded-xl hover:opacity-95 transition shadow-md"
+                    className="px-6 py-3 bg-gradient-to-r from-green-600 to-yellow-500 text-white font-semibold rounded-xl hover:opacity-90 transition shadow-md"
                   >
                     Edit Business Info
                   </button>
@@ -384,6 +599,28 @@ const BusinessDashboard = () => {
                   </div>
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Store link name
+                  </label>
+                  <div className="flex items-center rounded-xl border border-gray-300 focus-within:ring-2 focus-within:ring-green-500 overflow-hidden">
+                    <span className="pl-3 pr-1 text-sm text-gray-400 whitespace-nowrap">
+                      {window.location.origin}/business/
+                    </span>
+                    <input
+                      type="text"
+                      name="slug"
+                      value={editForm.slug}
+                      onChange={handleEditFieldChange}
+                      placeholder="your-store-name"
+                      className="flex-1 min-w-0 px-1 py-2 focus:outline-none"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Letters, numbers, and hyphens only. This is the link you'll share with customers.
+                  </p>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -426,13 +663,9 @@ const BusinessDashboard = () => {
                       accept="image/*"
                       name="logo"
                       onChange={handleEditImageUpload}
-                      disabled={uploadingField === "logo"}
-                      className="w-full rounded-xl border border-gray-300 px-3 py-2 file:mr-3 file:rounded file:border-0 file:bg-green-100 file:px-3 file:py-2 file:text-green-700 disabled:opacity-60"
+                      className="w-full rounded-xl border border-gray-300 px-3 py-2 file:mr-3 file:rounded file:border-0 file:bg-green-600 file:px-3 file:py-2 file:text-white file:font-medium hover:file:bg-green-700"
                     />
-                    {uploadingField === "logo" && (
-                      <p className="mt-2 text-sm text-green-600">Uploading...</p>
-                    )}
-                    {editForm.logo && uploadingField !== "logo" && (
+                    {editForm.logo && (
                       <img src={editForm.logo} alt="Logo preview" className="mt-3 h-20 w-20 rounded-xl object-cover border border-gray-200" />
                     )}
                   </div>
@@ -444,13 +677,9 @@ const BusinessDashboard = () => {
                       accept="image/*"
                       name="banner"
                       onChange={handleEditImageUpload}
-                      disabled={uploadingField === "banner"}
-                      className="w-full rounded-xl border border-gray-300 px-3 py-2 file:mr-3 file:rounded file:border-0 file:bg-yellow-100 file:px-3 file:py-2 file:text-yellow-700 disabled:opacity-60"
+                      className="w-full rounded-xl border border-gray-300 px-3 py-2 file:mr-3 file:rounded file:border-0 file:bg-green-600 file:px-3 file:py-2 file:text-white file:font-medium hover:file:bg-green-700"
                     />
-                    {uploadingField === "banner" && (
-                      <p className="mt-2 text-sm text-green-600">Uploading...</p>
-                    )}
-                    {editForm.banner && uploadingField !== "banner" && (
+                    {editForm.banner && (
                       <img src={editForm.banner} alt="Banner preview" className="mt-3 h-20 w-full rounded-xl object-cover border border-gray-200" />
                     )}
                   </div>
@@ -470,8 +699,8 @@ const BusinessDashboard = () => {
                   <button
                     type="button"
                     onClick={saveBusinessChanges}
-                    disabled={saving || uploadingField !== null}
-                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-600 to-yellow-500 text-white font-semibold disabled:opacity-70"
+                    disabled={saving}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-green-600 to-yellow-500 text-white font-semibold disabled:opacity-70 hover:opacity-90 transition"
                   >
                     {saving ? "Saving..." : "Save Changes"}
                   </button>

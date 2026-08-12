@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 function BusinessCard({ business }) {
   return (
-    <Link to={`/businesses/${business._id}`}>
+    <Link to={`/business/${business.slug || business._id}`}>
       <div className="border rounded-lg p-4 shadow hover:shadow-lg transition cursor-pointer">
         <img
           src={business.logo || "https://via.placeholder.com/150"}
