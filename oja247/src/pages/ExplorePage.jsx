@@ -248,12 +248,12 @@ const ExplorePage = () => {
                 </div>
 
                 {/* Business Information */}
-                <div className="p-5 -mt-12">
+                <div className="p-5 -mt-12 relative z-10">
                   {/* Business Logo */}
                   <img
                     src={business.logo || PLACEHOLDER_LOGO}
                     alt={business.name}
-                    className="w-20 h-20 rounded-full border-4 border-white shadow-lg mb-3 object-cover"
+                    className="w-20 h-20 rounded-full border-4 border-white shadow-lg mb-3 object-cover bg-white"
                   />
 
                   {/* Business Name */}

@@ -24,8 +24,6 @@ const DAY_LABELS = {
   saturday: "Sat",
 };
 
-// business.hours expected shape:
-// { monday: { open: "09:00", close: "18:00", closed: false }, ... }
 function getOpenStatus(hours) {
   if (!hours) return null;
 
@@ -70,7 +68,7 @@ function formatMemberSince(dateString) {
 }
 
 function StarRating({ rating }) {
-  const rounded = Math.round(rating * 2) / 2; // nearest half star
+  const rounded = Math.round(rating * 2) / 2;
   return (
     <span className="inline-flex items-center gap-0.5" aria-hidden="true">
       {[1, 2, 3, 4, 5].map((i) => (
@@ -106,13 +104,11 @@ function BusinessDetails() {
 
   const fetchBusinessAndProducts = async () => {
     try {
-      // Fetch business details
       const businessRes = await getBusinessById(id);
       setBusiness(businessRes.data);
       setIsFollowing(Boolean(businessRes.data.isFollowedByUser));
       setFollowerCount(businessRes.data.followerCount || 0);
 
-      // Fetch products for this business
       const productsRes = await getProductsByBusiness(id);
       setProducts(productsRes.data);
     } catch (error) {
@@ -122,10 +118,8 @@ function BusinessDetails() {
     }
   };
 
-  // Get unique categories from products
   const categories = ["all", ...new Set(products.map((p) => p.category))];
 
-  // Filter products by category
   const filteredProducts =
     selectedCategory === "all"
       ? products
@@ -147,7 +141,6 @@ function BusinessDetails() {
   };
 
   const handleFollowToggle = async () => {
-    // Optimistic update
     const nextFollowing = !isFollowing;
     setIsFollowing(nextFollowing);
     setFollowerCount((c) => (nextFollowing ? c + 1 : Math.max(0, c - 1)));
@@ -157,7 +150,6 @@ function BusinessDetails() {
       // nextFollowing ? await followBusiness(id) : await unfollowBusiness(id);
     } catch (error) {
       console.error("Error updating follow status:", error);
-      // Roll back on failure
       setIsFollowing(!nextFollowing);
       setFollowerCount((c) => (!nextFollowing ? c + 1 : Math.max(0, c - 1)));
     }
@@ -182,31 +174,36 @@ function BusinessDetails() {
     <div className="min-h-screen bg-gray-50">
       {/* Banner */}
       <div
-        className="relative w-full h-56 sm:h-72 bg-gradient-to-r from-gray-300 to-gray-400 flex items-center justify-center overflow-hidden"
+        className="relative w-full h-48 sm:h-64 bg-gradient-to-r from-gray-300 to-gray-400 overflow-hidden"
         style={{
           backgroundImage: business.banner ? `url(${business.banner})` : "",
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
       >
-        {/* subtle overlay for legibility whether image or gradient */}
         <div className="absolute inset-0 bg-black/10" />
         {!business.banner && (
-          <h2 className="relative text-3xl sm:text-4xl font-bold text-white drop-shadow-lg text-center px-4">
-            Welcome to {business.name}
-          </h2>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white drop-shadow-lg text-center px-4">
+              Welcome to {business.name}
+            </h2>
+          </div>
         )}
       </div>
+
       {/* Logo + Name Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 -mt-16 sm:-mt-20 relative z-10">
-        <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-5 sm:gap-6 text-center sm:text-left">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 relative">
+        {/* Avatar — sits above both the banner and the white card, overlapping the boundary */}
+        <div className="absolute z-20 -top-12 sm:-top-16 left-1/2 sm:left-8 -translate-x-1/2 sm:translate-x-0">
           <img
             src={business.logo || "https://via.placeholder.com/120"}
             alt={business.name}
-            className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-white shadow-xl object-cover flex-shrink-0"
+            className="w-24 h-24 sm:w-32 sm:h-32 rounded-full border-4 border-white shadow-xl object-cover bg-white"
           />
+        </div>
 
-          <div className="flex-1 min-w-0">
+        <div className="bg-white rounded-2xl shadow-lg p-5 sm:p-8 pt-16 sm:pt-8 sm:pl-44 flex flex-col sm:flex-row items-center sm:items-start gap-5 sm:gap-6 text-center sm:text-left relative z-10">
+          <div className="flex-1 min-w-0 sm:mt-2">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
               <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 truncate">
                 {business.name}
@@ -482,9 +479,9 @@ function BusinessDetails() {
           </div>
         </div>
       </div>
+
       {/* Products Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
-        {/* Header with Category Filter — sticky so it stays visible while browsing */}
         <div className="sticky top-0 z-20 bg-gray-50/90 backdrop-blur-sm -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 mb-6 flex flex-wrap justify-between items-center gap-3 border-b border-gray-200">
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
             Products{" "}
@@ -537,7 +534,6 @@ function BusinessDetails() {
           </div>
         </div>
 
-        {/* Products Grid */}
         {filteredProducts.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-2xl border border-gray-100">
             <svg
@@ -567,7 +563,6 @@ function BusinessDetails() {
                 key={product._id}
                 className="group bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col"
               >
-                {/* Product Image */}
                 <div className="relative aspect-square bg-gray-100 overflow-hidden">
                   {product.images && product.images[0] ? (
                     <img
@@ -593,7 +588,6 @@ function BusinessDetails() {
                     </div>
                   )}
 
-                  {/* Stock badge floats over the image, e-commerce style */}
                   <span
                     className={`absolute top-2 left-2 text-[11px] font-semibold px-2 py-1 rounded-full shadow-sm ${
                       product.inStock
@@ -609,7 +603,6 @@ function BusinessDetails() {
                   )}
                 </div>
 
-                {/* Product Info */}
                 <div className="p-3 sm:p-4 flex flex-col flex-1">
                   {product.category && (
                     <span className="text-[11px] uppercase tracking-wide text-gray-400 font-medium mb-1">
@@ -629,7 +622,6 @@ function BusinessDetails() {
                     </span>
                   </div>
 
-                  {/* Add to cart button */}
                   <button
                     type="button"
                     onClick={() => addToCart(product, business)}
@@ -661,6 +653,7 @@ function BusinessDetails() {
           </div>
         )}
       </div>
+
       {/* Floating WhatsApp Button */}
       {/*
       {business.contact && (
