@@ -40,7 +40,7 @@ export const verifyToken = () => axiosInstance.get('/api/auth/verify');
 
 // Upload API calls
 export const uploadImage = (formData) => {
-  return axiosInstance.post('/api/upload', formData, {
+  return axiosInstance.post('/api/upload/single', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
