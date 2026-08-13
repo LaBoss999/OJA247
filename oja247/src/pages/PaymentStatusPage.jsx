@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { motion } from "framer-motion";
 import axiosInstance from "../services/api";
 import Loader from "../components/Loader";
 import useMinimumLoadingTime from "../hooks/useMinimumLoadingTime";
+import Logo from "../assets/OJA247 VX1.png";
 
 function PaymentStatusPage() {
   const [searchParams] = useSearchParams();
@@ -42,58 +44,200 @@ function PaymentStatusPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-      <div className="max-w-xl w-full bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center">
-        <div
-          className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full ${
-            isSuccess ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
-          }`}
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center p-4 sm:p-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-xl w-full"
+      >
+        {/* Logo */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="flex justify-center mb-6"
         >
-          {isSuccess ? "✓" : "!"}
-        </div>
+          <img src={Logo} alt="OJA247" className="w-24 object-contain" />
+        </motion.div>
 
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {isSuccess ? "Payment Successful" : "Payment Not Completed"}
-        </h1>
+        <div className="relative bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden">
+          {/* Top accent bar — brand gradient, solid on success, muted on failure */}
+          <div
+            className={`h-1.5 w-full ${
+              isSuccess
+                ? "bg-gradient-to-r from-green-600 to-yellow-400"
+                : "bg-gray-200"
+            }`}
+          />
 
-        <p className="text-gray-600 mb-6">
-          {isSuccess
-            ? "Your order has been placed and payment was received successfully."
-            : "Your payment was not completed. You can try again or continue shopping."}
-        </p>
+          <div className="p-8 sm:p-10 text-center">
+            {/* Status icon with signature ripple motif */}
+            <div className="relative flex items-center justify-center h-28 mb-6">
+              {isSuccess && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  {[0, 1, 2].map((i) => (
+                    <motion.span
+                      key={i}
+                      className="absolute rounded-full border-2"
+                      style={{
+                        borderColor: i % 2 === 0 ? "#facc15" : "#16a34a",
+                      }}
+                      initial={{ width: 0, height: 0, opacity: 0.6 }}
+                      animate={{ width: 160, height: 160, opacity: 0 }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeOut",
+                        delay: 0.6 + i * 0.5,
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
 
-        {reference && (
-          <p className="text-sm text-gray-500 mb-6">
-            Reference: <span className="font-semibold text-gray-800">{reference}</span>
-          </p>
-        )}
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={
+                  isSuccess
+                    ? { scale: 1 }
+                    : { scale: 1, x: [0, -6, 6, -4, 4, 0] }
+                }
+                transition={
+                  isSuccess
+                    ? { type: "spring", stiffness: 200, damping: 14, delay: 0.2 }
+                    : { duration: 0.5, delay: 0.2 }
+                }
+                className={`relative flex h-20 w-20 items-center justify-center rounded-full ${
+                  isSuccess
+                    ? "bg-gradient-to-br from-green-500 to-green-600"
+                    : "bg-gray-100"
+                }`}
+              >
+                {isSuccess ? (
+                  <svg
+                    className="w-10 h-10 text-white"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <motion.path
+                      d="M5 13l4 4L19 7"
+                      stroke="currentColor"
+                      strokeWidth={3}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      initial={{ pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: 0.5, delay: 0.4 }}
+                    />
+                  </svg>
+                ) : (
+                  <svg
+                    className="w-9 h-9 text-gray-400"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <path
+                      d="M6 6l12 12M18 6L6 18"
+                      stroke="currentColor"
+                      strokeWidth={3}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                )}
+              </motion.div>
+            </div>
 
-        {order && (
-          <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 text-left mb-6">
-            <p className="text-sm text-gray-500">Order status</p>
-            <p className="font-semibold text-gray-900 capitalize">{order.status}</p>
-            <p className="mt-2 text-sm text-gray-500">Total</p>
-            <p className="font-bold text-gray-900">₦{Number(order.total || 0).toLocaleString()}</p>
-          </div>
-        )}
-
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <button
-            onClick={() => navigate("/products")}
-            className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-lg font-medium"
-          >
-            Continue Shopping
-          </button>
-          {!isSuccess && (
-            <button
-              onClick={() => navigate("/cart")}
-              className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-5 py-3 rounded-lg font-medium"
+            <motion.h1
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="text-2xl sm:text-3xl font-black text-gray-900 mb-2"
             >
-              Back to Cart
-            </button>
-          )}
+              {isSuccess ? "Payment received" : "Payment didn't go through"}
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="text-gray-500 mb-6 max-w-sm mx-auto"
+            >
+              {isSuccess
+                ? "Your order is confirmed and the vendor has been notified."
+                : "No charge was made. You can try again, or reach out if this keeps happening."}
+            </motion.p>
+
+            {reference && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.7 }}
+                className="inline-flex items-center gap-2 text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-full px-4 py-2 mb-6"
+              >
+                <span>Reference</span>
+                <span className="font-mono font-semibold text-gray-700">{reference}</span>
+              </motion.div>
+            )}
+
+            {order && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 }}
+                className="rounded-2xl bg-gray-50 border border-gray-100 p-5 text-left mb-8"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold">
+                      Order status
+                    </p>
+                    <p className="font-bold text-gray-900 capitalize mt-0.5">
+                      {order.status}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold">
+                      Total
+                    </p>
+                    <p className="font-black text-gray-900 mt-0.5">
+                      ₦{Number(order.total || 0).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.9 }}
+              className="flex flex-col sm:flex-row gap-3 justify-center"
+            >
+              <motion.button
+                whileHover={{ scale: 1.03, y: -2 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => navigate("/products")}
+                className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white px-6 py-3 rounded-xl font-semibold shadow-md hover:shadow-lg transition-shadow"
+              >
+                Continue shopping
+              </motion.button>
+
+              {!isSuccess && (
+                <motion.button
+                  whileHover={{ scale: 1.03, y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => navigate("/cart")}
+                  className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-6 py-3 rounded-xl font-semibold transition-colors"
+                >
+                  Back to cart
+                </motion.button>
+              )}
+            </motion.div>
+          </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
