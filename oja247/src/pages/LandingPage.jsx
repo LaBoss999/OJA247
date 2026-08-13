@@ -393,7 +393,7 @@ const LandingPage = () => {
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.1 }}
                   whileHover={{ y: -10, scale: 1.03 }}
-                  onClick={() => navigate(`/business/${business._id}`)}
+                  onClick={() => navigate(`/business/${business.slug || business._id}`)}
                   className="group relative cursor-pointer"
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-green-400/20 to-yellow-400/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl" />

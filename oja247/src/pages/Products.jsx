@@ -26,9 +26,16 @@ function Products() {
       .finally(() => setLoading(false));
   }, []);
 
-  // businessId comes back populated from the backend as { _id, name, logo, location }
+  // businessId comes back populated from the backend as { _id, name, logo, location, slug }
+  // NOTE: the backend's populate("businessId", "...") field list must include
+  // "slug" for this to actually be present — if it still only selects
+  // _id/name/logo/location, product.businessId?.slug will be undefined and
+  // links below will gracefully fall back to the raw _id instead.
   const getBusinessId = (product) => product.businessId?._id;
+  const getBusinessSlug = (product) => product.businessId?.slug;
   const getBusinessName = (product) => product.businessId?.name;
+  const getBusinessLink = (product) =>
+    `/business/${getBusinessSlug(product) || getBusinessId(product)}`;
 
   const defaultCategories = [
     "Fashion",
@@ -104,12 +111,8 @@ function Products() {
             All Products
           </h1>
 
-          
-            <a
-
-
-          
-              href="/cart"
+          <a
+            href="/cart"
             className="inline-flex items-center justify-center bg-gray-900 hover:bg-gray-800 text-white p-3 rounded-full shadow-sm relative"
             aria-label="View cart"
           >
@@ -352,7 +355,7 @@ function Products() {
                 <div className="mt-3 space-y-2">
                   <button
                     type="button"
-                    onClick={() => addToCart(product)}
+                    onClick={() => addToCart(product, product.businessId)}
                     disabled={!product.inStock}
                     className={`w-full py-2 rounded-lg text-sm sm:text-base font-medium transition-colors ${
                       product.inStock
@@ -364,11 +367,8 @@ function Products() {
                   </button>
 
                   {getBusinessId(product) && (
-                    
-                      <a
-
-                    
-                        href={`/business/${getBusinessId(product)}`}
+                    <a
+                      href={getBusinessLink(product)}
                       className="flex items-center justify-center w-full text-center bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors"
                     >
                       View Store
@@ -409,5 +409,3 @@ function Products() {
 }
 
 export default Products;
-
-// ...
