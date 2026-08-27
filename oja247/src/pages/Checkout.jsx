@@ -140,8 +140,9 @@ function Checkout() {
     const amountInKobo = Math.round(total * 100);
     const reference = `oja247-${Date.now()}`;
 
+    let split = null;
     try {
-      await axiosInstance.post("/api/orders", {
+      const { data } = await axiosInstance.post("/api/orders", {
         reference,
         customer: {
           fullName: formData.fullName,
@@ -174,9 +175,11 @@ function Checkout() {
         total: Number(total),
         deliveryMethod,
       });
+
+      split = data.split;
     } catch (error) {
       console.error("Order creation error:", error);
-      alert("We could not create your order. Please try again.");
+      alert(error.response?.data?.message || "We could not create your order. Please try again.");
       return;
     }
 
@@ -191,6 +194,9 @@ function Checkout() {
       amount: amountInKobo,
       currency: "NGN",
       ref: reference,
+      // Pays each vendor's subaccount immediately as part of this transaction —
+      // the platform's service fee + VAT stay behind since they're not in the split.
+      ...(split?.subaccounts?.length > 0 ? { split } : {}),
       metadata: {
         custom_fields: [
           { display_name: "Full Name", variable_name: "full_name", value: formData.fullName },

@@ -1,0 +1,303 @@
+import axios from "axios";
+import cloudinary from "../config/cloudinaryConfig.js";
+import Vendor from "../models/Vendor.js";
+import Business from "../models/Business.js";
+
+const ONBOARDING_GRACE_PERIOD_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+// Simple in-memory cache — bank list changes rarely, no need to hit
+// Paystack on every page load. Swap for Redis if you're running multiple
+// backend instances.
+let cachedBanks = null;
+let cachedAt = 0;
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+// GET /api/vendors/banks
+export const getBanks = async (req, res) => {
+  try {
+    const isFresh = cachedBanks && Date.now() - cachedAt < CACHE_TTL_MS;
+
+    if (isFresh) {
+      return res.json({ status: true, data: cachedBanks });
+    }
+
+    const response = await axios.get("https://api.paystack.co/bank", {
+      params: { country: "nigeria", currency: "NGN" },
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+      },
+    });
+
+    // Trim to just what the frontend dropdown needs
+    const banks = response.data.data.map((bank) => ({
+      name: bank.name,
+      code: bank.code,
+      slug: bank.slug,
+    }));
+
+    cachedBanks = banks;
+    cachedAt = Date.now();
+
+    return res.json({ status: true, data: banks });
+  } catch (error) {
+    console.error("Failed to fetch banks from Paystack:", error.response?.data || error.message);
+
+    // Fall back to stale cache rather than failing the whole form if
+    // Paystack is briefly down
+    if (cachedBanks) {
+      return res.json({ status: true, data: cachedBanks, stale: true });
+    }
+
+    return res.status(502).json({
+      status: false,
+      message: "Could not load bank list. Please try again shortly.",
+    });
+  }
+};
+
+// GET /api/vendors/resolve-account?account_number=...&bank_code=...
+// Used by the frontend to auto-fill the account name once the vendor
+// enters their account number, so they can confirm it's correct before
+// submitting.
+export const resolveAccount = async (req, res) => {
+  const { account_number, bank_code } = req.query;
+
+  if (!account_number || !bank_code) {
+    return res.status(400).json({
+      status: false,
+      message: "account_number and bank_code are required",
+    });
+  }
+
+  try {
+    const response = await axios.get("https://api.paystack.co/bank/resolve", {
+      params: { account_number, bank_code },
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+      },
+    });
+
+    return res.json({
+      status: true,
+      data: { account_name: response.data.data.account_name },
+    });
+  } catch (error) {
+    console.error("Account resolve failed:", error.response?.data || error.message);
+    return res.status(400).json({
+      status: false,
+      message: "Could not verify this account number. Double-check it and try again.",
+    });
+  }
+};
+
+// Basic tier fields are required. Verified tier fields (CAC + address
+// proof) are optional at submission — vendor can upgrade later.
+function determineTier({ nin, bankNameMatch, hasCacDocument, hasAddressProof }) {
+  const hasBasic = Boolean(nin) && bankNameMatch;
+  const hasVerified = hasBasic && hasCacDocument && hasAddressProof;
+  if (hasVerified) return "verified";
+  if (hasBasic) return "basic";
+  return "incomplete";
+}
+
+async function createPaystackSubaccount({ businessName, bankCode, accountNumber }) {
+  // Platform's default split percentage — adjust to your actual PSS rate.
+  // This is the *default*; per-transaction splits can still override it.
+  const PLATFORM_PERCENTAGE_CHARGE = process.env.PLATFORM_PERCENTAGE_CHARGE || 10;
+
+  const response = await axios.post(
+    "https://api.paystack.co/subaccount",
+    {
+      business_name: businessName,
+      bank_code: bankCode,
+      account_number: accountNumber,
+      percentage_charge: PLATFORM_PERCENTAGE_CHARGE,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  return response.data.data; // includes subaccount_code
+}
+
+function uploadBufferToCloudinary(fileBuffer, filename) {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: "oja247/vendor-docs",
+        resource_type: "auto", // handles both images and PDFs
+        public_id: `${Date.now()}-${filename.split(".")[0]}`,
+      },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    );
+    uploadStream.end(fileBuffer);
+  });
+}
+
+// POST /api/vendors
+// Handles the combined onboarding form: payout info + KYC docs together.
+// Also handles re-submission — a vendor on Basic tier can come back within
+// their 30-day window and add CAC/address proof to move up to Verified,
+// without a new Paystack subaccount being created.
+export const onboardVendor = async (req, res) => {
+  try {
+    const {
+      business_id,
+      business_name,
+      contact_email,
+      contact_phone,
+      contact_whatsapp,
+      bank_code,
+      bank_name,
+      account_number,
+      account_name, // returned by the resolve-account step, confirms bank-name-match
+      nin,
+    } = req.body;
+
+    // --- Required (Basic tier) field validation ---
+    const missing = [];
+    if (!business_id) missing.push("business_id");
+    if (!business_name) missing.push("business_name");
+    if (!contact_email) missing.push("contact_email");
+    if (!contact_phone) missing.push("contact_phone");
+    if (!bank_code) missing.push("bank_code");
+    if (!account_number) missing.push("account_number");
+    if (!account_name) missing.push("account_name");
+    if (!nin) missing.push("nin");
+
+    if (missing.length > 0) {
+      return res.status(400).json({
+        status: false,
+        message: `Missing required fields: ${missing.join(", ")}`,
+      });
+    }
+
+    // Format check only — Paystack has no NIN lookup, and NIMC (Nigeria's
+    // identity authority) restricts real NIN verification to licensed KYC
+    // providers (e.g. Prembly, QoreID, Youverify, Smile Identity, VerifyMe).
+    // Wire one of those in here if/when you have a provider account.
+    if (!/^\d{11}$/.test(nin)) {
+      return res.status(400).json({
+        status: false,
+        message: "NIN must be exactly 11 digits.",
+      });
+    }
+
+    // Only the business's own owner (or an admin) can submit onboarding for it
+    const isOwner = req.user.businessId && req.user.businessId.toString() === business_id;
+    if (req.user.role !== "admin" && !isOwner) {
+      return res.status(403).json({ status: false, message: "Not authorized to onboard this business." });
+    }
+
+    const business = await Business.findById(business_id);
+    if (!business) {
+      return res.status(404).json({ status: false, message: "Business not found." });
+    }
+
+    // bank-name-match check: does the account_name resolved from Paystack
+    // reasonably match the business/contact name they entered?
+    // (Simple normalized-substring check — tune to taste.)
+    const normalize = (s) => s.toLowerCase().replace(/[^a-z\s]/g, "").trim();
+    const bankNameMatch =
+      normalize(account_name).includes(normalize(business_name).split(" ")[0]) ||
+      normalize(business_name).includes(normalize(account_name).split(" ")[0]);
+
+    const existingVendor = await Vendor.findOne({ businessId: business_id });
+
+    const cacFile = req.files?.cac_document?.[0];
+    const addressProofFile = req.files?.address_proof?.[0];
+
+    const [cacUpload, addressProofUpload] = await Promise.all([
+      cacFile ? uploadBufferToCloudinary(cacFile.buffer, cacFile.originalname) : Promise.resolve(null),
+      addressProofFile
+        ? uploadBufferToCloudinary(addressProofFile.buffer, addressProofFile.originalname)
+        : Promise.resolve(null),
+    ]);
+
+    // Keep whatever was uploaded on a previous submission if this one didn't replace it
+    const cacDocumentUrl = cacUpload?.secure_url || existingVendor?.cacDocumentUrl || null;
+    const addressProofUrl = addressProofUpload?.secure_url || existingVendor?.addressProofUrl || null;
+
+    const tier = determineTier({
+      nin,
+      bankNameMatch,
+      hasCacDocument: Boolean(cacDocumentUrl),
+      hasAddressProof: Boolean(addressProofUrl),
+    });
+
+    // Reuse the existing subaccount rather than creating a new one on re-submission
+    let subaccountCode = existingVendor?.subaccountCode;
+    let subaccountId = existingVendor?.subaccountId;
+
+    if (!subaccountCode) {
+      const subaccount = await createPaystackSubaccount({
+        businessName: business_name,
+        bankCode: bank_code,
+        accountNumber: account_number,
+      });
+      subaccountCode = subaccount.subaccount_code;
+      subaccountId = subaccount.id ? String(subaccount.id) : "";
+    }
+
+    // 30-day deadline is anchored to when the business joined, not to whenever
+    // they get around to filling this form in — matches "list immediately,
+    // 30 days to verify" instead of letting the clock be delayed indefinitely.
+    const onboardingDeadline = new Date(business.createdAt.getTime() + ONBOARDING_GRACE_PERIOD_MS);
+
+    // --- Persist vendor record (create or update) ---
+    const vendor = await Vendor.findOneAndUpdate(
+      { businessId: business_id },
+      {
+        businessId: business_id,
+        businessName: business_name,
+        contactEmail: contact_email,
+        contactPhone: contact_phone,
+        contactWhatsapp: contact_whatsapp || contact_phone,
+        bankCode: bank_code,
+        bankName: bank_name,
+        accountNumber: account_number,
+        accountName: account_name,
+        bankNameMatch,
+        nin,
+        cacDocumentUrl,
+        addressProofUrl,
+        verificationTier: tier,
+        subaccountCode,
+        subaccountId,
+        onboardingDeadline,
+      },
+      { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
+    );
+
+    return res.status(201).json({
+      status: true,
+      message: "Vendor onboarded successfully.",
+      data: {
+        verificationTier: vendor.verificationTier,
+        subaccountCode: vendor.subaccountCode,
+        onboardingDeadline: vendor.onboardingDeadline,
+      },
+    });
+  } catch (error) {
+    console.error("Vendor onboarding failed:", error.response?.data || error.message);
+
+    if (error.code === 11000) {
+      return res.status(400).json({
+        status: false,
+        message: "A vendor with these details already exists.",
+      });
+    }
+
+    return res.status(500).json({
+      status: false,
+      message: "Something went wrong creating your vendor account. Please try again.",
+    });
+  }
+};

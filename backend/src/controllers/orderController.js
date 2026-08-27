@@ -1,4 +1,32 @@
 import Order from "../models/Order.js";
+import Vendor from "../models/Vendor.js";
+
+// Looks up each vendor's Paystack subaccount and builds the dynamic "flat"
+// split payload (Paystack keeps whatever isn't allocated to a subaccount,
+// so the platform's service fee + VAT naturally stay on the main account).
+async function buildPaystackSplit(orderVendors) {
+  const businessIds = orderVendors.map((v) => v.businessId).filter(Boolean);
+  const vendorRecords = await Vendor.find({ businessId: { $in: businessIds } });
+  const vendorByBusinessId = new Map(vendorRecords.map((v) => [v.businessId.toString(), v]));
+
+  const subaccounts = [];
+  const missing = [];
+
+  orderVendors.forEach((v) => {
+    const vendor = v.businessId && vendorByBusinessId.get(v.businessId.toString());
+    if (!vendor?.subaccountCode) {
+      missing.push(v.businessName || "Unknown vendor");
+      return;
+    }
+
+    const share = Math.round((v.itemsSubtotal + v.deliveryFee) * 100); // kobo
+    if (share > 0) {
+      subaccounts.push({ subaccount: vendor.subaccountCode, share });
+    }
+  });
+
+  return { subaccounts, missing };
+}
 
 export const createOrder = async (req, res) => {
   try {
@@ -21,9 +49,19 @@ export const createOrder = async (req, res) => {
 
     const existingOrder = await Order.findOne({ reference });
     if (existingOrder) {
+      const { subaccounts, missing } = await buildPaystackSplit(existingOrder.vendors);
+      if (missing.length > 0) {
+        return res.status(400).json({
+          message: `Some vendors in this order haven't finished payout setup yet: ${missing.join(
+            ", "
+          )}. Remove their items and try again.`,
+        });
+      }
+
       return res.status(200).json({
         message: "Order already exists",
         order: existingOrder,
+        split: { type: "flat", bearer_type: "account", subaccounts },
       });
     }
 
@@ -45,6 +83,18 @@ export const createOrder = async (req, res) => {
         })
       : [];
 
+    // Every vendor in the cart must have a working payout subaccount before
+    // we accept payment — otherwise their share of the money has nowhere to
+    // automatically go.
+    const { subaccounts, missing } = await buildPaystackSplit(vendors);
+    if (missing.length > 0) {
+      return res.status(400).json({
+        message: `Some vendors in your cart haven't finished payout setup yet: ${missing.join(
+          ", "
+        )}. Remove their items to continue.`,
+      });
+    }
+
     const order = await Order.create({
       reference,
       customer,
@@ -60,7 +110,11 @@ export const createOrder = async (req, res) => {
       paymentStatus: "pending",
     });
 
-    res.status(201).json({ message: "Order created", order });
+    res.status(201).json({
+      message: "Order created",
+      order,
+      split: { type: "flat", bearer_type: "account", subaccounts },
+    });
   } catch (error) {
     console.error("Create order error:", error);
     res.status(500).json({ message: "Error creating order" });

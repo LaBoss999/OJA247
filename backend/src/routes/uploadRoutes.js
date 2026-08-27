@@ -1,16 +1,8 @@
 import express from 'express';
-import { v2 as cloudinary } from 'cloudinary';
+import cloudinary from '../config/cloudinaryConfig.js';
 import multer from 'multer';
 
 const router = express.Router();
-
-// Configure Cloudinary HERE (after dotenv has loaded)
-  cloudinary.config({
-  cloud_name: 'darbw1ovq',
-  api_key: '271998152415255',
-  api_secret: 'p4yqmwRweD4FfuWQbFzx9xj0XQA',
-  secure: true
-});
 
 // Use memory storage for multer
 const storage = multer.memoryStorage();

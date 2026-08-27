@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import axiosInstance, { getBusinessById } from "../services/api";
 import AddProductForm from "../components/AddProductForm.jsx";
 import ProductList from "../components/ProductList.jsx";
+import VendorOnboardingForm from "../components/Vendoronboardingform.jsx";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { LogOut, ShoppingBag, Clock, CheckCircle2, XCircle, Copy, Check, Share2 } from "lucide-react";
@@ -284,6 +285,17 @@ const BusinessDashboard = () => {
               }`}
             >
               Business Settings
+            </button>
+
+            <button
+              onClick={() => setActiveTab("payouts")}
+              className={`py-4 px-2 border-b-2 font-semibold transition-colors whitespace-nowrap ${
+                activeTab === "payouts"
+                  ? "border-green-600 text-green-700"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Payouts & Verification
             </button>
           </div>
         </div>
@@ -709,6 +721,8 @@ const BusinessDashboard = () => {
             )}
           </div>
         )}
+
+        {activeTab === "payouts" && <VendorOnboardingForm />}
       </div>
     </div>
   );
