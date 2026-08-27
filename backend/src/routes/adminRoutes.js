@@ -8,6 +8,8 @@ import {
   toggleFeatured,
   deleteBusiness,
   toggleUserBan,
+  getAllVendors,
+  reviewVendor,
 } from "../controllers/adminController.js";
 
 const router = express.Router();
@@ -23,5 +25,7 @@ router.get("/orders", getAllOrders);
 router.patch("/businesses/:id/featured", toggleFeatured);
 router.delete("/businesses/:id", deleteBusiness);
 router.patch("/users/:id/ban", toggleUserBan);
+router.get("/vendors", getAllVendors);
+router.patch("/vendors/:id/review", reviewVendor);
 
 export default router;

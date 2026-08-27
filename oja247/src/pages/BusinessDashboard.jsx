@@ -42,6 +42,9 @@ const BusinessDashboard = () => {
   const [ordersFetched, setOrdersFetched] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
+  const [vendorStatus, setVendorStatus] = useState(null);
+  const [vendorStatusFetched, setVendorStatusFetched] = useState(false);
+
   const showLoader = useMinimumLoadingTime(loading);
 
   useEffect(() => {
@@ -71,6 +74,12 @@ const BusinessDashboard = () => {
     }
   }, [activeTab, ordersFetched]);
 
+  useEffect(() => {
+    if (activeTab === "payouts" && !vendorStatusFetched) {
+      fetchVendorStatus();
+    }
+  }, [activeTab, vendorStatusFetched]);
+
   const fetchBusiness = async () => {
     try {
       const response = await getBusinessById(businessId);
@@ -99,6 +108,27 @@ const BusinessDashboard = () => {
       );
     } finally {
       setOrdersLoading(false);
+    }
+  };
+
+  const fetchVendorStatus = async () => {
+    try {
+      const response = await axiosInstance.get("/api/vendors/me");
+      setVendorStatus(response.data.data);
+    } catch (error) {
+      // 404 just means they haven't submitted onboarding yet — not an error state
+      setVendorStatus(null);
+    } finally {
+      setVendorStatusFetched(true);
+    }
+  };
+
+  const acknowledgeVendorNotification = async () => {
+    try {
+      await axiosInstance.patch("/api/vendors/me/seen");
+      setVendorStatus((prev) => (prev ? { ...prev, notificationSeen: true } : prev));
+    } catch (error) {
+      console.error("Failed to acknowledge notification:", error);
     }
   };
 
@@ -722,7 +752,52 @@ const BusinessDashboard = () => {
           </div>
         )}
 
-        {activeTab === "payouts" && <VendorOnboardingForm />}
+        {activeTab === "payouts" && (
+          <div>
+            {vendorStatus && !vendorStatus.notificationSeen && vendorStatus.reviewStatus !== "pending" && (
+              <div
+                className={`mb-6 rounded-2xl border p-5 flex items-start justify-between gap-4 ${
+                  vendorStatus.reviewStatus === "approved"
+                    ? "bg-green-50 border-green-200"
+                    : "bg-red-50 border-red-200"
+                }`}
+              >
+                <div>
+                  <p
+                    className={`font-semibold ${
+                      vendorStatus.reviewStatus === "approved" ? "text-green-700" : "text-red-700"
+                    }`}
+                  >
+                    {vendorStatus.reviewStatus === "approved"
+                      ? "Your vendor verification was approved!"
+                      : "Your vendor verification was rejected"}
+                  </p>
+                  {vendorStatus.reviewStatus === "rejected" && vendorStatus.reviewNotes && (
+                    <p className="text-sm text-red-600 mt-1">{vendorStatus.reviewNotes}</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={acknowledgeVendorNotification}
+                  className="shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-white transition"
+                >
+                  Got it
+                </button>
+              </div>
+            )}
+
+            {vendorStatus?.reviewStatus === "pending" && (
+              <div className="mb-6 rounded-2xl border border-yellow-200 bg-yellow-50 p-5">
+                <p className="font-semibold text-yellow-700">Your submission is under review</p>
+                <p className="text-sm text-yellow-700 mt-1">
+                  We'll let you know here once an admin has checked your details.
+                </p>
+              </div>
+            )}
+
+            <VendorOnboardingForm onSubmitted={() => setVendorStatusFetched(false)} />
+          </div>
+        )}
       </div>
     </div>
   );

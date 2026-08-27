@@ -18,6 +18,9 @@ import {
   X,
   LogOut,
   ExternalLink,
+  ShieldCheck,
+  XCircle,
+  FileText,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -26,6 +29,7 @@ const NAV_ITEMS = [
   { id: "products", label: "Products", icon: Package },
   { id: "orders", label: "Orders", icon: ShoppingCart },
   { id: "users", label: "Users", icon: Users },
+  { id: "vendors", label: "Vendor Verification", icon: ShieldCheck },
 ];
 
 const AdminDashboard = () => {
@@ -44,6 +48,7 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
@@ -61,12 +66,13 @@ const AdminDashboard = () => {
 
   const fetchAllData = async () => {
     try {
-      const [statsRes, bizRes, userRes, prodRes, ordersRes] = await Promise.all([
+      const [statsRes, bizRes, userRes, prodRes, ordersRes, vendorsRes] = await Promise.all([
         axiosInstance.get("/api/admin/stats"),
         axiosInstance.get("/api/businesses"),
         axiosInstance.get("/api/admin/users"),
         axiosInstance.get("/api/products/search"),
         axiosInstance.get("/api/admin/orders"),
+        axiosInstance.get("/api/admin/vendors"),
       ]);
 
       setStats(statsRes.data);
@@ -74,6 +80,7 @@ const AdminDashboard = () => {
       setUsers(userRes.data);
       setProducts(prodRes.data);
       setOrders(ordersRes.data);
+      setVendors(vendorsRes.data);
     } catch (error) {
       console.error("Error fetching data:", error);
       if (error.response?.status === 403) {
@@ -143,6 +150,26 @@ const AdminDashboard = () => {
       fetchAllData();
     } catch (error) {
       alert("Failed to update user status");
+    }
+  };
+
+  const reviewVendor = async (id, decision, businessName) => {
+    let notes = "";
+
+    if (decision === "rejected") {
+      const input = window.prompt(`Reason for rejecting ${businessName}'s verification? (shown to the vendor)`);
+      if (input === null) return; // cancelled
+      notes = input;
+    } else if (!window.confirm(`Approve ${businessName}'s vendor verification?`)) {
+      return;
+    }
+
+    try {
+      await axiosInstance.patch(`/api/admin/vendors/${id}/review`, { decision, notes });
+      alert(`Vendor ${decision}.`);
+      fetchAllData();
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to update vendor review status.");
     }
   };
 
@@ -585,6 +612,104 @@ const AdminDashboard = () => {
                               {u.banned ? "Unban" : "Ban User"}
                             </button>
                           )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "vendors" && (
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
+              <div className="p-6 border-b border-white/10">
+                <h2 className="text-xl font-bold text-white">
+                  Vendor Verification <span className="text-gray-500 font-normal">({vendors.length})</span>
+                </h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[900px]">
+                  <thead className="bg-white/5">
+                    <tr>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Business</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Tier</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Documents</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Review Status</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vendors.map((v) => (
+                      <tr key={v._id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                        <td className="p-4">
+                          <p className="font-medium text-white">{v.businessId?.name || v.businessName}</p>
+                          <p className="text-sm text-gray-500">{v.contactEmail}</p>
+                        </td>
+                        <td className="p-4">
+                          <span className="px-2.5 py-1 rounded-full text-xs font-semibold border bg-blue-500/15 text-blue-300 border-blue-500/30 capitalize">
+                            {v.verificationTier}
+                          </span>
+                        </td>
+                        <td className="p-4 text-sm">
+                          <div className="flex flex-col gap-1">
+                            {[
+                              { label: "NIN", value: v.nin },
+                              { label: "CAC", url: v.cacDocumentUrl },
+                              { label: "Address proof", url: v.addressProofUrl },
+                              { label: "Selfie", url: v.selfieUrl },
+                            ].map((doc) => (
+                              <span key={doc.label} className="flex items-center gap-1.5 text-gray-400">
+                                <FileText size={13} />
+                                {doc.url ? (
+                                  <a
+                                    href={doc.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-green-400 hover:underline"
+                                  >
+                                    {doc.label}
+                                  </a>
+                                ) : (
+                                  <span>{doc.label}: {doc.value || "—"}</span>
+                                )}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-xs font-semibold border capitalize ${
+                              v.reviewStatus === "approved"
+                                ? "bg-green-500/15 text-green-400 border-green-500/30"
+                                : v.reviewStatus === "rejected"
+                                ? "bg-red-500/15 text-red-400 border-red-500/30"
+                                : "bg-yellow-500/15 text-yellow-400 border-yellow-500/30"
+                            }`}
+                          >
+                            {v.reviewStatus}
+                          </span>
+                          {v.reviewStatus === "rejected" && v.reviewNotes && (
+                            <p className="text-xs text-gray-500 mt-1 max-w-[220px]">{v.reviewNotes}</p>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => reviewVendor(v._id, "approved", v.businessId?.name || v.businessName)}
+                              className="px-3 py-1.5 bg-green-500/15 text-green-400 border border-green-500/30 rounded-lg hover:bg-green-500/25 text-sm font-medium flex items-center gap-1 transition"
+                            >
+                              <ShieldCheck size={14} />
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => reviewVendor(v._id, "rejected", v.businessId?.name || v.businessName)}
+                              className="px-3 py-1.5 bg-red-500/15 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/25 text-sm font-medium flex items-center gap-1 transition"
+                            >
+                              <XCircle size={14} />
+                              Reject
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

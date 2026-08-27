@@ -90,11 +90,11 @@ export const resolveAccount = async (req, res) => {
   }
 };
 
-// Basic tier fields are required. Verified tier fields (CAC + address
-// proof) are optional at submission — vendor can upgrade later.
-function determineTier({ nin, bankNameMatch, hasCacDocument, hasAddressProof }) {
+// Basic tier fields are required. Verified tier fields (CAC, address proof,
+// selfie) are optional at submission — vendor can upgrade later.
+function determineTier({ nin, bankNameMatch, hasCacDocument, hasAddressProof, hasSelfie }) {
   const hasBasic = Boolean(nin) && bankNameMatch;
-  const hasVerified = hasBasic && hasCacDocument && hasAddressProof;
+  const hasVerified = hasBasic && hasCacDocument && hasAddressProof && hasSelfie;
   if (hasVerified) return "verified";
   if (hasBasic) return "basic";
   return "incomplete";
@@ -124,12 +124,12 @@ async function createPaystackSubaccount({ businessName, bankCode, accountNumber 
   return response.data.data; // includes subaccount_code
 }
 
-function uploadBufferToCloudinary(fileBuffer, filename) {
+function uploadBufferToCloudinary(fileBuffer, filename, resourceType = "auto") {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder: "oja247/vendor-docs",
-        resource_type: "auto", // handles both images and PDFs
+        resource_type: resourceType, // "auto" handles both images and PDFs; selfies are forced to "image"
         public_id: `${Date.now()}-${filename.split(".")[0]}`,
       },
       (error, result) => {
@@ -213,23 +213,29 @@ export const onboardVendor = async (req, res) => {
 
     const cacFile = req.files?.cac_document?.[0];
     const addressProofFile = req.files?.address_proof?.[0];
+    const selfieFile = req.files?.selfie?.[0];
 
-    const [cacUpload, addressProofUpload] = await Promise.all([
+    const [cacUpload, addressProofUpload, selfieUpload] = await Promise.all([
       cacFile ? uploadBufferToCloudinary(cacFile.buffer, cacFile.originalname) : Promise.resolve(null),
       addressProofFile
         ? uploadBufferToCloudinary(addressProofFile.buffer, addressProofFile.originalname)
+        : Promise.resolve(null),
+      selfieFile
+        ? uploadBufferToCloudinary(selfieFile.buffer, selfieFile.originalname, "image")
         : Promise.resolve(null),
     ]);
 
     // Keep whatever was uploaded on a previous submission if this one didn't replace it
     const cacDocumentUrl = cacUpload?.secure_url || existingVendor?.cacDocumentUrl || null;
     const addressProofUrl = addressProofUpload?.secure_url || existingVendor?.addressProofUrl || null;
+    const selfieUrl = selfieUpload?.secure_url || existingVendor?.selfieUrl || null;
 
     const tier = determineTier({
       nin,
       bankNameMatch,
       hasCacDocument: Boolean(cacDocumentUrl),
       hasAddressProof: Boolean(addressProofUrl),
+      hasSelfie: Boolean(selfieUrl),
     });
 
     // Reuse the existing subaccount rather than creating a new one on re-submission
@@ -268,10 +274,16 @@ export const onboardVendor = async (req, res) => {
         nin,
         cacDocumentUrl,
         addressProofUrl,
+        selfieUrl,
         verificationTier: tier,
         subaccountCode,
         subaccountId,
         onboardingDeadline,
+        // Any (re)submission needs a fresh admin look, since the vendor may
+        // have changed the very details that were previously reviewed.
+        reviewStatus: "pending",
+        reviewNotes: "",
+        notificationSeen: true,
       },
       { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
     );
@@ -299,5 +311,48 @@ export const onboardVendor = async (req, res) => {
       status: false,
       message: "Something went wrong creating your vendor account. Please try again.",
     });
+  }
+};
+
+// GET /api/vendors/me
+// Lets the logged-in vendor check their own verification review status
+// (pending/approved/rejected) and any feedback left by an admin.
+export const getMyVendor = async (req, res) => {
+  try {
+    if (!req.user.businessId) {
+      return res.status(404).json({ status: false, message: "No business linked to this account." });
+    }
+
+    const vendor = await Vendor.findOne({ businessId: req.user.businessId });
+    if (!vendor) {
+      return res.status(404).json({ status: false, message: "You haven't submitted vendor onboarding yet." });
+    }
+
+    return res.json({ status: true, data: vendor });
+  } catch (error) {
+    console.error("Get vendor status failed:", error.message);
+    return res.status(500).json({ status: false, message: "Could not load your verification status." });
+  }
+};
+
+// PATCH /api/vendors/me/seen
+// Marks the latest admin review decision as seen, so the notification
+// banner doesn't keep showing up on every login.
+export const acknowledgeVendorNotification = async (req, res) => {
+  try {
+    const vendor = await Vendor.findOneAndUpdate(
+      { businessId: req.user.businessId },
+      { notificationSeen: true },
+      { new: true }
+    );
+
+    if (!vendor) {
+      return res.status(404).json({ status: false, message: "Vendor profile not found." });
+    }
+
+    return res.json({ status: true });
+  } catch (error) {
+    console.error("Acknowledge vendor notification failed:", error.message);
+    return res.status(500).json({ status: false, message: "Could not update notification." });
   }
 };

@@ -8,7 +8,7 @@ import './VendorOnboardingForm.css';
 // Verified tier fields (CAC + address proof) are optional here — a vendor
 // can list immediately on Basic and upgrade within the 30-day window.
 
-export default function VendorOnboardingForm() {
+export default function VendorOnboardingForm({ onSubmitted } = {}) {
   const { business, isAuthenticated } = useAuth();
 
   const [banks, setBanks] = useState([]);
@@ -31,6 +31,7 @@ export default function VendorOnboardingForm() {
   const [nin, setNin] = useState('');
   const [cacFile, setCacFile] = useState(null);
   const [addressProofFile, setAddressProofFile] = useState(null);
+  const [selfieFile, setSelfieFile] = useState(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -144,6 +145,7 @@ export default function VendorOnboardingForm() {
     payload.append('nin', nin);
     if (cacFile) payload.append('cac_document', cacFile);
     if (addressProofFile) payload.append('address_proof', addressProofFile);
+    if (selfieFile) payload.append('selfie', selfieFile);
 
     try {
       const { data } = await axiosInstance.post('/api/vendors', payload, {
@@ -155,6 +157,7 @@ export default function VendorOnboardingForm() {
       }
 
       setResult(data.data);
+      onSubmitted?.(data.data);
     } catch (err) {
       setSubmitError(err.response?.data?.message || err.message);
     } finally {
@@ -335,6 +338,12 @@ export default function VendorOnboardingForm() {
             {addressProofFile && <span className="vof-filename">{addressProofFile.name}</span>}
           </label>
         </div>
+
+        <label className="vof-field vof-upload">
+          <span>Headshot / selfie <em>(optional now)</em></span>
+          <input type="file" accept=".jpg,.jpeg,.png" onChange={handleFileChange(setSelfieFile)} />
+          {selfieFile && <span className="vof-filename">{selfieFile.name}</span>}
+        </label>
       </fieldset>
 
       {submitError && <p className="vof-error vof-submit-error">{submitError}</p>}

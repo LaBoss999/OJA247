@@ -4,15 +4,15 @@
   padding: 2rem;
   background: #ffffff;
   border-radius: 12px;
-  border: 1px solid #e8e3da;
+  border: 1px solid #e5ece6;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  color: #1f2421;
+  color: #16332b;
 }
 
 .vof-header h1 {
   font-size: 1.5rem;
   margin: 0 0 0.25rem;
-  color: #16332b;
+  color: #14532d;
 }
 
 .vof-header p {
@@ -32,11 +32,11 @@ legend {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #0f7a52;
+  color: #16a34a;
   padding: 0 0 0.75rem;
   margin: 0;
   width: 100%;
-  border-bottom: 1px solid #e8e3da;
+  border-bottom: 2px solid #f2c94c;
 }
 
 .vof-field {
@@ -64,18 +64,19 @@ legend {
 .vof-field select {
   width: 100%;
   padding: 0.65rem 0.75rem;
-  border: 1px solid #d3cec2;
+  border: 1px solid #d6e0d8;
   border-radius: 8px;
   font-size: 0.95rem;
-  background: #fdfcfa;
+  background: #fbfdfc;
   box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .vof-field input:focus,
 .vof-field select:focus {
-  outline: 2px solid #0f7a52;
-  outline-offset: 1px;
-  border-color: #0f7a52;
+  outline: none;
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(242, 201, 76, 0.35);
 }
 
 .vof-field input[type="file"] {
@@ -97,7 +98,7 @@ legend {
 .vof-skeleton {
   height: 42px;
   border-radius: 8px;
-  background: linear-gradient(90deg, #f0ede6 25%, #f8f6f1 37%, #f0ede6 63%);
+  background: linear-gradient(90deg, #eaf3ec 25%, #f7fbf4 37%, #eaf3ec 63%);
   background-size: 400% 100%;
   animation: vof-shimmer 1.4s ease infinite;
 }
@@ -118,7 +119,7 @@ legend {
 }
 
 .vof-confirmed {
-  color: #0f7a52;
+  color: #16a34a;
   font-weight: 500;
 }
 
@@ -132,8 +133,9 @@ legend {
 
 .vof-tier-note {
   font-size: 0.85rem;
-  color: #5c6560;
-  background: #f3f7f4;
+  color: #6b5a12;
+  background: #fdf6da;
+  border: 1px solid #f2c94c;
   border-radius: 8px;
   padding: 0.75rem;
   margin: 0 0 1rem;
@@ -149,17 +151,23 @@ legend {
 .vof-submit {
   width: 100%;
   padding: 0.85rem;
-  background: #0f7a52;
-  color: white;
+  background: #16a34a;
+  color: #ffffff;
   border: none;
   border-radius: 8px;
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s ease;
 }
 
 .vof-submit:hover:not(:disabled) {
-  background: #0c6543;
+  background: #15803d;
+}
+
+.vof-submit:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(242, 201, 76, 0.5);
 }
 
 .vof-submit:disabled {
@@ -168,14 +176,24 @@ legend {
 }
 
 .vof-success h2 {
-  color: #16332b;
+  color: #14532d;
   margin-top: 0;
+}
+
+.vof-success::before {
+  content: "";
+  display: block;
+  height: 3px;
+  width: 48px;
+  background: #f2c94c;
+  border-radius: 2px;
+  margin-bottom: 0.75rem;
 }
 
 .vof-note {
   font-size: 0.9rem;
-  color: #5c6560;
-  background: #f3f7f4;
+  color: #16332b;
+  background: #eef7f1;
   border-radius: 8px;
   padding: 0.75rem;
 }
