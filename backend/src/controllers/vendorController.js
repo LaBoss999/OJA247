@@ -3,8 +3,6 @@ import cloudinary from "../config/cloudinaryConfig.js";
 import Vendor from "../models/Vendor.js";
 import Business from "../models/Business.js";
 
-const ONBOARDING_GRACE_PERIOD_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-
 // Simple in-memory cache — bank list changes rarely, no need to hit
 // Paystack on every page load. Swap for Redis if you're running multiple
 // backend instances.
@@ -252,11 +250,6 @@ export const onboardVendor = async (req, res) => {
       subaccountId = subaccount.id ? String(subaccount.id) : "";
     }
 
-    // 30-day deadline is anchored to when the business joined, not to whenever
-    // they get around to filling this form in — matches "list immediately,
-    // 30 days to verify" instead of letting the clock be delayed indefinitely.
-    const onboardingDeadline = new Date(business.createdAt.getTime() + ONBOARDING_GRACE_PERIOD_MS);
-
     // --- Persist vendor record (create or update) ---
     const vendor = await Vendor.findOneAndUpdate(
       { businessId: business_id },
@@ -278,7 +271,6 @@ export const onboardVendor = async (req, res) => {
         verificationTier: tier,
         subaccountCode,
         subaccountId,
-        onboardingDeadline,
         // Any (re)submission needs a fresh admin look, since the vendor may
         // have changed the very details that were previously reviewed.
         reviewStatus: "pending",
@@ -294,7 +286,8 @@ export const onboardVendor = async (req, res) => {
       data: {
         verificationTier: vendor.verificationTier,
         subaccountCode: vendor.subaccountCode,
-        onboardingDeadline: vendor.onboardingDeadline,
+        // Admin-controlled — null if the countdown hasn't been started for this business
+        verificationDeadline: business.verificationDeadline,
       },
     });
   } catch (error) {

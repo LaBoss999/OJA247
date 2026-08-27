@@ -179,3 +179,27 @@ export const reviewVendor = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Start, extend, or clear a business's verification countdown.
+// deadline: an ISO date string to set it explicitly, or null to stop the
+// countdown entirely (business is never auto-hidden while it's null).
+export const setVerificationDeadline = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { deadline } = req.body;
+
+    const business = await Business.findByIdAndUpdate(
+      id,
+      { verificationDeadline: deadline ? new Date(deadline) : null },
+      { new: true }
+    );
+
+    if (!business) {
+      return res.status(404).json({ message: "Business not found" });
+    }
+
+    res.json(business);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

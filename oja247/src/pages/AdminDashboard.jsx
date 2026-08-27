@@ -103,6 +103,33 @@ const AdminDashboard = () => {
     }
   };
 
+  const setVerificationDeadline = async (id, deadline) => {
+    try {
+      await axiosInstance.patch(`/api/admin/businesses/${id}/verification-deadline`, { deadline });
+      fetchAllData();
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to update verification deadline");
+    }
+  };
+
+  const startVerificationCountdown = (biz) => {
+    const deadline = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    setVerificationDeadline(biz._id, deadline);
+  };
+
+  const extendVerificationDeadline = (biz, days) => {
+    const base = biz.verificationDeadline ? new Date(biz.verificationDeadline) : new Date();
+    const deadline = new Date(base.getTime() + days * 24 * 60 * 60 * 1000).toISOString();
+    setVerificationDeadline(biz._id, deadline);
+  };
+
+  const clearVerificationDeadline = (biz) => {
+    if (!window.confirm(`Stop the verification countdown for "${biz.name}"? Their store will never be auto-hidden until you start it again.`)) {
+      return;
+    }
+    setVerificationDeadline(biz._id, null);
+  };
+
   const deleteBusiness = async (id, name) => {
     if (
       !window.confirm(
@@ -444,6 +471,7 @@ const AdminDashboard = () => {
                       <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Location</th>
                       <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Contact</th>
                       <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Featured</th>
+                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Verification Deadline</th>
                       <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Actions</th>
                     </tr>
                   </thead>
@@ -477,6 +505,40 @@ const AdminDashboard = () => {
                             <Star size={14} fill={biz.featured ? "currentColor" : "none"} />
                             {biz.featured ? "Featured" : "Not Featured"}
                           </button>
+                        </td>
+                        <td className="p-4">
+                          <p className="text-xs text-gray-400 mb-1.5">
+                            {biz.verificationDeadline
+                              ? `${new Date(biz.verificationDeadline) < new Date() ? "Expired" : "Due"} ${new Date(
+                                  biz.verificationDeadline
+                                ).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}`
+                              : "Not started"}
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {!biz.verificationDeadline ? (
+                              <button
+                                onClick={() => startVerificationCountdown(biz)}
+                                className="px-2.5 py-1 bg-green-500/15 text-green-400 border border-green-500/30 rounded-lg hover:bg-green-500/25 text-xs font-medium transition"
+                              >
+                                Start 30-day countdown
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => extendVerificationDeadline(biz, 7)}
+                                  className="px-2.5 py-1 bg-white/5 text-gray-300 border border-white/10 rounded-lg hover:bg-white/10 text-xs font-medium transition"
+                                >
+                                  +7 days
+                                </button>
+                                <button
+                                  onClick={() => clearVerificationDeadline(biz)}
+                                  className="px-2.5 py-1 bg-red-500/15 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/25 text-xs font-medium transition"
+                                >
+                                  Clear
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </td>
                         <td className="p-4">
                           <div className="flex gap-2">

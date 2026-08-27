@@ -184,19 +184,21 @@ export default function VendorOnboardingForm({ onSubmitted } = {}) {
         </p>
         {result.verificationTier === 'basic' && (
           <p className="vof-note">
-            Add your CAC document and address proof any time in the next 30 days to move up to Verified —
-            it raises your payout limits and unlocks the Verified badge.
+            Add your CAC document, address proof, and a selfie any time to move up to Verified — it raises
+            your payout limits and unlocks the Verified badge.
           </p>
         )}
-        <p className="vof-note">
-          Complete your verification before{' '}
-          {new Date(result.onboardingDeadline).toLocaleDateString('en-NG', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-          })}{' '}
-          or your listings will be hidden until you do.
-        </p>
+        {result.verificationDeadline && (
+          <p className="vof-note">
+            Complete your verification before{' '}
+            {new Date(result.verificationDeadline).toLocaleDateString('en-NG', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            })}{' '}
+            or your listings will be hidden until you do.
+          </p>
+        )}
       </div>
     );
   }

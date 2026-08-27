@@ -29,8 +29,6 @@ const VendorSchema = new mongoose.Schema(
       default: "incomplete",
     },
 
-    onboardingDeadline: { type: Date, required: true },
-
     // Manual admin review — automatic verificationTier only reflects which
     // documents were submitted, not whether an admin has confirmed them.
     reviewStatus: {

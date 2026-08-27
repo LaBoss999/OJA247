@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Business from "../models/Business.js";
+import Vendor from "../models/Vendor.js";
 
 // Turns "Chioma Fashion & Co." into "chioma-fashion-co"
 const slugify = (text) =>
@@ -31,11 +32,30 @@ const generateUniqueSlug = async (name, excludeId = null) => {
   }
 };
 
-// GET all
+// GET all — excludes businesses an admin has hidden, and businesses whose
+// admin-set verification deadline has passed without at least Basic-tier
+// vendor verification (paused, not deleted — direct/owner links still work).
+// A business with no deadline set yet (verificationDeadline: null) is never
+// auto-hidden — an admin has to start that countdown explicitly.
 export const getBusinesses = async (req, res) => {
   try {
-    const businesses = await Business.find();
-    res.json(businesses);
+    const businesses = await Business.find({ isHidden: { $ne: true } }).lean();
+
+    const vendors = await Vendor.find({
+      businessId: { $in: businesses.map((b) => b._id) },
+    }).select("businessId verificationTier");
+    const tierByBusinessId = new Map(vendors.map((v) => [v.businessId.toString(), v.verificationTier]));
+
+    const now = Date.now();
+    const visible = businesses.filter((b) => {
+      const tier = tierByBusinessId.get(b._id.toString()) || "incomplete";
+      if (tier !== "incomplete") return true;
+      if (!b.verificationDeadline) return true;
+
+      return now <= new Date(b.verificationDeadline).getTime();
+    });
+
+    res.json(visible);
   } catch (error) {
     res.status(500).json({ message: "Error fetching businesses" });
   }

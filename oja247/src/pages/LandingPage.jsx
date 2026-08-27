@@ -26,8 +26,11 @@ const LandingPage = () => {
   });
 
   const { scrollY } = useScroll();
-  const opacity = useTransform(scrollY, [0, 300], [1, 0]);
-  const scale = useTransform(scrollY, [0, 300], [1, 0.8]);
+  // Fade only the heading/badge as the user scrolls — spread over a longer
+  // distance, and never fully vanish, so it doesn't visibly shift the layout
+  // out from under someone who's scrolling and then trying to type.
+  const opacity = useTransform(scrollY, [0, 450], [1, 0.4]);
+  const scale = useTransform(scrollY, [0, 450], [1, 0.94]);
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -148,6 +151,7 @@ const LandingPage = () => {
 
       {/* Hero Section */}
       <main className="relative min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 pt-24 sm:pt-32 pb-12 sm:pb-20 text-center">
+        {/* Only the badge/heading/subtext fade+scale on scroll now */}
         <motion.div style={{ opacity, scale }} className="relative z-10 w-full">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -200,76 +204,78 @@ const LandingPage = () => {
               24/7!
             </span>
           </motion.p>
+        </motion.div>
 
-          {/* Search Bar */}
-          <motion.form
-            onSubmit={handleSearch}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1 }}
-            className="max-w-2xl mx-auto mb-6 sm:mb-8 px-4"
-          >
-            <div className="relative group">
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                className="flex items-center backdrop-blur-xl bg-white/80 border-2 border-gray-200/50 rounded-full shadow-xl overflow-hidden group-hover:border-green-400 transition-colors"
+        {/* Search bar + CTAs live OUTSIDE the fading wrapper so they stay
+            fully opaque, full-size, and clickable/typeable no matter how
+            far the page has scrolled. */}
+        <motion.form
+          onSubmit={handleSearch}
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1 }}
+          className="relative z-10 max-w-2xl mx-auto mb-6 sm:mb-8 px-4 w-full"
+        >
+          <div className="relative group">
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              className="flex items-center backdrop-blur-xl bg-white/80 border-2 border-gray-200/50 rounded-full shadow-xl overflow-hidden group-hover:border-green-400 transition-colors"
+            >
+              <Search
+                className="ml-4 sm:ml-6 text-gray-400 group-hover:text-green-500 transition-colors flex-shrink-0"
+                size={20}
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search for products, businesses..."
+                className="flex-1 px-3 sm:px-6 py-3 sm:py-5 bg-transparent text-gray-900 text-sm sm:text-lg focus:outline-none min-w-0"
+              />
+              <motion.button
+                type="submit"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="m-1.5 sm:m-2 px-4 sm:px-8 py-2 sm:py-3 text-sm sm:text-base bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition flex-shrink-0"
               >
-                <Search
-                  className="ml-4 sm:ml-6 text-gray-400 group-hover:text-green-500 transition-colors flex-shrink-0"
-                  size={20}
-                />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search for products, businesses..."
-                  className="flex-1 px-3 sm:px-6 py-3 sm:py-5 bg-transparent text-gray-900 text-sm sm:text-lg focus:outline-none min-w-0"
-                />
-                <motion.button
-                  type="submit"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="m-1.5 sm:m-2 px-4 sm:px-8 py-2 sm:py-3 text-sm sm:text-base bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition flex-shrink-0"
-                >
-                  Search
-                </motion.button>
-              </motion.div>
-            </div>
-          </motion.form>
+                Search
+              </motion.button>
+            </motion.div>
+          </div>
+        </motion.form>
 
-          {/* CTA Buttons */}
-          <motion.div
-            className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center px-4"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.2 }}
+        {/* CTA Buttons */}
+        <motion.div
+          className="relative z-10 flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center px-4"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.2 }}
+        >
+          <motion.button
+            whileHover={{ scale: 1.05, y: -5 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => navigate("/business-form")}
+            className="group relative px-6 sm:px-10 py-3 sm:py-5 overflow-hidden rounded-2xl"
           >
-            <motion.button
-              whileHover={{ scale: 1.05, y: -5 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate("/business-form")}
-              className="group relative px-6 sm:px-10 py-3 sm:py-5 overflow-hidden rounded-2xl"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-500 transition-transform group-hover:scale-110" />
-              <span className="relative z-10 text-white font-bold text-sm sm:text-lg flex items-center gap-2 justify-center">
-                <Rocket size={18} className="sm:w-6 sm:h-6" />
-                <span className="whitespace-nowrap">
-                  Register Your Business
-                </span>
+            <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-500 transition-transform group-hover:scale-110" />
+            <span className="relative z-10 text-white font-bold text-sm sm:text-lg flex items-center gap-2 justify-center">
+              <Rocket size={18} className="sm:w-6 sm:h-6" />
+              <span className="whitespace-nowrap">
+                Register Your Business
               </span>
-            </motion.button>
+            </span>
+          </motion.button>
 
-            <motion.button
-              whileHover={{ scale: 1.05, y: -5 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate("/explore")}
-              className="group relative px-6 sm:px-10 py-3 sm:py-5 bg-white border-2 border-orange-500 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl"
-            >
-              <span className="relative z-10 text-orange-600 font-bold text-sm sm:text-lg flex items-center gap-2 justify-center">
-                <Store size={18} className="sm:w-6 sm:h-6" /> Explore Vendors
-              </span>
-            </motion.button>
-          </motion.div>
+          <motion.button
+            whileHover={{ scale: 1.05, y: -5 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => navigate("/explore")}
+            className="group relative px-6 sm:px-10 py-3 sm:py-5 bg-white border-2 border-orange-500 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl"
+          >
+            <span className="relative z-10 text-orange-600 font-bold text-sm sm:text-lg flex items-center gap-2 justify-center">
+              <Store size={18} className="sm:w-6 sm:h-6" /> Explore Vendors
+            </span>
+          </motion.button>
         </motion.div>
 
         {/* Stats */}

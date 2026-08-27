@@ -10,6 +10,7 @@ import {
   toggleUserBan,
   getAllVendors,
   reviewVendor,
+  setVerificationDeadline,
 } from "../controllers/adminController.js";
 
 const router = express.Router();
@@ -27,5 +28,6 @@ router.delete("/businesses/:id", deleteBusiness);
 router.patch("/users/:id/ban", toggleUserBan);
 router.get("/vendors", getAllVendors);
 router.patch("/vendors/:id/review", reviewVendor);
+router.patch("/businesses/:id/verification-deadline", setVerificationDeadline);
 
 export default router;

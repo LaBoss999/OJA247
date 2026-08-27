@@ -23,7 +23,10 @@ const BusinessSchema = new mongoose.Schema(
     isHidden: { type: Boolean, default: false }, // hides this business from public listings
     featured: { type: Boolean, default: false }, // admin-only — was previously used but missing from schema
     verified: { type: Boolean, default: false }, // admin-only — shown as a trust badge on the storefront
-    slug: { type: String, unique: true, sparse: true, lowercase: true, trim: true } // vendor-editable, readable store URL (e.g. "chioma-fashion")
+    slug: { type: String, unique: true, sparse: true, lowercase: true, trim: true }, // vendor-editable, readable store URL (e.g. "chioma-fashion")
+    // Admin-controlled vendor verification countdown. Null = not started yet,
+    // so the business is never auto-hidden regardless of verification tier.
+    verificationDeadline: { type: Date, default: null }
   },
   { timestamps: true }
 );

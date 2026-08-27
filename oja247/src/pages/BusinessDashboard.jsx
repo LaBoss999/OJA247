@@ -43,12 +43,12 @@ const BusinessDashboard = () => {
   const [copiedLink, setCopiedLink] = useState(false);
 
   const [vendorStatus, setVendorStatus] = useState(null);
-  const [vendorStatusFetched, setVendorStatusFetched] = useState(false);
 
   const showLoader = useMinimumLoadingTime(loading);
 
   useEffect(() => {
     fetchBusiness();
+    fetchVendorStatus();
   }, [businessId]);
 
   useEffect(() => {
@@ -73,12 +73,6 @@ const BusinessDashboard = () => {
       fetchOrders();
     }
   }, [activeTab, ordersFetched]);
-
-  useEffect(() => {
-    if (activeTab === "payouts" && !vendorStatusFetched) {
-      fetchVendorStatus();
-    }
-  }, [activeTab, vendorStatusFetched]);
 
   const fetchBusiness = async () => {
     try {
@@ -118,8 +112,6 @@ const BusinessDashboard = () => {
     } catch (error) {
       // 404 just means they haven't submitted onboarding yet — not an error state
       setVendorStatus(null);
-    } finally {
-      setVendorStatusFetched(true);
     }
   };
 
@@ -231,6 +223,15 @@ const BusinessDashboard = () => {
       .reduce((sum, o) => sum + Number(o.total || 0), 0),
   };
 
+  // Verification countdown is admin-controlled (Business.verificationDeadline).
+  // Null means an admin hasn't started it yet — no banner, never auto-hidden.
+  const needsVerification = (vendorStatus?.verificationTier || "incomplete") === "incomplete";
+  const verificationDeadline = business.verificationDeadline ? new Date(business.verificationDeadline) : null;
+  const daysUntilDeadline = verificationDeadline
+    ? Math.ceil((verificationDeadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+    : null;
+  const deadlinePassed = daysUntilDeadline !== null && daysUntilDeadline < 0;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-yellow-50">
       <div
@@ -269,6 +270,29 @@ const BusinessDashboard = () => {
           </button>
         </div>
       </div>
+
+      {needsVerification && verificationDeadline && (
+        <div className={`px-4 py-3 text-sm font-medium text-center ${deadlinePassed ? "bg-red-600 text-white" : "bg-yellow-400 text-yellow-950"}`}>
+          {deadlinePassed ? (
+            <span>
+              Your store is hidden from customers because verification wasn't completed by{" "}
+              {verificationDeadline.toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" })}.{" "}
+            </span>
+          ) : (
+            <span>
+              Complete vendor verification within {daysUntilDeadline} day{daysUntilDeadline === 1 ? "" : "s"} (by{" "}
+              {verificationDeadline.toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" })}) or your store will be hidden from customers.{" "}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setActiveTab("payouts")}
+            className="underline font-semibold hover:opacity-80"
+          >
+            Complete now
+          </button>
+        </div>
+      )}
 
       <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4">
@@ -795,7 +819,7 @@ const BusinessDashboard = () => {
               </div>
             )}
 
-            <VendorOnboardingForm onSubmitted={() => setVendorStatusFetched(false)} />
+            <VendorOnboardingForm onSubmitted={() => fetchVendorStatus()} />
           </div>
         )}
       </div>
