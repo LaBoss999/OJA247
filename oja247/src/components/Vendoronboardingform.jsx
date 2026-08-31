@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import axiosInstance from '../services/api';
-import './VendorOnboardingForm.css';
+import './VendoronboardingForm.css';
 
 // Combined vendor onboarding form: payout info + KYC docs in one flow.
 // Basic tier (NIN + bank match) is required to submit.
