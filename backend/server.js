@@ -1,9 +1,13 @@
 import dns from "node:dns";
-// Force Node.js to use Google's public DNS servers
-dns.setServers(["8.8.8.8", "8.8.4.4"]);
-
 import dotenv from "dotenv";
 dotenv.config();
+
+if (process.env.NODE_ENV !== "production") {
+  // Local networks sometimes fail to resolve MongoDB Atlas's SRV records —
+  // not needed (and can add latency) on Vercel's own network, so this only
+  // runs in local dev.
+  dns.setServers(["8.8.8.8", "8.8.4.4"]);
+}
 
 import express from "express";
 import cors from "cors";
@@ -67,8 +71,10 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/vendors", vendorRoutes);
 
-// Connect to MongoDB
-connectDB();
+// Awaited at module load — on a cold start this holds the response until
+// Mongo is ready instead of letting requests race ahead of the connection.
+// Cached in db.js, so warm invocations skip straight past this.
+await connectDB();
 
 // Only run server locally
 if (process.env.NODE_ENV !== "production") {
