@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Facebook, Twitter, Instagram } from "lucide-react";
+import { Facebook, Twitter, Instagram, MessageCircle } from "lucide-react";
 import Logo1 from "../assets/OJA247..PNG";
 
 const marketplaceLinks = [
@@ -139,6 +139,29 @@ const Footer = () => {
           <FooterLinkGroup title="Company" links={companyLinks} />
 
           <FooterLinkGroup title="Support" links={supportLinks} />
+        </div>
+
+        {/* WhatsApp Community */}
+        <div className="mt-16 p-8 rounded-3xl bg-green-500/10 border border-green-500/20 backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-6">
+          <div>
+            <h3 className="text-2xl font-bold flex items-center gap-2">
+              <MessageCircle className="text-green-400" size={24} />
+              Join our WhatsApp Community
+            </h3>
+
+            <p className="text-gray-400 mt-2">
+              Get real-time updates, drops and offers straight from OJA247 vendors.
+            </p>
+          </div>
+
+          <a
+            href="https://chat.whatsapp.com/JFszyecYw0o46HYTNaPxpT"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 font-bold hover:scale-105 transition whitespace-nowrap"
+          >
+            Join Community
+          </a>
         </div>
 
         {/* Newsletter */}
