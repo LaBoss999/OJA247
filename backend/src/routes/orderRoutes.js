@@ -5,6 +5,7 @@ import {
   updateOrderStatus,
   verifyOrderPayment,
   getOrdersByBusiness,
+  handlePaystackWebhook,
 } from "../controllers/orderController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -12,6 +13,8 @@ const router = express.Router();
 
 router.post("/", createOrder);
 router.post("/verify/:reference", verifyOrderPayment);
+// Public — Paystack calls this directly, verified via signature, not a user token
+router.post("/webhook", handlePaystackWebhook);
 router.get("/reference/:reference", getOrderByReference);
 router.patch("/reference/:reference", updateOrderStatus);
 

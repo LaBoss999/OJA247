@@ -36,7 +36,17 @@ app.use(
 );
 
 // Increased body size limit (default is 100kb, bumped up for image/file payloads)
-app.use(express.json({ limit: "25mb" }));
+// The `verify` callback stashes the raw bytes on req.rawBody — needed to check
+// Paystack's webhook signature, since HMAC must run over the exact raw body,
+// not the parsed/re-stringified JSON.
+app.use(
+  express.json({
+    limit: "25mb",
+    verify: (req, res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 app.use(express.urlencoded({ limit: "25mb", extended: true }));
 
 // Health check route

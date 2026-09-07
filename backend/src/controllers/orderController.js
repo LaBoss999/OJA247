@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import Order from "../models/Order.js";
 import Vendor from "../models/Vendor.js";
 
@@ -182,6 +183,46 @@ export const verifyOrderPayment = async (req, res) => {
   } catch (error) {
     console.error("Verify payment error:", error);
     return res.status(500).json({ message: "Error verifying payment" });
+  }
+};
+
+// POST /api/orders/webhook
+// Paystack calls this asynchronously on payment events — this is the
+// source of truth for marking orders paid, independent of whether the
+// customer's browser stayed on the page long enough to hit /verify.
+export const handlePaystackWebhook = async (req, res) => {
+  try {
+    const signature = req.headers["x-paystack-signature"];
+    const secret = process.env.PAYSTACK_SECRET_KEY;
+
+    // req.rawBody is populated by the express.json() verify hook in server.js —
+    // the signature is an HMAC over the exact raw bytes, not the parsed JSON.
+    if (!secret || !signature || !req.rawBody) {
+      return res.sendStatus(401);
+    }
+
+    const expectedSignature = crypto.createHmac("sha512", secret).update(req.rawBody).digest("hex");
+    if (expectedSignature !== signature) {
+      console.error("Paystack webhook: signature mismatch");
+      return res.sendStatus(401);
+    }
+
+    const event = req.body;
+
+    // findOneAndUpdate is idempotent — safe if Paystack retries, or if
+    // /verify already marked this order paid via the redirect callback.
+    if (event.event === "charge.success" && event.data?.reference) {
+      await Order.findOneAndUpdate(
+        { reference: event.data.reference },
+        { status: "paid", paymentStatus: "paid" }
+      );
+    }
+
+    return res.sendStatus(200);
+  } catch (error) {
+    console.error("Paystack webhook error:", error.message);
+    // Non-2xx so Paystack retries later rather than silently losing the event
+    return res.sendStatus(500);
   }
 };
 
