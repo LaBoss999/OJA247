@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   XCircle,
   FileText,
+  Search,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -31,6 +32,32 @@ const NAV_ITEMS = [
   { id: "users", label: "Users", icon: Users },
   { id: "vendors", label: "Vendor Verification", icon: ShieldCheck },
 ];
+
+// Small, reusable empty-state block so every table has somewhere
+// sensible to land when there's nothing (or no matches) to show.
+const EmptyState = ({ icon: Icon, title, message }) => (
+  <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+    <div className="p-3 rounded-2xl bg-white/5 border border-white/10 mb-4">
+      <Icon size={22} className="text-gray-500" />
+    </div>
+    <p className="font-semibold text-white mb-1">{title}</p>
+    <p className="text-sm text-gray-500 max-w-xs">{message}</p>
+  </div>
+);
+
+// Lightweight search field shared across the table headers.
+const SearchField = ({ value, onChange, placeholder }) => (
+  <div className="relative w-full sm:w-64">
+    <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:border-green-400/40 focus:bg-white/10 transition"
+    />
+  </div>
+);
 
 const AdminDashboard = () => {
   const { user, logout } = useAuth();
@@ -54,7 +81,24 @@ const AdminDashboard = () => {
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Search terms, one per searchable tab.
+  const [businessSearch, setBusinessSearch] = useState("");
+  const [productSearch, setProductSearch] = useState("");
+  const [orderSearch, setOrderSearch] = useState("");
+  const [userSearch, setUserSearch] = useState("");
+
+  // Toast replaces alert() for non-blocking confirmations/errors.
+  const [toast, setToast] = useState(null); // { message, type: "success" | "error" }
+
   const showLoader = useMinimumLoadingTime(loading);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3200);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const showToast = (message, type = "success") => setToast({ message, type });
 
   useEffect(() => {
     if (!user || user.role !== "admin") {
@@ -86,6 +130,8 @@ const AdminDashboard = () => {
       if (error.response?.status === 403) {
         alert("Admin access required");
         navigate("/");
+      } else {
+        showToast("Couldn't load dashboard data. Try refreshing.", "error");
       }
     } finally {
       setLoading(false);
@@ -97,9 +143,10 @@ const AdminDashboard = () => {
       await axiosInstance.patch(`/api/admin/businesses/${id}/featured`, {
         featured: !currentStatus,
       });
+      showToast(currentStatus ? "Removed from featured" : "Marked as featured");
       fetchAllData();
     } catch (error) {
-      alert("Failed to update featured status");
+      showToast("Failed to update featured status", "error");
     }
   };
 
@@ -108,7 +155,7 @@ const AdminDashboard = () => {
       await axiosInstance.patch(`/api/admin/businesses/${id}/verification-deadline`, { deadline });
       fetchAllData();
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to update verification deadline");
+      showToast(error.response?.data?.message || "Failed to update verification deadline", "error");
     }
   };
 
@@ -141,10 +188,10 @@ const AdminDashboard = () => {
 
     try {
       await axiosInstance.delete(`/api/admin/businesses/${id}`);
-      alert("Business deleted successfully");
+      showToast("Business deleted");
       fetchAllData();
     } catch (error) {
-      alert("Failed to delete business");
+      showToast("Failed to delete business", "error");
     }
   };
 
@@ -155,10 +202,10 @@ const AdminDashboard = () => {
 
     try {
       await axiosInstance.delete(`/api/products/${id}`);
-      alert("Product deleted successfully");
+      showToast("Product deleted");
       fetchAllData();
     } catch (error) {
-      alert("Failed to delete product");
+      showToast("Failed to delete product", "error");
     }
   };
 
@@ -173,10 +220,10 @@ const AdminDashboard = () => {
       await axiosInstance.patch(`/api/admin/users/${id}/ban`, {
         banned: !currentStatus,
       });
-      alert(`User ${currentStatus ? "unbanned" : "banned"} successfully`);
+      showToast(`User ${currentStatus ? "unbanned" : "banned"}`);
       fetchAllData();
     } catch (error) {
-      alert("Failed to update user status");
+      showToast("Failed to update user status", "error");
     }
   };
 
@@ -193,17 +240,41 @@ const AdminDashboard = () => {
 
     try {
       await axiosInstance.patch(`/api/admin/vendors/${id}/review`, { decision, notes });
-      alert(`Vendor ${decision}.`);
+      showToast(`Vendor ${decision}`);
       fetchAllData();
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to update vendor review status.");
+      showToast(error.response?.data?.message || "Failed to update vendor review status", "error");
     }
   };
 
-  const filteredOrders =
-    orderStatusFilter === "all"
-      ? orders
-      : orders.filter((order) => order.paymentStatus === orderStatusFilter);
+  const filteredOrders = orders
+    .filter((order) => orderStatusFilter === "all" || order.paymentStatus === orderStatusFilter)
+    .filter((order) => {
+      if (!orderSearch) return true;
+      const q = orderSearch.toLowerCase();
+      return (
+        order.reference?.toLowerCase().includes(q) ||
+        order.customer?.fullName?.toLowerCase().includes(q) ||
+        order.customer?.email?.toLowerCase().includes(q)
+      );
+    });
+
+  const filteredBusinesses = businesses.filter((biz) => {
+    if (!businessSearch) return true;
+    const q = businessSearch.toLowerCase();
+    return biz.name?.toLowerCase().includes(q) || biz.category?.toLowerCase().includes(q) || biz.location?.toLowerCase().includes(q);
+  });
+
+  const filteredProducts = products.filter((product) => {
+    if (!productSearch) return true;
+    return product.name?.toLowerCase().includes(productSearch.toLowerCase());
+  });
+
+  const filteredUsers = users.filter((u) => {
+    if (!userSearch) return true;
+    const q = userSearch.toLowerCase();
+    return u.email?.toLowerCase().includes(q) || u.businessId?.name?.toLowerCase().includes(q);
+  });
 
   if (showLoader) {
     return <Loader text="Loading Admin Dashboard..." />;
@@ -212,9 +283,9 @@ const AdminDashboard = () => {
   const activeLabel = NAV_ITEMS.find((n) => n.id === activeTab)?.label || "";
 
   return (
-    <div className="min-h-screen bg-[#05070a] text-white relative overflow-x-hidden">
-      {/* Ambient glow orbs — same device as the storefront footer, carried into the admin surface */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+    <div className="min-h-screen bg-[#05070a] text-white relative overflow-x-hidden lg:flex">
+      {/* Ambient glow orbs — purely decorative, never intercepts clicks */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden z-0">
         <div className="absolute -top-32 left-1/4 w-96 h-96 bg-green-500/10 rounded-full blur-3xl" />
         <div className="absolute top-1/2 -right-32 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-1/3 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl" />
@@ -228,11 +299,18 @@ const AdminDashboard = () => {
         />
       )}
 
-      {/* Sidebar */}
+      {/*
+        Sidebar: an overlay drawer on mobile (fixed), but a normal flex
+        item that's "sticky" from lg upward — not "fixed" full-height.
+        A sticky element releases at the bottom of ITS OWN parent, so
+        once this component ends and any page footer begins below it,
+        the sidebar stops scrolling and gets out of the footer's way
+        instead of permanently floating over it.
+      */}
       <aside
-        className={`fixed top-0 left-0 h-full w-72 bg-white/5 backdrop-blur-2xl border-r border-white/10 z-50 transform transition-transform duration-300 lg:translate-x-0 flex flex-col ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed top-0 left-0 h-screen w-72 bg-white/5 backdrop-blur-2xl border-r border-white/10 z-50 flex flex-col transform transition-transform duration-300
+        lg:sticky lg:translate-x-0 lg:z-30 lg:shrink-0
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
         <div className="flex items-center justify-between px-6 py-6 border-b border-white/10">
           <div>
@@ -251,7 +329,7 @@ const AdminDashboard = () => {
           </button>
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-1.5">
+        <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
           {NAV_ITEMS.map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -293,9 +371,9 @@ const AdminDashboard = () => {
       </aside>
 
       {/* Main content */}
-      <div className="lg:pl-72 relative z-10">
+      <div className="flex-1 min-w-0 relative z-10">
         {/* Top bar */}
-        <div className="sticky top-0 z-30 bg-[#05070a]/80 backdrop-blur-xl border-b border-white/10">
+        <div className="sticky top-0 z-20 bg-[#05070a]/80 backdrop-blur-xl border-b border-white/10">
           <div className="flex items-center gap-4 px-4 sm:px-8 py-5">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -361,31 +439,38 @@ const AdminDashboard = () => {
               {/* Categories */}
               <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 sm:p-8">
                 <h2 className="text-lg font-bold text-white mb-5">Businesses by Category</h2>
-                <div className="space-y-3">
-                  {stats.businessesByCategory.map((cat) => (
-                    <div
-                      key={cat._id}
-                      className="flex items-center justify-between bg-white/5 rounded-xl px-4 py-3 border border-white/5"
-                    >
-                      <span className="font-medium text-gray-300">
-                        {cat._id || "Uncategorized"}
-                      </span>
-                      <span className="px-3 py-1 bg-green-500/15 text-green-400 border border-green-500/30 rounded-full font-semibold text-sm">
-                        {cat.count}
-                      </span>
-                    </div>
-                  ))}
-                </div>
+                {stats.businessesByCategory.length === 0 ? (
+                  <EmptyState icon={Store} title="No categories yet" message="Category breakdowns will show up here as businesses join." />
+                ) : (
+                  <div className="space-y-3">
+                    {stats.businessesByCategory.map((cat) => (
+                      <div
+                        key={cat._id}
+                        className="flex items-center justify-between bg-white/5 rounded-xl px-4 py-3 border border-white/5"
+                      >
+                        <span className="font-medium text-gray-300">
+                          {cat._id || "Uncategorized"}
+                        </span>
+                        <span className="px-3 py-1 bg-green-500/15 text-green-400 border border-green-500/30 rounded-full font-semibold text-sm">
+                          {cat.count}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
 
           {activeTab === "orders" && (
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
-              <div className="p-6 border-b border-white/10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <h2 className="text-xl font-bold text-white">
-                  Recent Orders <span className="text-gray-500 font-normal">({filteredOrders.length})</span>
-                </h2>
+              <div className="p-6 border-b border-white/10 flex flex-col gap-4">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <h2 className="text-xl font-bold text-white">
+                    Recent Orders <span className="text-gray-500 font-normal">({filteredOrders.length})</span>
+                  </h2>
+                  <SearchField value={orderSearch} onChange={setOrderSearch} placeholder="Search by reference or customer" />
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {[
                     { value: "all", label: "All" },
@@ -407,279 +492,314 @@ const AdminDashboard = () => {
                   ))}
                 </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[720px]">
-                  <thead className="bg-white/5">
-                    <tr>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Reference</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Customer</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Items</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Total</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Payment</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredOrders.map((order) => (
-                      <tr key={order._id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                        <td className="p-4 font-medium text-sm text-gray-300">{order.reference}</td>
-                        <td className="p-4">
-                          <div>
-                            <p className="font-medium text-white">{order.customer?.fullName}</p>
-                            <p className="text-sm text-gray-500">{order.customer?.email}</p>
-                          </div>
-                        </td>
-                        <td className="p-4 text-sm text-gray-400">{order.items?.length || 0}</td>
-                        <td className="p-4 font-semibold text-white">₦{Number(order.total || 0).toLocaleString()}</td>
-                        <td className="p-4">
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                              order.paymentStatus === "paid"
-                                ? "bg-green-500/15 text-green-400 border-green-500/30"
-                                : order.paymentStatus === "failed"
-                                ? "bg-red-500/15 text-red-400 border-red-500/30"
-                                : "bg-yellow-500/15 text-yellow-400 border-yellow-500/30"
-                            }`}
-                          >
-                            {order.paymentStatus}
-                          </span>
-                        </td>
-                        <td className="p-4 text-sm text-gray-500">
-                          {new Date(order.createdAt).toLocaleString()}
-                        </td>
+              {filteredOrders.length === 0 ? (
+                <EmptyState
+                  icon={ShoppingCart}
+                  title={orderSearch || orderStatusFilter !== "all" ? "No matching orders" : "No orders yet"}
+                  message={orderSearch || orderStatusFilter !== "all" ? "Try a different search or filter." : "Orders will appear here as customers check out."}
+                />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[720px]">
+                    <thead className="bg-white/5">
+                      <tr>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Reference</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Customer</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Items</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Total</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Payment</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Date</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {filteredOrders.map((order) => (
+                        <tr key={order._id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                          <td className="p-4 font-medium text-sm text-gray-300">{order.reference}</td>
+                          <td className="p-4">
+                            <div>
+                              <p className="font-medium text-white">{order.customer?.fullName}</p>
+                              <p className="text-sm text-gray-500">{order.customer?.email}</p>
+                            </div>
+                          </td>
+                          <td className="p-4 text-sm text-gray-400">{order.items?.length || 0}</td>
+                          <td className="p-4 font-semibold text-white">₦{Number(order.total || 0).toLocaleString()}</td>
+                          <td className="p-4">
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                                order.paymentStatus === "paid"
+                                  ? "bg-green-500/15 text-green-400 border-green-500/30"
+                                  : order.paymentStatus === "failed"
+                                  ? "bg-red-500/15 text-red-400 border-red-500/30"
+                                  : "bg-yellow-500/15 text-yellow-400 border-yellow-500/30"
+                              }`}
+                            >
+                              {order.paymentStatus}
+                            </span>
+                          </td>
+                          <td className="p-4 text-sm text-gray-500">
+                            {new Date(order.createdAt).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
           {activeTab === "businesses" && (
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
-              <div className="p-6 border-b border-white/10">
+              <div className="p-6 border-b border-white/10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <h2 className="text-xl font-bold text-white">
-                  All Businesses <span className="text-gray-500 font-normal">({businesses.length})</span>
+                  All Businesses <span className="text-gray-500 font-normal">({filteredBusinesses.length})</span>
                 </h2>
+                <SearchField value={businessSearch} onChange={setBusinessSearch} placeholder="Search by name, category, or location" />
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[720px]">
-                  <thead className="bg-white/5">
-                    <tr>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Business</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Category</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Location</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Contact</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Featured</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Verification Deadline</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {businesses.map((biz) => (
-                      <tr key={biz._id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            {biz.logo && (
-                              <img
-                                src={biz.logo}
-                                alt=""
-                                className="w-9 h-9 rounded-full object-cover border border-white/10"
-                              />
-                            )}
-                            <span className="font-medium text-white">{biz.name}</span>
-                          </div>
-                        </td>
-                        <td className="p-4 text-gray-400">{biz.category}</td>
-                        <td className="p-4 text-gray-400">{biz.location}</td>
-                        <td className="p-4 text-gray-400">{biz.contact}</td>
-                        <td className="p-4">
-                          <button
-                            onClick={() => toggleFeatured(biz._id, biz.featured)}
-                            className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border transition ${
-                              biz.featured
-                                ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/30"
-                                : "bg-white/5 text-gray-400 border-white/10 hover:bg-white/10"
-                            }`}
-                          >
-                            <Star size={14} fill={biz.featured ? "currentColor" : "none"} />
-                            {biz.featured ? "Featured" : "Not Featured"}
-                          </button>
-                        </td>
-                        <td className="p-4">
-                          <p className="text-xs text-gray-400 mb-1.5">
-                            {biz.verificationDeadline
-                              ? `${new Date(biz.verificationDeadline) < new Date() ? "Expired" : "Due"} ${new Date(
-                                  biz.verificationDeadline
-                                ).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}`
-                              : "Not started"}
-                          </p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {!biz.verificationDeadline ? (
-                              <button
-                                onClick={() => startVerificationCountdown(biz)}
-                                className="px-2.5 py-1 bg-green-500/15 text-green-400 border border-green-500/30 rounded-lg hover:bg-green-500/25 text-xs font-medium transition"
-                              >
-                                Start 30-day countdown
-                              </button>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() => extendVerificationDeadline(biz, 7)}
-                                  className="px-2.5 py-1 bg-white/5 text-gray-300 border border-white/10 rounded-lg hover:bg-white/10 text-xs font-medium transition"
-                                >
-                                  +7 days
-                                </button>
-                                <button
-                                  onClick={() => clearVerificationDeadline(biz)}
-                                  className="px-2.5 py-1 bg-red-500/15 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/25 text-xs font-medium transition"
-                                >
-                                  Clear
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => navigate(`/dashboard/${biz._id}`)}
-                              className="px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm font-medium transition"
-                            >
-                              View
-                            </button>
-                            <button
-                              onClick={() => deleteBusiness(biz._id, biz.name)}
-                              className="px-3 py-1.5 bg-red-500/15 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/25 text-sm font-medium flex items-center gap-1 transition"
-                            >
-                              <Trash2 size={14} />
-                              Delete
-                            </button>
-                          </div>
-                        </td>
+              {filteredBusinesses.length === 0 ? (
+                <EmptyState
+                  icon={Store}
+                  title={businessSearch ? "No matching businesses" : "No businesses yet"}
+                  message={businessSearch ? `Nothing matches "${businessSearch}".` : "Businesses will appear here once vendors sign up."}
+                />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[720px]">
+                    <thead className="bg-white/5">
+                      <tr>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Business</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Category</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Location</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Contact</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Featured</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Verification Deadline</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {filteredBusinesses.map((biz) => (
+                        <tr key={biz._id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              {biz.logo && (
+                                <img
+                                  src={biz.logo}
+                                  alt=""
+                                  className="w-9 h-9 rounded-full object-cover border border-white/10"
+                                />
+                              )}
+                              <span className="font-medium text-white">{biz.name}</span>
+                            </div>
+                          </td>
+                          <td className="p-4 text-gray-400">{biz.category}</td>
+                          <td className="p-4 text-gray-400">{biz.location}</td>
+                          <td className="p-4 text-gray-400">{biz.contact}</td>
+                          <td className="p-4">
+                            <button
+                              onClick={() => toggleFeatured(biz._id, biz.featured)}
+                              className={`flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium border transition ${
+                                biz.featured
+                                  ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/30"
+                                  : "bg-white/5 text-gray-400 border-white/10 hover:bg-white/10"
+                              }`}
+                            >
+                              <Star size={14} fill={biz.featured ? "currentColor" : "none"} />
+                              {biz.featured ? "Featured" : "Not Featured"}
+                            </button>
+                          </td>
+                          <td className="p-4">
+                            <p className="text-xs text-gray-400 mb-1.5">
+                              {biz.verificationDeadline
+                                ? `${new Date(biz.verificationDeadline) < new Date() ? "Expired" : "Due"} ${new Date(
+                                    biz.verificationDeadline
+                                  ).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}`
+                                : "Not started"}
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {!biz.verificationDeadline ? (
+                                <button
+                                  onClick={() => startVerificationCountdown(biz)}
+                                  className="px-2.5 py-1 bg-green-500/15 text-green-400 border border-green-500/30 rounded-lg hover:bg-green-500/25 text-xs font-medium transition"
+                                >
+                                  Start 30-day countdown
+                                </button>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => extendVerificationDeadline(biz, 7)}
+                                    className="px-2.5 py-1 bg-white/5 text-gray-300 border border-white/10 rounded-lg hover:bg-white/10 text-xs font-medium transition"
+                                  >
+                                    +7 days
+                                  </button>
+                                  <button
+                                    onClick={() => clearVerificationDeadline(biz)}
+                                    className="px-2.5 py-1 bg-red-500/15 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/25 text-xs font-medium transition"
+                                  >
+                                    Clear
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => navigate(`/dashboard/${biz._id}`)}
+                                className="px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 text-sm font-medium transition"
+                              >
+                                View
+                              </button>
+                              <button
+                                onClick={() => deleteBusiness(biz._id, biz.name)}
+                                className="px-3 py-1.5 bg-red-500/15 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/25 text-sm font-medium flex items-center gap-1 transition"
+                              >
+                                <Trash2 size={14} />
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
           {activeTab === "products" && (
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
-              <div className="p-6 border-b border-white/10">
+              <div className="p-6 border-b border-white/10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <h2 className="text-xl font-bold text-white">
-                  All Products <span className="text-gray-500 font-normal">({products.length})</span>
+                  All Products <span className="text-gray-500 font-normal">({filteredProducts.length})</span>
                 </h2>
+                <SearchField value={productSearch} onChange={setProductSearch} placeholder="Search products" />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 p-6">
-                {products.map((product) => (
-                  <div
-                    key={product._id}
-                    className="bg-white/5 border border-white/10 rounded-xl overflow-hidden hover:border-white/20 hover:-translate-y-0.5 transition-all"
-                  >
-                    <div className="h-44 bg-white/5">
-                      {product.images?.[0] ? (
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Package className="text-gray-600" size={40} />
-                        </div>
-                      )}
+              {filteredProducts.length === 0 ? (
+                <EmptyState
+                  icon={Package}
+                  title={productSearch ? "No matching products" : "No products yet"}
+                  message={productSearch ? `Nothing matches "${productSearch}".` : "Products will appear here as vendors list them."}
+                />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 p-6">
+                  {filteredProducts.map((product) => (
+                    <div
+                      key={product._id}
+                      className="bg-white/5 border border-white/10 rounded-xl overflow-hidden hover:border-white/20 hover:-translate-y-0.5 transition-all"
+                    >
+                      <div className="h-44 bg-white/5">
+                        {product.images?.[0] ? (
+                          <img
+                            src={product.images[0]}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package className="text-gray-600" size={40} />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-bold text-white mb-1 truncate">{product.name}</h3>
+                        <p className="text-green-400 font-bold text-lg mb-2">
+                          ₦{product.price?.toLocaleString()}
+                        </p>
+                        <p className="text-sm text-gray-500 mb-4 line-clamp-2">
+                          {product.description}
+                        </p>
+                        <button
+                          onClick={() => deleteProduct(product._id, product.name)}
+                          className="w-full px-4 py-2 bg-yellow-500/15 text-yellow-400 border border-yellow-500/30 rounded-lg hover:bg-yellow-500/25 flex items-center justify-center gap-2 font-medium text-sm transition"
+                        >
+                          <Trash2 size={15} />
+                          Delete Product
+                        </button>
+                      </div>
                     </div>
-                    <div className="p-4">
-                      <h3 className="font-bold text-white mb-1 truncate">{product.name}</h3>
-                      <p className="text-green-400 font-bold text-lg mb-2">
-                        ₦{product.price?.toLocaleString()}
-                      </p>
-                      <p className="text-sm text-gray-500 mb-4 line-clamp-2">
-                        {product.description}
-                      </p>
-                      <button
-                        onClick={() => deleteProduct(product._id, product.name)}
-                        className="w-full px-4 py-2 bg-yellow-500/15 text-yellow-400 border border-yellow-500/30 rounded-lg hover:bg-yellow-500/25 flex items-center justify-center gap-2 font-medium text-sm transition"
-                      >
-                        <Trash2 size={15} />
-                        Delete Product
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
           {activeTab === "users" && (
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden">
-              <div className="p-6 border-b border-white/10">
+              <div className="p-6 border-b border-white/10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <h2 className="text-xl font-bold text-white">
-                  All Users <span className="text-gray-500 font-normal">({users.length})</span>
+                  All Users <span className="text-gray-500 font-normal">({filteredUsers.length})</span>
                 </h2>
+                <SearchField value={userSearch} onChange={setUserSearch} placeholder="Search by email or business" />
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[720px]">
-                  <thead className="bg-white/5">
-                    <tr>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Email</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Business</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Role</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Status</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Joined</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map((u) => (
-                      <tr key={u._id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                        <td className="p-4 font-medium text-white">{u.email}</td>
-                        <td className="p-4 text-gray-400">{u.businessId?.name || "No business"}</td>
-                        <td className="p-4">
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                              u.role === "admin"
-                                ? "bg-purple-500/15 text-purple-300 border-purple-500/30"
-                                : "bg-blue-500/15 text-blue-300 border-blue-500/30"
-                            }`}
-                          >
-                            {u.role}
-                          </span>
-                        </td>
-                        <td className="p-4">
-                          <span
-                            className={`flex items-center gap-1.5 text-sm font-medium ${
-                              u.banned ? "text-red-400" : "text-green-400"
-                            }`}
-                          >
-                            {u.banned ? <Ban size={15} /> : <CheckCircle size={15} />}
-                            {u.banned ? "Banned" : "Active"}
-                          </span>
-                        </td>
-                        <td className="p-4 text-sm text-gray-500">
-                          {new Date(u.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="p-4">
-                          {u.role !== "admin" && (
-                            <button
-                              onClick={() => toggleUserBan(u._id, u.banned, u.email)}
-                              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                                u.banned
-                                  ? "bg-green-500/15 text-green-400 border border-green-500/30 hover:bg-green-500/25"
-                                  : "bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25"
+              {filteredUsers.length === 0 ? (
+                <EmptyState
+                  icon={Users}
+                  title={userSearch ? "No matching users" : "No users yet"}
+                  message={userSearch ? `Nothing matches "${userSearch}".` : "Registered users will appear here."}
+                />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[720px]">
+                    <thead className="bg-white/5">
+                      <tr>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Email</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Business</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Role</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Status</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Joined</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredUsers.map((u) => (
+                        <tr key={u._id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                          <td className="p-4 font-medium text-white">{u.email}</td>
+                          <td className="p-4 text-gray-400">{u.businessId?.name || "No business"}</td>
+                          <td className="p-4">
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                                u.role === "admin"
+                                  ? "bg-purple-500/15 text-purple-300 border-purple-500/30"
+                                  : "bg-blue-500/15 text-blue-300 border-blue-500/30"
                               }`}
                             >
-                              {u.banned ? "Unban" : "Ban User"}
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className="p-4">
+                            <span
+                              className={`flex items-center gap-1.5 text-sm font-medium ${
+                                u.banned ? "text-red-400" : "text-green-400"
+                              }`}
+                            >
+                              {u.banned ? <Ban size={15} /> : <CheckCircle size={15} />}
+                              {u.banned ? "Banned" : "Active"}
+                            </span>
+                          </td>
+                          <td className="p-4 text-sm text-gray-500">
+                            {new Date(u.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="p-4">
+                            {u.role !== "admin" && (
+                              <button
+                                onClick={() => toggleUserBan(u._id, u.banned, u.email)}
+                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                                  u.banned
+                                    ? "bg-green-500/15 text-green-400 border border-green-500/30 hover:bg-green-500/25"
+                                    : "bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25"
+                                }`}
+                              >
+                                {u.banned ? "Unban" : "Ban User"}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
@@ -690,98 +810,116 @@ const AdminDashboard = () => {
                   Vendor Verification <span className="text-gray-500 font-normal">({vendors.length})</span>
                 </h2>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[900px]">
-                  <thead className="bg-white/5">
-                    <tr>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Business</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Tier</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Documents</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Review Status</th>
-                      <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {vendors.map((v) => (
-                      <tr key={v._id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                        <td className="p-4">
-                          <p className="font-medium text-white">{v.businessId?.name || v.businessName}</p>
-                          <p className="text-sm text-gray-500">{v.contactEmail}</p>
-                        </td>
-                        <td className="p-4">
-                          <span className="px-2.5 py-1 rounded-full text-xs font-semibold border bg-blue-500/15 text-blue-300 border-blue-500/30 capitalize">
-                            {v.verificationTier}
-                          </span>
-                        </td>
-                        <td className="p-4 text-sm">
-                          <div className="flex flex-col gap-1">
-                            {[
-                              { label: "NIN", value: v.nin },
-                              { label: "CAC", url: v.cacDocumentUrl },
-                              { label: "Address proof", url: v.addressProofUrl },
-                              { label: "Selfie", url: v.selfieUrl },
-                            ].map((doc) => (
-                              <span key={doc.label} className="flex items-center gap-1.5 text-gray-400">
-                                <FileText size={13} />
-                                {doc.url ? (
-                                  <a
-                                    href={doc.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-green-400 hover:underline"
-                                  >
-                                    {doc.label}
-                                  </a>
-                                ) : (
-                                  <span>{doc.label}: {doc.value || "—"}</span>
-                                )}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <span
-                            className={`px-2.5 py-1 rounded-full text-xs font-semibold border capitalize ${
-                              v.reviewStatus === "approved"
-                                ? "bg-green-500/15 text-green-400 border-green-500/30"
-                                : v.reviewStatus === "rejected"
-                                ? "bg-red-500/15 text-red-400 border-red-500/30"
-                                : "bg-yellow-500/15 text-yellow-400 border-yellow-500/30"
-                            }`}
-                          >
-                            {v.reviewStatus}
-                          </span>
-                          {v.reviewStatus === "rejected" && v.reviewNotes && (
-                            <p className="text-xs text-gray-500 mt-1 max-w-[220px]">{v.reviewNotes}</p>
-                          )}
-                        </td>
-                        <td className="p-4">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => reviewVendor(v._id, "approved", v.businessId?.name || v.businessName)}
-                              className="px-3 py-1.5 bg-green-500/15 text-green-400 border border-green-500/30 rounded-lg hover:bg-green-500/25 text-sm font-medium flex items-center gap-1 transition"
-                            >
-                              <ShieldCheck size={14} />
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => reviewVendor(v._id, "rejected", v.businessId?.name || v.businessName)}
-                              className="px-3 py-1.5 bg-red-500/15 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/25 text-sm font-medium flex items-center gap-1 transition"
-                            >
-                              <XCircle size={14} />
-                              Reject
-                            </button>
-                          </div>
-                        </td>
+              {vendors.length === 0 ? (
+                <EmptyState icon={ShieldCheck} title="Nothing to review" message="Vendor verification submissions will show up here." />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[900px]">
+                    <thead className="bg-white/5">
+                      <tr>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Business</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Tier</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Documents</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Review Status</th>
+                        <th className="text-left p-4 font-semibold text-gray-400 text-xs uppercase tracking-wide">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {vendors.map((v) => (
+                        <tr key={v._id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                          <td className="p-4">
+                            <p className="font-medium text-white">{v.businessId?.name || v.businessName}</p>
+                            <p className="text-sm text-gray-500">{v.contactEmail}</p>
+                          </td>
+                          <td className="p-4">
+                            <span className="px-2.5 py-1 rounded-full text-xs font-semibold border bg-blue-500/15 text-blue-300 border-blue-500/30 capitalize">
+                              {v.verificationTier}
+                            </span>
+                          </td>
+                          <td className="p-4 text-sm">
+                            <div className="flex flex-col gap-1">
+                              {[
+                                { label: "NIN", value: v.nin },
+                                { label: "CAC", url: v.cacDocumentUrl },
+                                { label: "Address proof", url: v.addressProofUrl },
+                                { label: "Selfie", url: v.selfieUrl },
+                              ].map((doc) => (
+                                <span key={doc.label} className="flex items-center gap-1.5 text-gray-400">
+                                  <FileText size={13} />
+                                  {doc.url ? (
+                                    <a
+                                      href={doc.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-green-400 hover:underline"
+                                    >
+                                      {doc.label}
+                                    </a>
+                                  ) : (
+                                    <span>{doc.label}: {doc.value || "—"}</span>
+                                  )}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-xs font-semibold border capitalize ${
+                                v.reviewStatus === "approved"
+                                  ? "bg-green-500/15 text-green-400 border-green-500/30"
+                                  : v.reviewStatus === "rejected"
+                                  ? "bg-red-500/15 text-red-400 border-red-500/30"
+                                  : "bg-yellow-500/15 text-yellow-400 border-yellow-500/30"
+                              }`}
+                            >
+                              {v.reviewStatus}
+                            </span>
+                            {v.reviewStatus === "rejected" && v.reviewNotes && (
+                              <p className="text-xs text-gray-500 mt-1 max-w-[220px]">{v.reviewNotes}</p>
+                            )}
+                          </td>
+                          <td className="p-4">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => reviewVendor(v._id, "approved", v.businessId?.name || v.businessName)}
+                                className="px-3 py-1.5 bg-green-500/15 text-green-400 border border-green-500/30 rounded-lg hover:bg-green-500/25 text-sm font-medium flex items-center gap-1 transition"
+                              >
+                                <ShieldCheck size={14} />
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => reviewVendor(v._id, "rejected", v.businessId?.name || v.businessName)}
+                                className="px-3 py-1.5 bg-red-500/15 text-red-400 border border-red-500/30 rounded-lg hover:bg-red-500/25 text-sm font-medium flex items-center gap-1 transition"
+                              >
+                                <XCircle size={14} />
+                                Reject
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
+
+      {/* Toast — replaces alert() for non-blocking confirmations/errors */}
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-[60] flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-xl shadow-lg ${
+            toast.type === "error"
+              ? "bg-red-500/10 border-red-500/30 text-red-300"
+              : "bg-green-500/10 border-green-500/30 text-green-300"
+          }`}
+        >
+          {toast.type === "error" ? <XCircle size={18} /> : <CheckCircle size={18} />}
+          <span className="text-sm font-medium">{toast.message}</span>
+        </div>
+      )}
     </div>
   );
 };
