@@ -6,6 +6,7 @@ import Footer from "./components/Footer";
 import LandingPage from "./pages/LandingPage";
 import ExplorePage from "./pages/ExplorePage";
 import Products from "./pages/Products";
+import ProductDetails from "./pages/ProductDetails";
 import BusinessForm from "./pages/BusinessForm";
 import BusinessDetails from "./pages/BusinessDetails";
 import BusinessDashboard from "./pages/BusinessDashboard";
@@ -27,6 +28,7 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/explore" element={<ExplorePage />} />
           <Route path="/products" element={<Products />} />
+          <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/about" element={<About />} />
           <Route path="/business/:id" element={<BusinessDetails />} />
           <Route path="/cart" element={<CartPage />} />
@@ -60,4 +62,3 @@ function App() {
 }
 
 export default App;
-

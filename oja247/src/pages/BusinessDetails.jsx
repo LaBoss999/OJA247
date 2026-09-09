@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getBusinessById, getProductsByBusiness } from "../services/api";
 import { useCart } from "../context/CartContext";
@@ -569,45 +569,48 @@ function BusinessDetails() {
                 key={product._id}
                 className="group bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col"
               >
-                <div className="relative aspect-square bg-gray-100 overflow-hidden">
-                  {product.images && product.images[0] ? (
-                    <img
-                      src={product.images[0]}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <svg
-                        className="h-16 w-16 text-gray-300"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
-                    </div>
-                  )}
+                {/* Image links through to the product detail page */}
+                <Link to={`/product/${product._id}`} className="block">
+                  <div className="relative aspect-square bg-gray-100 overflow-hidden">
+                    {product.images && product.images[0] ? (
+                      <img
+                        src={product.images[0]}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <svg
+                          className="h-16 w-16 text-gray-300"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
+                        </svg>
+                      </div>
+                    )}
 
-                  <span
-                    className={`absolute top-2 left-2 text-[11px] font-semibold px-2 py-1 rounded-full shadow-sm ${
-                      product.inStock
-                        ? "bg-green-100 text-green-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {product.inStock ? "In Stock" : "Out of Stock"}
-                  </span>
+                    <span
+                      className={`absolute top-2 left-2 text-[11px] font-semibold px-2 py-1 rounded-full shadow-sm ${
+                        product.inStock
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {product.inStock ? "In Stock" : "Out of Stock"}
+                    </span>
 
-                  {!product.inStock && (
-                    <div className="absolute inset-0 bg-white/40" />
-                  )}
-                </div>
+                    {!product.inStock && (
+                      <div className="absolute inset-0 bg-white/40" />
+                    )}
+                  </div>
+                </Link>
 
                 <div className="p-3 sm:p-4 flex flex-col flex-1">
                   {product.category && (
@@ -615,9 +618,11 @@ function BusinessDetails() {
                       {product.category}
                     </span>
                   )}
-                  <h3 className="font-semibold text-sm sm:text-lg text-gray-900 mb-1 line-clamp-1">
-                    {product.name}
-                  </h3>
+                  <Link to={`/product/${product._id}`}>
+                    <h3 className="font-semibold text-sm sm:text-lg text-gray-900 mb-1 line-clamp-1 hover:text-green-700 transition-colors">
+                      {product.name}
+                    </h3>
+                  </Link>
                   <p className="text-xs sm:text-sm text-gray-500 mb-3 line-clamp-2 flex-1">
                     {product.description}
                   </p>

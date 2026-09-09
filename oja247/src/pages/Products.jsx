@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { getAllProducts } from "../services/api";
 import { useCart } from "../context/CartContext";
 import Loader from "../components/Loader";
@@ -7,9 +8,12 @@ import { SlidersHorizontal, X } from "lucide-react";
 
 function Products() {
   const { addToCart, itemCount } = useCart();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [categoryFilter, setCategoryFilter] = useState(
+    searchParams.get("category") || "All"
+  );
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [inStockOnly, setInStockOnly] = useState(false);
@@ -26,11 +30,19 @@ function Products() {
       .finally(() => setLoading(false));
   }, []);
 
-  // businessId comes back populated from the backend as { _id, name, logo, location, slug }
-  // NOTE: the backend's populate("businessId", "...") field list must include
-  // "slug" for this to actually be present — if it still only selects
-  // _id/name/logo/location, product.businessId?.slug will be undefined and
-  // links below will gracefully fall back to the raw _id instead.
+  // Keep the URL's ?category= param in sync so this page's filter state is
+  // linkable/shareable/refreshable — e.g. a breadcrumb or category tile
+  // elsewhere in the app can deep-link straight into a filtered view.
+  useEffect(() => {
+    if (categoryFilter === "All") {
+      searchParams.delete("category");
+      setSearchParams(searchParams, { replace: true });
+    } else {
+      setSearchParams({ category: categoryFilter }, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryFilter]);
+
   const getBusinessId = (product) => product.businessId?._id;
   const getBusinessSlug = (product) => product.businessId?.slug;
   const getBusinessName = (product) => product.businessId?.name;
@@ -95,7 +107,6 @@ function Products() {
       if (sortBy === "price-low") return a.price - b.price;
       if (sortBy === "price-high") return b.price - a.price;
       if (sortBy === "name") return a.name.localeCompare(b.name);
-      // "newest" — fall back to createdAt if present, otherwise leave as-is
       return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
     });
 
@@ -184,7 +195,6 @@ function Products() {
             </button>
           </div>
 
-          {/* Filter panel */}
           {showFilters && (
             <div className="mt-3 p-4 bg-white border border-gray-200 rounded-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div>
@@ -274,7 +284,6 @@ function Products() {
           )}
         </div>
 
-        {/* Results count */}
         <p className="text-sm text-gray-500 mb-4">
           {filteredProducts.length}{" "}
           {filteredProducts.length === 1 ? "product" : "products"} found
@@ -286,57 +295,60 @@ function Products() {
               key={product._id}
               className="group bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col"
             >
-              {/* Product Image */}
-              <div className="relative aspect-square bg-gray-100 overflow-hidden">
-                {product.images && product.images[0] ? (
-                  <img
-                    src={product.images[0]}
-                    alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <svg
-                      className="h-16 w-16 text-gray-300"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                      />
-                    </svg>
-                  </div>
-                )}
+              {/* Image links through to the product detail page */}
+              <Link to={`/product/${product._id}`} className="block">
+                <div className="relative aspect-square bg-gray-100 overflow-hidden">
+                  {product.images && product.images[0] ? (
+                    <img
+                      src={product.images[0]}
+                      alt={product.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <svg
+                        className="h-16 w-16 text-gray-300"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </div>
+                  )}
 
-                <span
-                  className={`absolute top-2 left-2 text-[11px] font-semibold px-2 py-1 rounded-full shadow-sm ${
-                    product.inStock
-                      ? "bg-green-100 text-green-800"
-                      : "bg-red-100 text-red-800"
-                  }`}
-                >
-                  {product.inStock ? "In Stock" : "Out of Stock"}
-                </span>
+                  <span
+                    className={`absolute top-2 left-2 text-[11px] font-semibold px-2 py-1 rounded-full shadow-sm ${
+                      product.inStock
+                        ? "bg-green-100 text-green-800"
+                        : "bg-red-100 text-red-800"
+                    }`}
+                  >
+                    {product.inStock ? "In Stock" : "Out of Stock"}
+                  </span>
 
-                {!product.inStock && (
-                  <div className="absolute inset-0 bg-white/40" />
-                )}
-              </div>
+                  {!product.inStock && (
+                    <div className="absolute inset-0 bg-white/40" />
+                  )}
+                </div>
+              </Link>
 
-              {/* Product Info */}
               <div className="p-3 sm:p-4 flex flex-col flex-1">
                 {product.category && (
                   <span className="text-[11px] uppercase tracking-wide text-gray-400 font-medium mb-1">
                     {product.category}
                   </span>
                 )}
-                <h3 className="font-semibold text-sm sm:text-lg text-gray-900 mb-1 line-clamp-1">
-                  {product.name}
-                </h3>
+                <Link to={`/product/${product._id}`}>
+                  <h3 className="font-semibold text-sm sm:text-lg text-gray-900 mb-1 line-clamp-1 hover:text-green-700 transition-colors">
+                    {product.name}
+                  </h3>
+                </Link>
                 {getBusinessName(product) && (
                   <p className="text-xs text-gray-400 mb-1">
                     by {getBusinessName(product)}

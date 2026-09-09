@@ -28,6 +28,7 @@ export const deleteBusiness = (id) => axiosInstance.delete(`/api/businesses/${id
 
 // Product API calls
 export const getAllProducts = () => axiosInstance.get('/api/products');
+export const getProductById = (id) => axiosInstance.get(`/api/products/${id}`);
 export const getProductsByBusiness = (businessId) => axiosInstance.get(`/api/products/business/${businessId}`);
 export const createProduct = (productData) => axiosInstance.post('/api/products', productData);
 export const updateProduct = (id, productData) => axiosInstance.put(`/api/products/${id}`, productData);

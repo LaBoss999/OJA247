@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Product from "../models/Product.js";
 import Business from "../models/Business.js";
 
@@ -18,6 +19,11 @@ export const getAllProducts = async (req, res) => {
 export const getProductsByBusiness = async (req, res) => {
   try {
     const { businessId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(businessId)) {
+      return res.status(400).json({ message: "Invalid business ID" });
+    }
+
     const products = await Product.find({ businessId })
       .populate("businessId", "name logo location deliveryFeeInState deliveryFeeOutState")
       .sort({ createdAt: -1 });
@@ -31,7 +37,13 @@ export const getProductsByBusiness = async (req, res) => {
 // Get single product
 export const getProduct = async (req, res) => {
   try {
-    const product = await Product.findById(req.params.id).populate(
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid product ID" });
+    }
+
+    const product = await Product.findById(id).populate(
       "businessId",
       "name logo contact location deliveryFeeInState deliveryFeeOutState"
     );
@@ -62,6 +74,10 @@ export const createProduct = async (req, res) => {
 
     if (!businessId) {
       return res.status(400).json({ message: "businessId is required" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(businessId)) {
+      return res.status(400).json({ message: "Invalid business ID" });
     }
 
     // Verify business exists
@@ -97,6 +113,10 @@ export const updateProduct = async (req, res) => {
     const { id } = req.params;
     const updates = req.body;
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid product ID" });
+    }
+
     if (updates.stock !== undefined) {
       updates.inStock = updates.stock > 0;
     }
@@ -120,7 +140,13 @@ export const updateProduct = async (req, res) => {
 // Delete product
 export const deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid product ID" });
+    }
+
+    const product = await Product.findByIdAndDelete(id);
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
