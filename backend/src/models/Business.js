@@ -26,7 +26,25 @@ const BusinessSchema = new mongoose.Schema(
     slug: { type: String, unique: true, sparse: true, lowercase: true, trim: true }, // vendor-editable, readable store URL (e.g. "chioma-fashion")
     // Admin-controlled vendor verification countdown. Null = not started yet,
     // so the business is never auto-hidden regardless of verification tier.
-    verificationDeadline: { type: Date, default: null }
+    verificationDeadline: { type: Date, default: null },
+
+    // --- Subscription (new) ---
+    subscriptionStatus: {
+      type: String,
+      enum: ["inactive", "active", "expired"],
+      default: "inactive",
+    },
+    subscriptionExpiresAt: { type: Date, default: null },
+    hasPaidFirstSubscription: { type: Boolean, default: false }, // gates the marketer payout rule
+
+    // --- Referral (new) ---
+    // This business's OWN code, for referring other businesses (business-owner track)
+    referralCode: { type: String, unique: true, sparse: true, uppercase: true },
+    // The code THIS business signed up with, if any — captured once, permanent
+    referredByCode: { type: String, default: null },
+    // Denormalized running total — PointsLedger is the source of truth,
+    // this is kept in sync for fast dashboard reads
+    pointsBalance: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

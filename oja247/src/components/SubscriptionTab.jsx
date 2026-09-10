@@ -1,0 +1,229 @@
+import React, { useEffect, useState } from "react";
+import axiosInstance from "../services/api";
+
+const PLANS = [
+  { key: "monthly", label: "Monthly", price: 1999, blurb: "Billed every month" },
+  { key: "six_month", label: "6 Months", price: 9999, blurb: "≈ ₦1,666/month — save ~17%" },
+  { key: "yearly", label: "Yearly", price: 17999, blurb: "≈ ₦1,500/month — save ~25%", recommended: true },
+];
+
+const STATUS_LABELS = {
+  inactive: { text: "No active subscription", color: "text-gray-500" },
+  active: { text: "Active", color: "text-green-600" },
+  expired: { text: "Expired", color: "text-red-600" },
+};
+
+function SubscriptionTab({ businessId, business, email }) {
+  const paystackPublicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+  const [paystackReady, setPaystackReady] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState("yearly");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [usePoints, setUsePoints] = useState(false);
+
+  const pointsBalance = business?.pointsBalance || 0;
+
+  useEffect(() => {
+    const existingScript = document.querySelector("script[src='https://js.paystack.co/v1/inline.js']");
+    if (existingScript) {
+      if (window.PaystackPop) setPaystackReady(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://js.paystack.co/v1/inline.js";
+    script.async = true;
+    script.onload = () => setPaystackReady(true);
+    script.onerror = () => setPaystackReady(false);
+    document.body.appendChild(script);
+  }, []);
+
+  const currentPlan = PLANS.find((p) => p.key === selectedPlan);
+  const appliedPoints = usePoints ? Math.min(pointsBalance, currentPlan.price) : 0;
+  const amountDue = currentPlan.price - appliedPoints;
+
+  const status = STATUS_LABELS[business?.subscriptionStatus] || STATUS_LABELS.inactive;
+  const expiresAt = business?.subscriptionExpiresAt
+    ? new Date(business.subscriptionExpiresAt).toLocaleDateString("en-NG", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : null;
+
+  const handleSubscribe = async () => {
+    setError("");
+    setLoading(true);
+
+    let reference, amount, fullyPaidWithPoints;
+    try {
+      const { data } = await axiosInstance.post("/api/subscriptions/initiate", {
+        businessId,
+        planType: selectedPlan,
+        pointsToApply: appliedPoints,
+      });
+      reference = data.reference;
+      amount = data.amount;
+      fullyPaidWithPoints = data.fullyPaidWithPoints;
+    } catch (err) {
+      setLoading(false);
+      setError(err.response?.data?.message || "Could not start the subscription payment. Please try again.");
+      return;
+    }
+
+    // Points covered the whole plan — nothing left to charge, subscription
+    // is already active on the backend.
+    if (fullyPaidWithPoints) {
+      window.location.reload();
+      return;
+    }
+
+    if (!paystackPublicKey) {
+      setLoading(false);
+      setError("Paystack public key is missing. Add VITE_PAYSTACK_PUBLIC_KEY to your .env file.");
+      return;
+    }
+    if (!paystackReady || !window.PaystackPop) {
+      setLoading(false);
+      setError("Paystack is still loading. Please wait a moment and try again.");
+      return;
+    }
+
+    const handler = window.PaystackPop.setup({
+      key: paystackPublicKey,
+      email,
+      amount: Math.round(amount * 100), // kobo
+      currency: "NGN",
+      ref: reference,
+      metadata: {
+        custom_fields: [
+          { display_name: "Business ID", variable_name: "business_id", value: businessId },
+          { display_name: "Plan", variable_name: "plan_type", value: selectedPlan },
+        ],
+      },
+      callback: function (response) {
+        (async function () {
+          try {
+            const verification = await axiosInstance.post(
+              `/api/subscriptions/verify/${response.reference}`
+            );
+            if (verification.data?.payment?.status === "success") {
+              window.location.reload(); // simplest way to reflect the new subscriptionStatus/expiry
+              return;
+            }
+          } catch (err) {
+            console.error("Subscription verification error:", err);
+          }
+          setError("Payment could not be verified. If you were charged, contact support with your reference.");
+          setLoading(false);
+        })();
+      },
+      onClose: function () {
+        setLoading(false);
+      },
+    });
+
+    handler.openIframe();
+  };
+
+  return (
+    <div className="max-w-2xl">
+      <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6">
+        <h3 className="text-lg font-bold text-gray-900 mb-1">Subscription Status</h3>
+        <p className={`font-semibold ${status.color}`}>{status.text}</p>
+        {expiresAt && (
+          <p className="text-sm text-gray-500 mt-1">
+            {business?.subscriptionStatus === "active" ? "Renews / expires" : "Expired"} on {expiresAt}
+          </p>
+        )}
+      </div>
+
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        {PLANS.map((plan) => (
+          <button
+            key={plan.key}
+            type="button"
+            onClick={() => setSelectedPlan(plan.key)}
+            className={`relative text-left p-4 rounded-xl border-2 transition-colors ${
+              selectedPlan === plan.key
+                ? "border-green-600 bg-green-50"
+                : "border-gray-200 hover:border-gray-300"
+            }`}
+          >
+            {plan.recommended && (
+              <span className="absolute -top-2 right-3 bg-green-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                Best value
+              </span>
+            )}
+            <p className="font-bold text-gray-900">{plan.label}</p>
+            <p className="text-2xl font-extrabold text-gray-900 mt-1">
+              ₦{plan.price.toLocaleString()}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">{plan.blurb}</p>
+          </button>
+        ))}
+      </div>
+
+      {pointsBalance > 0 && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={usePoints}
+              onChange={(e) => setUsePoints(e.target.checked)}
+              className="mt-1 w-4 h-4 accent-green-600"
+            />
+            <div>
+              <p className="font-semibold text-gray-900 text-sm">
+                Pay with my points ({pointsBalance.toLocaleString()} pts available)
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                1 point = ₦1. Points from referrals are applied first, and you only pay the rest.
+              </p>
+            </div>
+          </label>
+
+          {usePoints && (
+            <div className="mt-3 pt-3 border-t border-green-200 text-sm space-y-1">
+              <div className="flex justify-between text-gray-600">
+                <span>Plan price</span>
+                <span>₦{currentPlan.price.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-green-700 font-semibold">
+                <span>Points applied</span>
+                <span>-₦{appliedPoints.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-gray-900 font-bold text-base pt-1">
+                <span>{amountDue <= 0 ? "You pay" : "Amount due"}</span>
+                <span>₦{amountDue.toLocaleString()}</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <button
+        onClick={handleSubscribe}
+        disabled={loading}
+        className={`w-full py-3 rounded-lg font-bold text-white transition-colors ${
+          loading
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+        } shadow-lg`}
+      >
+        {loading
+          ? "Processing..."
+          : amountDue <= 0
+          ? "Pay with Points"
+          : `Subscribe — ${currentPlan?.label}${appliedPoints > 0 ? ` (₦${amountDue.toLocaleString()} due)` : ""}`}
+      </button>
+    </div>
+  );
+}
+
+export default SubscriptionTab;

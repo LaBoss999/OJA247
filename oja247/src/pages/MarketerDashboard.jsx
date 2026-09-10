@@ -1,0 +1,395 @@
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Copy,
+  Check,
+  LogOut,
+  Users,
+  CheckCircle2,
+  Wallet,
+  TrendingUp,
+  Landmark,
+  Pencil,
+} from "lucide-react";
+import marketerApi from "../services/marketerApi";
+import Loader from "../components/Loader";
+import Logo from "../assets/OJA247 VX1.png";
+
+const MarketerDashboard = () => {
+  const navigate = useNavigate();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  // Payout details form
+  const [editingPayout, setEditingPayout] = useState(false);
+  const [banks, setBanks] = useState([]);
+  const [banksLoading, setBanksLoading] = useState(false);
+  const [bankCode, setBankCode] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [resolvedAccountName, setResolvedAccountName] = useState("");
+  const [resolving, setResolving] = useState(false);
+  const [resolveError, setResolveError] = useState("");
+  const [savingPayout, setSavingPayout] = useState(false);
+  const [payoutMessage, setPayoutMessage] = useState("");
+
+  const loadDashboard = () => {
+    marketerApi
+      .get("/api/marketers/dashboard")
+      .then((res) => setData(res.data))
+      .catch((err) => {
+        if (err.response?.status === 401) {
+          localStorage.removeItem("marketerToken");
+          navigate("/marketer-login");
+          return;
+        }
+        setError(err.response?.data?.message || "Could not load your dashboard.");
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    const token = localStorage.getItem("marketerToken");
+    if (!token) {
+      navigate("/marketer-login");
+      return;
+    }
+    loadDashboard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate]);
+
+  // Load banks the first time the payout form is opened
+  useEffect(() => {
+    if (!editingPayout || banks.length > 0) return;
+    setBanksLoading(true);
+    marketerApi
+      .get("/api/vendors/banks")
+      .then(({ data: res }) => {
+        if (res.status) setBanks(res.data);
+      })
+      .catch(() => {})
+      .finally(() => setBanksLoading(false));
+  }, [editingPayout, banks.length]);
+
+  // Debounced auto-resolve once bank + 10-digit account number are entered
+  useEffect(() => {
+    setResolvedAccountName("");
+    setResolveError("");
+    if (!bankCode || accountNumber.length !== 10) return;
+
+    let cancelled = false;
+    setResolving(true);
+    const timeout = setTimeout(() => {
+      marketerApi
+        .get("/api/vendors/resolve-account", {
+          params: { account_number: accountNumber, bank_code: bankCode },
+        })
+        .then(({ data: res }) => {
+          if (cancelled) return;
+          if (res.status) setResolvedAccountName(res.data.account_name);
+          else setResolveError(res.message || "Could not verify this account.");
+        })
+        .catch(() => {
+          if (!cancelled) setResolveError("Could not verify this account.");
+        })
+        .finally(() => {
+          if (!cancelled) setResolving(false);
+        });
+    }, 500);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [bankCode, accountNumber]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("marketerToken");
+    navigate("/marketer-login");
+  };
+
+  const referralLink = data
+    ? `${window.location.origin}/business-form?ref=${data.referralCode}`
+    : "";
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(referralLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSavePayout = async (e) => {
+    e.preventDefault();
+    setPayoutMessage("");
+
+    if (!bankCode || !resolvedAccountName) {
+      setPayoutMessage("Select your bank and enter a valid account number first.");
+      return;
+    }
+
+    const selectedBank = banks.find((b) => b.code === bankCode);
+    setSavingPayout(true);
+    try {
+      await marketerApi.patch("/api/marketers/me/payout-details", {
+        bank_code: bankCode,
+        bank_name: selectedBank?.name || "",
+        account_number: accountNumber,
+      });
+      setEditingPayout(false);
+      loadDashboard();
+    } catch (err) {
+      setPayoutMessage(err.response?.data?.message || "Could not save your payout details.");
+    } finally {
+      setSavingPayout(false);
+    }
+  };
+
+  if (loading) return <Loader />;
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <p className="text-red-600">{error}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-green-600 to-emerald-600 shadow-md">
+        <div className="max-w-5xl mx-auto px-4 py-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src={Logo} alt="OJA247" className="w-10 h-10 rounded-lg bg-white/90 p-1 object-contain" />
+            <div>
+              <p className="text-white font-black text-lg leading-tight">Marketer Dashboard</p>
+              <p className="text-green-50 text-xs">Earn cash by referring businesses to OJA247</p>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2 text-sm text-white/90 hover:text-white font-semibold bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg transition"
+          >
+            <LogOut size={16} /> Log Out
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        {/* Referral code + link */}
+        <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6">
+          <p className="text-sm font-semibold text-gray-500 mb-1">Your Referral Code</p>
+          <p className="text-2xl font-extrabold text-gray-900 mb-4">{data.referralCode}</p>
+          <div className="flex items-center gap-2">
+            <input
+              readOnly
+              value={referralLink}
+              className="flex-1 p-3 border border-gray-300 rounded-lg text-sm bg-gray-50 text-gray-600"
+            />
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-semibold text-sm shadow"
+            >
+              {copied ? <Check size={16} /> : <Copy size={16} />}
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-2">
+          <div className="bg-white rounded-xl shadow-sm border p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Users size={14} className="text-green-600" />
+              <p className="text-xs text-gray-500 font-semibold">Total Referred</p>
+            </div>
+            <p className="text-2xl font-extrabold text-gray-900">{data.stats.totalReferred}</p>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <CheckCircle2 size={14} className="text-green-600" />
+              <p className="text-xs text-gray-500 font-semibold">Converted</p>
+            </div>
+            <p className="text-2xl font-extrabold text-gray-900">{data.stats.totalConverted}</p>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Wallet size={14} className="text-green-600" />
+              <p className="text-xs text-gray-500 font-semibold">Pending Payout</p>
+            </div>
+            <p className="text-2xl font-extrabold text-green-700">
+              ₦{data.stats.pendingPayoutTotal.toLocaleString()}
+            </p>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <TrendingUp size={14} className="text-green-600" />
+              <p className="text-xs text-gray-500 font-semibold">Lifetime Paid</p>
+            </div>
+            <p className="text-2xl font-extrabold text-gray-900">
+              ₦{data.stats.lifetimePaidTotal.toLocaleString()}
+            </p>
+          </div>
+        </div>
+        <p className="text-xs text-gray-400 mb-6">
+          Pending payouts are released weekly. Converted = the business has paid their subscription.
+        </p>
+
+        {/* Payout details */}
+        <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6">
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <Landmark size={18} className="text-green-600" />
+              <h3 className="font-bold text-gray-900">Payout Details</h3>
+            </div>
+            {!editingPayout && (
+              <button
+                onClick={() => {
+                  setBankCode("");
+                  setAccountNumber("");
+                  setPayoutMessage("");
+                  setEditingPayout(true);
+                }}
+                className="flex items-center gap-1 text-xs font-semibold text-green-600 hover:text-green-700"
+              >
+                <Pencil size={12} /> {data.payoutDetails.hasPayoutDetails ? "Update" : "Add details"}
+              </button>
+            )}
+          </div>
+
+          {!editingPayout ? (
+            data.payoutDetails.hasPayoutDetails ? (
+              <div className="mt-3 text-sm text-gray-700 space-y-0.5">
+                <p>
+                  <span className="text-gray-500">Bank:</span> {data.payoutDetails.bankName}
+                </p>
+                <p>
+                  <span className="text-gray-500">Account:</span> {data.payoutDetails.accountNumber} —{" "}
+                  {data.payoutDetails.accountName}
+                </p>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-gray-500">
+                Add your bank account so your weekly payouts have somewhere to go.
+              </p>
+            )
+          ) : (
+            <form onSubmit={handleSavePayout} className="mt-4 space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Bank</label>
+                <select
+                  value={bankCode}
+                  onChange={(e) => setBankCode(e.target.value)}
+                  className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  required
+                >
+                  <option value="">{banksLoading ? "Loading banks..." : "Select your bank"}</option>
+                  {banks.map((b) => (
+                    <option key={b.code} value={b.code}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Account Number</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={10}
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ""))}
+                  placeholder="0123456789"
+                  className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  required
+                />
+                {resolving && <p className="text-xs text-gray-400 mt-1">Verifying account...</p>}
+                {resolvedAccountName && (
+                  <p className="text-xs text-green-700 font-semibold mt-1">{resolvedAccountName}</p>
+                )}
+                {resolveError && <p className="text-xs text-red-600 mt-1">{resolveError}</p>}
+              </div>
+
+              {payoutMessage && <p className="text-xs text-red-600">{payoutMessage}</p>}
+
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="submit"
+                  disabled={savingPayout || !resolvedAccountName}
+                  className="px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-semibold text-sm shadow disabled:opacity-50"
+                >
+                  {savingPayout ? "Saving..." : "Save Payout Details"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingPayout(false)}
+                  className="px-4 py-2.5 text-gray-500 hover:text-gray-700 text-sm font-semibold"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+
+        {/* Referral list */}
+        <div className="bg-white rounded-2xl shadow-sm border overflow-hidden mb-6">
+          <div className="px-6 py-4 border-b">
+            <h3 className="font-bold text-gray-900">Your Referrals</h3>
+          </div>
+          {data.referrals.length === 0 ? (
+            <p className="p-6 text-sm text-gray-500">
+              No referrals yet — share your link above to get started.
+            </p>
+          ) : (
+            <div className="divide-y">
+              {data.referrals.map((r) => (
+                <div key={r.id} className="px-6 py-4 flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-gray-900">{r.businessName}</p>
+                    <p className="text-xs text-gray-400">
+                      Referred {new Date(r.referredAt).toLocaleDateString("en-NG")}
+                    </p>
+                  </div>
+                  <span
+                    className={`text-xs font-bold px-3 py-1 rounded-full ${
+                      r.status === "converted"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-yellow-100 text-yellow-700"
+                    }`}
+                  >
+                    {r.status === "converted" ? "Converted" : "Pending"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Payout history */}
+        <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+          <div className="px-6 py-4 border-b">
+            <h3 className="font-bold text-gray-900">Payout History</h3>
+          </div>
+          {data.payoutHistory.length === 0 ? (
+            <p className="p-6 text-sm text-gray-500">No payouts released yet.</p>
+          ) : (
+            <div className="divide-y">
+              {data.payoutHistory.map((p) => (
+                <div key={p.id} className="px-6 py-4 flex items-center justify-between">
+                  <p className="text-sm text-gray-600">
+                    {new Date(p.paidAt).toLocaleDateString("en-NG")}
+                  </p>
+                  <p className="font-bold text-gray-900">₦{p.amount.toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default MarketerDashboard;

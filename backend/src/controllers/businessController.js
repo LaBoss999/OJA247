@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Business from "../models/Business.js";
 import Vendor from "../models/Vendor.js";
+import { isValidCustomReferralCode, isBusinessReferralCodeTaken } from "../services/referralService.js";
 
 // Turns "Chioma Fashion & Co." into "chioma-fashion-co"
 const slugify = (text) =>
@@ -152,6 +153,46 @@ export const updateBusiness = async (req, res) => {
   } catch (error) {
     if (error.code === 11000) {
       return res.status(400).json({ message: "That store link is already taken. Try another." });
+    }
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// PATCH /api/businesses/:id/referral-code
+// Lets a vendor pick their own short referral code (7-8 letters/numbers)
+// in place of the random one assigned at signup — mirrors the custom
+// store-slug pattern in updateBusiness above.
+export const updateBusinessReferralCode = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const raw = String(req.body.referralCode || "")
+      .trim()
+      .toUpperCase();
+
+    if (!isValidCustomReferralCode(raw)) {
+      return res.status(400).json({
+        message: "Referral code must be 7-8 characters, letters and numbers only.",
+      });
+    }
+
+    if (await isBusinessReferralCodeTaken(raw, id)) {
+      return res.status(400).json({ message: "That referral code is already taken. Try another." });
+    }
+
+    const updated = await Business.findByIdAndUpdate(
+      id,
+      { referralCode: raw },
+      { new: true, runValidators: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ message: "Business not found" });
+    }
+
+    res.json({ success: true, referralCode: updated.referralCode });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({ message: "That referral code is already taken. Try another." });
     }
     res.status(400).json({ message: error.message });
   }

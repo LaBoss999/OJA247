@@ -19,6 +19,9 @@ import authRoutes from "./src/routes/authRoutes.js";
 import adminRoutes from "./src/routes/adminRoutes.js";
 import orderRoutes from "./src/routes/orderRoutes.js";
 import vendorRoutes from "./src/routes/vendorRoutes.js";
+import marketerRoutes from "./src/routes/marketerRoutes.js";
+import subscriptionRoutes from "./src/routes/subscriptionRoutes.js";
+import cronRoutes from "./src/routes/cronRoutes.js";
 
 console.log("=== Environment Variables Check ===");
 console.log("CLOUDINARY_CLOUD_NAME:", process.env.CLOUDINARY_CLOUD_NAME);
@@ -70,6 +73,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/vendors", vendorRoutes);
+app.use("/api/marketers", marketerRoutes);
+app.use("/api/subscriptions", subscriptionRoutes);
+app.use("/api/cron", cronRoutes);
 
 // Awaited at module load — on a cold start this holds the response until
 // Mongo is ready instead of letting requests race ahead of the connection.

@@ -1,6 +1,10 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import Business from "../models/Business.js";
+import {
+  generateUniqueBusinessReferralCode,
+  attributeReferral,
+} from "../services/referralService.js";
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -14,7 +18,7 @@ export const register = async (req, res) => {
   try {
     console.log("Register request received:", req.body);
 
-    const { email, password, businessData } = req.body;
+    const { email, password, businessData, referralCodeUsed } = req.body;
 
     if (!email || !password || !businessData) {
       return res.status(400).json({
@@ -53,9 +57,20 @@ export const register = async (req, res) => {
     };
 
     console.log("Creating business...");
+    // Every business gets its own referral code (business-owner referral track)
+    normalizedBusinessData.referralCode = await generateUniqueBusinessReferralCode();
     const business = new Business(normalizedBusinessData);
     const savedBusiness = await business.save();
     console.log("Business created:", savedBusiness._id);
+
+    // If they signed up via someone else's referral link/code, attribute it.
+    // Silently no-ops on an invalid code so it never blocks registration.
+    if (referralCodeUsed) {
+      await attributeReferral({
+        businessId: savedBusiness._id,
+        referralCodeUsed,
+      });
+    }
 
     console.log("Creating user...");
     const user = new User({

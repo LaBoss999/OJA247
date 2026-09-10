@@ -9,6 +9,10 @@ import {
   Search,
   TrendingUp,
   MapPin,
+  Megaphone,
+  Share2,
+  Wallet,
+  ArrowRight,
 } from "lucide-react";
 import { getAllBusinesses, getAllProducts } from "../services/api";
 import axiosInstance from "../services/api";
@@ -523,6 +527,159 @@ const LandingPage = () => {
           </div>
         </section>
       )}
+
+      {/* Pricing / List Your Business */}
+      <section className="relative z-10 py-20 px-6">
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="text-4xl md:text-5xl font-black mb-4 bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+              List Your Business on OJA247
+            </h2>
+            <p className="text-gray-600 text-base sm:text-lg max-w-2xl mx-auto">
+              Get your own storefront, reach thousands of local buyers, and get paid
+              straight to your bank — pick the plan that fits.
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {[
+              { label: "Monthly", price: "1,999", cadence: "/month", blurb: "Billed every month" },
+              {
+                label: "6 Months",
+                price: "9,999",
+                cadence: "one-time",
+                blurb: "≈ ₦1,666/month — save ~17%",
+              },
+              {
+                label: "Yearly",
+                price: "17,999",
+                cadence: "one-time",
+                blurb: "≈ ₦1,500/month — save ~25%",
+                recommended: true,
+              },
+            ].map((plan, i) => (
+              <motion.div
+                key={plan.label}
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                whileHover={{ y: -10, scale: 1.03 }}
+                className={`relative p-8 rounded-3xl border-2 backdrop-blur-xl shadow-lg hover:shadow-2xl transition-all ${
+                  plan.recommended
+                    ? "border-green-500 bg-white/90"
+                    : "border-gray-200/50 bg-white/70"
+                }`}
+              >
+                {plan.recommended && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold px-4 py-1 rounded-full shadow-md whitespace-nowrap">
+                    Best Value
+                  </span>
+                )}
+                <p className="text-gray-500 font-semibold mb-2">{plan.label}</p>
+                <p className="text-4xl font-black text-gray-900 mb-1">
+                  ₦{plan.price}
+                  <span className="text-base font-medium text-gray-400"> {plan.cadence}</span>
+                </p>
+                <p className="text-sm text-gray-500 mb-6">{plan.blurb}</p>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate("/business-form")}
+                  className={`w-full py-3 rounded-xl font-bold transition ${
+                    plan.recommended
+                      ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg hover:shadow-xl"
+                      : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                  }`}
+                >
+                  Get Started
+                </motion.button>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="text-center text-sm text-gray-500 mt-10"
+          >
+            Prefer to earn by referring businesses instead of listing your own?{" "}
+            <button
+              onClick={() => navigate("/register-marketer")}
+              className="text-green-600 font-bold hover:underline"
+            >
+              Become a Marketer
+            </button>
+          </motion.p>
+        </div>
+      </section>
+
+      {/* Become a Marketer */}
+      <section className="relative z-10 py-16 px-6">
+        <div className="max-w-5xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="relative overflow-hidden rounded-3xl border border-gray-200/50 bg-gradient-to-br from-green-600 to-emerald-600 shadow-xl p-8 sm:p-12"
+          >
+            <div className="absolute -top-10 -right-10 w-48 h-48 bg-white/10 rounded-full blur-2xl" />
+            <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-yellow-300/10 rounded-full blur-2xl" />
+
+            <div className="relative grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+              <div className="md:col-span-2">
+                <span className="inline-flex items-center gap-2 bg-white/15 text-white text-xs font-bold px-3 py-1 rounded-full mb-4">
+                  <Megaphone size={14} /> No storefront needed
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-black text-white mb-3">
+                  Don't sell anything? Earn by referring businesses instead.
+                </h2>
+                <p className="text-green-50 text-sm sm:text-base mb-6 max-w-xl">
+                  Become an OJA247 Marketer, share your personal referral link with vendors, and get
+                  paid in cash every time a business you refer subscribes — no inventory, no
+                  storefront, just your network.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                  <div className="flex items-start gap-2">
+                    <Share2 size={18} className="text-white shrink-0 mt-0.5" />
+                    <p className="text-xs text-green-50">Share your unique referral link or code</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Store size={18} className="text-white shrink-0 mt-0.5" />
+                    <p className="text-xs text-green-50">A business signs up and subscribes</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Wallet size={18} className="text-white shrink-0 mt-0.5" />
+                    <p className="text-xs text-green-50">You get paid out weekly, straight to your bank</p>
+                  </div>
+                </div>
+
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate("/register-marketer")}
+                  className="inline-flex items-center gap-2 bg-white text-green-700 font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition"
+                >
+                  Become a Marketer <ArrowRight size={18} />
+                </motion.button>
+              </div>
+
+              <div className="hidden md:flex justify-center">
+                <div className="w-40 h-40 rounded-full bg-white/10 flex items-center justify-center">
+                  <Megaphone size={64} className="text-white" />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
 
       {/* Features Grid */}
       <section className="relative z-10 py-20 px-6">

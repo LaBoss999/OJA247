@@ -1,11 +1,13 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { Eye, EyeOff } from "lucide-react";
+import Logo from "../assets/OJA247 VX1.png";
 
 const BusinessForm = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -14,6 +16,9 @@ const BusinessForm = () => {
     email: "",
     password: "",
     confirmPassword: "",
+    // Pre-filled from a shared referral link (?ref=CODE), but editable —
+    // covers both "clicked a link" and "someone told me a code" cases
+    referralCodeUsed: searchParams.get("ref") || "",
 
     // Business fields
     name: "",
@@ -135,6 +140,7 @@ const BusinessForm = () => {
       formData.email,
       formData.password,
       businessData,
+      formData.referralCodeUsed.trim() || null,
     );
 
     if (result.success) {
@@ -151,6 +157,9 @@ const BusinessForm = () => {
     <div className="min-h-screen bg-gray-50 py-6 sm:py-12">
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
         <div className="bg-white rounded-2xl shadow-lg p-4 sm:p-8">
+          <div className="flex justify-center mb-6">
+            <img src={Logo} alt="OJA247" className="w-28" />
+          </div>
           <h2 className="text-2xl sm:text-3xl font-bold mb-2 bg-gradient-to-r from-green-600 to-yellow-600 bg-clip-text text-transparent">
             Register Your Business
           </h2>
@@ -249,6 +258,23 @@ const BusinessForm = () => {
                       </button>
                     </div>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Referral Code (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    name="referralCodeUsed"
+                    placeholder="e.g., MKT-A1B2C3"
+                    value={formData.referralCodeUsed}
+                    onChange={handleChange}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm sm:text-base uppercase"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Were you referred by a marketer or another business? Enter their code here.
+                  </p>
                 </div>
               </div>
             </div>

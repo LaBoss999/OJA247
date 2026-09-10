@@ -4,6 +4,8 @@ import axiosInstance, { getBusinessById } from "../services/api";
 import AddProductForm from "../components/AddProductForm.jsx";
 import ProductList from "../components/ProductList.jsx";
 import VendorOnboardingForm from "../components/Vendoronboardingform.jsx";
+import SubscriptionTab from "../components/SubscriptionTab.jsx";
+import ReferralPointsTab from "../components/ReferralPointsTab.jsx";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { LogOut, ShoppingBag, Clock, CheckCircle2, XCircle, Copy, Check, Share2 } from "lucide-react";
@@ -351,12 +353,40 @@ const BusinessDashboard = () => {
             >
               Payouts & Verification
             </button>
+
+            <button
+              onClick={() => setActiveTab("subscription")}
+              className={`py-4 px-2 border-b-2 font-semibold transition-colors whitespace-nowrap ${
+                activeTab === "subscription"
+                  ? "border-green-600 text-green-700"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Subscription
+            </button>
+
+            <button
+              onClick={() => setActiveTab("referrals")}
+              className={`py-4 px-2 border-b-2 font-semibold transition-colors whitespace-nowrap ${
+                activeTab === "referrals"
+                  ? "border-green-600 text-green-700"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Referrals & Points
+            </button>
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         {activeTab === "products" && <ProductList businessId={businessId} />}
+
+        {activeTab === "subscription" && (
+          <SubscriptionTab businessId={businessId} business={business} email={user?.email} />
+        )}
+
+        {activeTab === "referrals" && <ReferralPointsTab businessId={businessId} />}
 
         {activeTab === "add" && (
           <AddProductForm

@@ -188,6 +188,13 @@ const LoginPage = () => {
               >
                 Register your business
               </Link>
+              {' '}or{' '}
+              <Link
+                to="/register-marketer"
+                className="text-green-600 font-semibold hover:text-green-700 transition"
+              >
+                register as a marketer
+              </Link>
             </p>
           </motion.div>
 

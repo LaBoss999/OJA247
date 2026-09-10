@@ -12,6 +12,7 @@ import {
   reviewVendor,
   setVerificationDeadline,
 } from "../controllers/adminController.js";
+import { getPayoutBatches, markPayoutBatchPaid } from "../controllers/payoutBatchController.js";
 
 const router = express.Router();
 
@@ -29,5 +30,9 @@ router.patch("/users/:id/ban", toggleUserBan);
 router.get("/vendors", getAllVendors);
 router.patch("/vendors/:id/review", reviewVendor);
 router.patch("/businesses/:id/verification-deadline", setVerificationDeadline);
+
+// Marketer payout batches (weekly, frozen by the cron job — see cronRoutes.js)
+router.get("/payout-batches", getPayoutBatches);
+router.post("/payout-batches/:marketerId/mark-paid", markPayoutBatchPaid);
 
 export default router;

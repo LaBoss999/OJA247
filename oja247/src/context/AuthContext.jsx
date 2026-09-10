@@ -38,12 +38,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (email, password, businessData) => {
+  const register = async (email, password, businessData, referralCodeUsed = null) => {
     try {
       const response = await axiosInstance.post('/api/auth/register', {
         email,
         password,
-        businessData
+        businessData,
+        referralCodeUsed
       });
 
       const { token, user, business } = response.data;

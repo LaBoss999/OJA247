@@ -17,6 +17,9 @@ import About from "./pages/About";
 import CartPage from "./pages/CartPage";
 import Checkout from "./pages/Checkout";
 import PaymentStatusPage from "./pages/PaymentStatusPage";
+import MarketerRegisterForm from "./pages/MarketerRegisterForm";
+import MarketerLoginPage from "./pages/MarketerLoginPage";
+import MarketerDashboard from "./pages/MarketerDashboard";
 
 function App() {
   return (
@@ -37,6 +40,9 @@ function App() {
           {/* Auth Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/business-form" element={<BusinessForm />} />
+          <Route path="/register-marketer" element={<MarketerRegisterForm />} />
+          <Route path="/marketer-login" element={<MarketerLoginPage />} />
+          <Route path="/marketer-dashboard" element={<MarketerDashboard />} />
           {/* Protected Routes */}
           <Route
             path="/dashboard/:businessId"
