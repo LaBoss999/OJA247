@@ -661,14 +661,23 @@ const LandingPage = () => {
                   </div>
                 </div>
 
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate("/register-marketer")}
-                  className="inline-flex items-center gap-2 bg-white text-green-700 font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition"
-                >
-                  Become a Marketer <ArrowRight size={18} />
-                </motion.button>
+                <div className="flex flex-wrap items-center gap-4">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => navigate("/register-marketer")}
+                    className="inline-flex items-center gap-2 bg-white text-green-700 font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition"
+                  >
+                    Become a Marketer <ArrowRight size={18} />
+                  </motion.button>
+
+                  <button
+                    onClick={() => navigate("/marketer-login")}
+                    className="text-sm font-semibold text-white/90 hover:text-white underline underline-offset-4"
+                  >
+                    Already a marketer? Log in
+                  </button>
+                </div>
               </div>
 
               <div className="hidden md:flex justify-center">

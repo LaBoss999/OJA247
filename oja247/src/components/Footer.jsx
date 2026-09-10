@@ -164,6 +164,29 @@ const Footer = () => {
           </a>
         </div>
 
+        {/* Marketer WhatsApp Group */}
+        <div className="mt-6 p-8 rounded-3xl bg-orange-500/10 border border-orange-500/20 backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-6">
+          <div>
+            <h3 className="text-2xl font-bold flex items-center gap-2">
+              <MessageCircle className="text-orange-400" size={24} />
+              Join our Marketer Group
+            </h3>
+
+            <p className="text-gray-400 mt-2">
+              Connect with other OJA247 marketers, get tips and grow your referral earnings.
+            </p>
+          </div>
+
+          <a
+            href="https://chat.whatsapp.com/HHZ3GWuJaSXLQO5rIyMEXY"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 font-bold hover:scale-105 transition whitespace-nowrap"
+          >
+            Join Community
+          </a>
+        </div>
+
         {/* Newsletter */}
         <div className="mt-16 p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-6">
           <div>

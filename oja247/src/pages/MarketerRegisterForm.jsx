@@ -180,6 +180,19 @@ const MarketerRegisterForm = () => {
 
             <div className="text-center pt-4 border-t">
               <p className="text-xs sm:text-sm text-gray-600">
+                Already a marketer?{" "}
+                <button
+                  type="button"
+                  onClick={() => navigate("/marketer-login")}
+                  className="text-green-600 font-semibold hover:text-green-700"
+                >
+                  Log in
+                </button>
+              </p>
+            </div>
+
+            <div className="text-center pt-2">
+              <p className="text-xs sm:text-sm text-gray-600">
                 Registering a business instead?{" "}
                 <button
                   type="button"
