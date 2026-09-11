@@ -45,6 +45,27 @@ async function deductAppliedPoints(payment) {
   await business.save();
 }
 
+// Wraps handleSubscriptionConversion so a referral/payout bug can never
+// block or re-trigger-loop subscription activation. By the time this is
+// called the payment has already been marked "success" and the business
+// already activated — that must stand regardless of what happens here.
+// Without this, an error here would bubble up, the webhook would return
+// 500 and Paystack would retry, but markSubscriptionPaid short-circuits on
+// an already-"success" payment — so the retry silently never re-attempts
+// the conversion either. The marketer's payout would just vanish with no
+// record and no error anywhere. Logging loudly here is the only safety net.
+async function safeHandleSubscriptionConversion(details) {
+  const { paymentId, ...conversionArgs } = details;
+  try {
+    await handleSubscriptionConversion(conversionArgs);
+  } catch (err) {
+    console.error(
+      `Referral conversion failed for subscription payment ${paymentId} (business ${conversionArgs.businessId}, plan ${conversionArgs.planType}) — subscription is still active, but no marketer payout/points were recorded:`,
+      err
+    );
+  }
+}
+
 // POST /api/subscriptions/initiate
 // Creates the pending SubscriptionPayment record the frontend then charges
 // against via the Paystack popup, mirroring orderController's createOrder.
@@ -110,7 +131,8 @@ export const initiateSubscription = async (req, res) => {
 
       await deductAppliedPoints(payment);
 
-      await handleSubscriptionConversion({
+      await safeHandleSubscriptionConversion({
+        paymentId: payment._id,
         businessId,
         amountPaid: payment.amount,
         planType,
@@ -161,7 +183,8 @@ async function markSubscriptionPaid(reference) {
 
   await deductAppliedPoints(payment);
 
-  await handleSubscriptionConversion({
+  await safeHandleSubscriptionConversion({
+    paymentId: payment._id,
     businessId: payment.businessId,
     amountPaid: payment.amount,
     planType: payment.planType,

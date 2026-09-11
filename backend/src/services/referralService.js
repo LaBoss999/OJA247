@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import Business from "../models/Business.js";
 import Marketer from "../models/Marketer.js";
+import User from "../models/User.js";
 import ReferralAttribution from "../models/ReferralAttribution.js";
 import MarketerPayout from "../models/MarketerPayout.js";
 import PointsLedger from "../models/PointsLedger.js";
@@ -75,12 +76,40 @@ export async function isBusinessReferralCodeTaken(code, excludeBusinessId = null
 
 // --- Attribution -------------------------------------------------------
 
+const normalizeEmail = (s) => String(s || "").toLowerCase().trim();
+const normalizePhone = (s) => String(s || "").replace(/\D/g, "");
+
+// Fraud guard: a referrer (marketer or business) gets paid/earns points for
+// whatever business they refer, so nothing should stop them referring a
+// business they themselves signed up under a second email — except this
+// check. Compares the referrer's own contact details against the new
+// business owner's, since that's all we have at signup time (no shared
+// account link between the two record types).
+function isSelfReferral({ referrerEmail, referrerPhone }, { ownerEmail, contact }) {
+  const email = normalizeEmail(referrerEmail);
+  if (email && ownerEmail && email === normalizeEmail(ownerEmail)) {
+    return true;
+  }
+
+  const phone = normalizePhone(referrerPhone);
+  const contactPhone = normalizePhone(contact);
+  // Require a reasonably-full phone number match — short/partial digit
+  // strings could coincidentally collide and wrongly block a legit referral.
+  if (phone.length >= 7 && phone === contactPhone) {
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * Call this right after a new Business is created, if a referral code was
  * captured at signup (URL param or manual entry field).
  * Silently no-ops on an invalid/unknown code rather than failing signup.
+ * ownerEmail/contact are the new business's own owner email + contact —
+ * passed in so a marketer can't cash in on referring themselves.
  */
-export async function attributeReferral({ businessId, referralCodeUsed }) {
+export async function attributeReferral({ businessId, referralCodeUsed, ownerEmail, contact }) {
   if (!referralCodeUsed) return null;
 
   const code = String(referralCodeUsed).trim().toUpperCase();
@@ -89,6 +118,32 @@ export async function attributeReferral({ businessId, referralCodeUsed }) {
   const referringBusiness = marketer ? null : await Business.findOne({ referralCode: code });
 
   if (!marketer && !referringBusiness) return null; // unknown code — ignore, don't block signup
+
+  if (
+    marketer &&
+    isSelfReferral({ referrerEmail: marketer.email, referrerPhone: marketer.phone }, { ownerEmail, contact })
+  ) {
+    console.warn(
+      `Blocked self-referral attempt: marketer ${marketer._id} (${marketer.email}) tried to refer business ${businessId} using their own code ${code}`
+    );
+    return null;
+  }
+
+  if (referringBusiness) {
+    // Business owner's email lives on User, not Business — look it up for the check.
+    const referringOwner = await User.findOne({ businessId: referringBusiness._id }).select("email");
+    if (
+      isSelfReferral(
+        { referrerEmail: referringOwner?.email, referrerPhone: referringBusiness.contact },
+        { ownerEmail, contact }
+      )
+    ) {
+      console.warn(
+        `Blocked self-referral attempt: business ${referringBusiness._id} tried to refer new business ${businessId} using its own code ${code}`
+      );
+      return null;
+    }
+  }
 
   try {
     const attribution = await ReferralAttribution.create({

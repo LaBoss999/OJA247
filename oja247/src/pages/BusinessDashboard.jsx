@@ -5,6 +5,7 @@ import AddProductForm from "../components/AddProductForm.jsx";
 import ProductList from "../components/ProductList.jsx";
 import VendorOnboardingForm from "../components/Vendoronboardingform.jsx";
 import SubscriptionTab from "../components/SubscriptionTab.jsx";
+import AccountAlertsPopup from "../components/AccountAlertsPopup.jsx";
 import ReferralPointsTab from "../components/ReferralPointsTab.jsx";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -225,17 +226,32 @@ const BusinessDashboard = () => {
       .reduce((sum, o) => sum + Number(o.total || 0), 0),
   };
 
-  // Verification countdown is admin-controlled (Business.verificationDeadline).
-  // Null means an admin hasn't started it yet — no banner, never auto-hidden.
+  // Documents-incomplete reminder is now a dismissible popup, not a
+  // countdown — verification no longer auto-hides the store.
   const needsVerification = (vendorStatus?.verificationTier || "incomplete") === "incomplete";
-  const verificationDeadline = business.verificationDeadline ? new Date(business.verificationDeadline) : null;
-  const daysUntilDeadline = verificationDeadline
-    ? Math.ceil((verificationDeadline.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+
+  // Subscription reminder: purely computed from subscriptionExpiresAt, no
+  // cron/status field to trust — matches how the backend gates public
+  // listing visibility (live check, restored the instant a payment lands).
+  const subscriptionExpiresAt = business.subscriptionExpiresAt ? new Date(business.subscriptionExpiresAt) : null;
+  const daysUntilSubExpiry = subscriptionExpiresAt
+    ? Math.ceil((subscriptionExpiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
-  const deadlinePassed = daysUntilDeadline !== null && daysUntilDeadline < 0;
+  const subExpired = daysUntilSubExpiry !== null && daysUntilSubExpiry < 0;
+  const subExpiringSoon = daysUntilSubExpiry !== null && daysUntilSubExpiry >= 0 && daysUntilSubExpiry <= 4;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-yellow-50">
+      <AccountAlertsPopup
+        businessId={businessId}
+        needsVerification={needsVerification}
+        subExpired={subExpired}
+        subExpiringSoon={subExpiringSoon}
+        daysUntilSubExpiry={daysUntilSubExpiry}
+        onGoToVerification={() => setActiveTab("payouts")}
+        onGoToSubscription={() => setActiveTab("subscription")}
+      />
+
       <div
         className="relative h-60 sm:h-72 overflow-hidden"
         style={{
@@ -272,29 +288,6 @@ const BusinessDashboard = () => {
           </button>
         </div>
       </div>
-
-      {needsVerification && verificationDeadline && (
-        <div className={`px-4 py-3 text-sm font-medium text-center ${deadlinePassed ? "bg-red-600 text-white" : "bg-yellow-400 text-yellow-950"}`}>
-          {deadlinePassed ? (
-            <span>
-              Your store is hidden from customers because verification wasn't completed by{" "}
-              {verificationDeadline.toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" })}.{" "}
-            </span>
-          ) : (
-            <span>
-              Complete vendor verification within {daysUntilDeadline} day{daysUntilDeadline === 1 ? "" : "s"} (by{" "}
-              {verificationDeadline.toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" })}) or your store will be hidden from customers.{" "}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={() => setActiveTab("payouts")}
-            className="underline font-semibold hover:opacity-80"
-          >
-            Complete now
-          </button>
-        </div>
-      )}
 
       <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4">

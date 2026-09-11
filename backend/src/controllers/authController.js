@@ -69,6 +69,8 @@ export const register = async (req, res) => {
       await attributeReferral({
         businessId: savedBusiness._id,
         referralCodeUsed,
+        ownerEmail: email,
+        contact: normalizedBusinessData.contact,
       });
     }
 

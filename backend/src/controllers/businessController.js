@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import Business from "../models/Business.js";
-import Vendor from "../models/Vendor.js";
 import { isValidCustomReferralCode, isBusinessReferralCodeTaken } from "../services/referralService.js";
 
 // Turns "Chioma Fashion & Co." into "chioma-fashion-co"
@@ -33,27 +32,21 @@ const generateUniqueSlug = async (name, excludeId = null) => {
   }
 };
 
-// GET all — excludes businesses an admin has hidden, and businesses whose
-// admin-set verification deadline has passed without at least Basic-tier
-// vendor verification (paused, not deleted — direct/owner links still work).
-// A business with no deadline set yet (verificationDeadline: null) is never
-// auto-hidden — an admin has to start that countdown explicitly.
+// GET all — excludes businesses an admin has hidden, and businesses without
+// a currently-active paid subscription (never subscribed, OR subscribed but
+// subscriptionExpiresAt has passed). This is a live check, not cron-driven:
+// the moment a vendor pays and subscriptionExpiresAt moves into the future,
+// they reappear on the very next fetch — no separate "un-hide" step needed.
+// The owner can still log in and use their dashboard either way — this only
+// gates the public listing, not account access.
 export const getBusinesses = async (req, res) => {
   try {
     const businesses = await Business.find({ isHidden: { $ne: true } }).lean();
 
-    const vendors = await Vendor.find({
-      businessId: { $in: businesses.map((b) => b._id) },
-    }).select("businessId verificationTier");
-    const tierByBusinessId = new Map(vendors.map((v) => [v.businessId.toString(), v.verificationTier]));
-
     const now = Date.now();
     const visible = businesses.filter((b) => {
-      const tier = tierByBusinessId.get(b._id.toString()) || "incomplete";
-      if (tier !== "incomplete") return true;
-      if (!b.verificationDeadline) return true;
-
-      return now <= new Date(b.verificationDeadline).getTime();
+      if (!b.subscriptionExpiresAt) return false;
+      return now <= new Date(b.subscriptionExpiresAt).getTime();
     });
 
     res.json(visible);
