@@ -28,21 +28,42 @@ async function deductAppliedPoints(payment) {
   // creates the payment already "success" (never re-entering this function),
   // and markSubscriptionPaid only reaches this line on the pending -> success
   // transition, which happens at most once per payment (idempotency guarded above).
-  const business = await Business.findById(payment.businessId);
-  if (!business) return;
+  //
+  // Atomic decrement (not read-then-write) — closes the same race window as
+  // withdrawPoints in pointsController.js: two balance-affecting operations
+  // firing near-simultaneously for the same business can no longer both act
+  // on the same stale balance reading.
+  let business = await Business.findOneAndUpdate(
+    { _id: payment.businessId, pointsBalance: { $gte: payment.pointsApplied } },
+    { $inc: { pointsBalance: -payment.pointsApplied } },
+    { new: true }
+  );
 
-  const newBalance = Math.max(0, (business.pointsBalance || 0) - payment.pointsApplied);
+  if (!business) {
+    // The balance check at initiate time is now stale (something else moved
+    // the balance in between) and there isn't enough left to fully cover
+    // this payment. The subscription is already active at this point — that
+    // can't be undone — so floor at 0 and log loudly rather than silently
+    // pretending the deduction happened as planned.
+    console.error(
+      `Points balance insufficient at deduction time for business ${payment.businessId} ` +
+        `(payment ${payment._id}, expected to deduct ${payment.pointsApplied}). Flooring balance to 0.`
+    );
+    business = await Business.findByIdAndUpdate(
+      payment.businessId,
+      { pointsBalance: 0 },
+      { new: true }
+    );
+    if (!business) return;
+  }
 
   await PointsLedger.create({
     businessId: payment.businessId,
     type: "redeemed_subscription",
     points: -payment.pointsApplied,
-    balanceAfter: newBalance,
+    balanceAfter: business.pointsBalance,
     status: "n/a",
   });
-
-  business.pointsBalance = newBalance;
-  await business.save();
 }
 
 // Wraps handleSubscriptionConversion so a referral/payout bug can never
@@ -131,13 +152,16 @@ export const initiateSubscription = async (req, res) => {
 
       await deductAppliedPoints(payment);
 
-      await safeHandleSubscriptionConversion({
-        paymentId: payment._id,
-        businessId,
-        amountPaid: payment.amount,
-        planType,
-        isFirstPayment,
-      });
+      // No Paystack cash was collected on this payment — it's covered
+      // entirely by points, which are themselves money the platform already
+      // paid out once (to whoever earned them). Awarding a marketer payout
+      // or business referral points again here, off the nominal plan price,
+      // would pay out twice against a single real inflow. So: activate the
+      // subscription, but skip the referral conversion entirely — the
+      // referring marketer/business simply doesn't get paid on this
+      // particular payment. (Their ReferralAttribution stays "pending"
+      // rather than flipping to "converted" — it will still convert on a
+      // later payment for this business that does involve real cash.)
 
       return res.status(201).json({
         message: "Subscription paid in full with points",
@@ -183,13 +207,20 @@ async function markSubscriptionPaid(reference) {
 
   await deductAppliedPoints(payment);
 
-  await safeHandleSubscriptionConversion({
-    paymentId: payment._id,
-    businessId: payment.businessId,
-    amountPaid: payment.amount,
-    planType: payment.planType,
-    isFirstPayment: payment.isFirstPayment,
-  });
+  // Conversion is based on cash actually collected on THIS payment
+  // (plan price minus whatever was covered by points) — never the full
+  // nominal plan price. See the points-only branch in initiateSubscription
+  // for the full reasoning; this covers the partial-points-partial-cash case.
+  const cashCollected = payment.amount - (payment.pointsApplied || 0);
+  if (cashCollected > 0) {
+    await safeHandleSubscriptionConversion({
+      paymentId: payment._id,
+      businessId: payment.businessId,
+      amountPaid: cashCollected,
+      planType: payment.planType,
+      isFirstPayment: payment.isFirstPayment,
+    });
+  }
 
   return payment;
 }

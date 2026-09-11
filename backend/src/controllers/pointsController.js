@@ -64,15 +64,6 @@ export const withdrawPoints = async (req, res) => {
       return res.status(400).json({ message: "A valid withdrawal amount is required" });
     }
 
-    const business = await Business.findById(businessId);
-    if (!business) {
-      return res.status(404).json({ message: "Business not found" });
-    }
-
-    if (requestedAmount > (business.pointsBalance || 0)) {
-      return res.status(400).json({ message: "Withdrawal amount exceeds your points balance" });
-    }
-
     const vendor = await Vendor.findOne({ businessId });
     if (!vendor || !vendor.accountNumber || !vendor.bankCode) {
       return res.status(400).json({
@@ -80,24 +71,41 @@ export const withdrawPoints = async (req, res) => {
       });
     }
 
-    const newBalance = business.pointsBalance - requestedAmount;
+    // Atomic check-and-decrement: the pointsBalance >= requestedAmount filter
+    // is enforced by MongoDB as part of the same operation as the $inc, not
+    // as a separate read beforehand. Two simultaneous withdrawal requests
+    // can no longer both pass a balance check based on the same stale
+    // reading — only one can match the filter and succeed if the balance
+    // wouldn't cover both.
+    const business = await Business.findOneAndUpdate(
+      { _id: businessId, pointsBalance: { $gte: requestedAmount } },
+      { $inc: { pointsBalance: -requestedAmount } },
+      { new: true }
+    );
+
+    if (!business) {
+      // Either the business doesn't exist, or the balance check failed —
+      // distinguish the two for a clearer error message.
+      const exists = await Business.exists({ _id: businessId });
+      if (!exists) {
+        return res.status(404).json({ message: "Business not found" });
+      }
+      return res.status(400).json({ message: "Withdrawal amount exceeds your points balance" });
+    }
 
     const entry = await PointsLedger.create({
       businessId,
       type: "withdrawn_cash",
       points: -requestedAmount,
-      balanceAfter: newBalance,
+      balanceAfter: business.pointsBalance,
       status: "pending", // released via the same payout mechanism as marketer payouts, once decided
     });
-
-    business.pointsBalance = newBalance;
-    await business.save();
 
     res.json({
       success: true,
       message: "Withdrawal requested — it will be processed shortly.",
       entry,
-      pointsBalance: newBalance,
+      pointsBalance: business.pointsBalance,
     });
   } catch (error) {
     console.error("Withdraw points error:", error);
