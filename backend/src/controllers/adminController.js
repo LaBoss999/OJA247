@@ -3,6 +3,7 @@ import Business from "../models/Business.js";
 import Product from "../models/Product.js";
 import Order from "../models/Order.js";
 import Vendor from "../models/Vendor.js";
+import PlatformSettings from "../models/PlatformSettings.js";
 
 // Get all users
 export const getAllUsers = async (req, res) => {
@@ -202,6 +203,37 @@ export const setVerificationDeadline = async (req, res) => {
     }
 
     res.json(business);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+// GET /api/admin/settings
+export const getPlatformSettings = async (req, res) => {
+  try {
+    const settings = await PlatformSettings.getSettings();
+    res.json({ enforceSubscriptionVisibility: settings.enforceSubscriptionVisibility });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PATCH /api/admin/settings/subscription-visibility
+// Admin kill switch (see PlatformSettings.js + businessController.getBusinesses).
+// Turning this ON hides any business without a currently active subscription
+// from public listings — only flip it on once vendors have had a fair
+// chance to actually pay via the new subscription system.
+export const setSubscriptionVisibilityEnforcement = async (req, res) => {
+  try {
+    const { enabled } = req.body;
+    if (typeof enabled !== "boolean") {
+      return res.status(400).json({ message: "'enabled' must be true or false" });
+    }
+
+    const settings = await PlatformSettings.getSettings();
+    settings.enforceSubscriptionVisibility = enabled;
+    await settings.save();
+
+    res.json({ enforceSubscriptionVisibility: settings.enforceSubscriptionVisibility });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

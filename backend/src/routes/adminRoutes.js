@@ -11,6 +11,8 @@ import {
   getAllVendors,
   reviewVendor,
   setVerificationDeadline,
+  getPlatformSettings,
+  setSubscriptionVisibilityEnforcement,
 } from "../controllers/adminController.js";
 import { getPayoutBatches, markPayoutBatchPaid } from "../controllers/payoutBatchController.js";
 
@@ -34,5 +36,9 @@ router.patch("/businesses/:id/verification-deadline", setVerificationDeadline);
 // Marketer payout batches (weekly, frozen by the cron job — see cronRoutes.js)
 router.get("/payout-batches", getPayoutBatches);
 router.post("/payout-batches/:marketerId/mark-paid", markPayoutBatchPaid);
+
+// Platform settings (global kill switches)
+router.get("/settings", getPlatformSettings);
+router.patch("/settings/subscription-visibility", setSubscriptionVisibilityEnforcement);
 
 export default router;

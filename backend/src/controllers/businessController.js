@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Business from "../models/Business.js";
+import PlatformSettings from "../models/PlatformSettings.js";
 import { isValidCustomReferralCode, isBusinessReferralCodeTaken } from "../services/referralService.js";
 
 // Turns "Chioma Fashion & Co." into "chioma-fashion-co"
@@ -32,16 +33,23 @@ const generateUniqueSlug = async (name, excludeId = null) => {
   }
 };
 
-// GET all — excludes businesses an admin has hidden, and businesses without
-// a currently-active paid subscription (never subscribed, OR subscribed but
-// subscriptionExpiresAt has passed). This is a live check, not cron-driven:
-// the moment a vendor pays and subscriptionExpiresAt moves into the future,
-// they reappear on the very next fetch — no separate "un-hide" step needed.
+// GET all — excludes businesses an admin has hidden, and (only when the
+// enforceSubscriptionVisibility kill switch is ON — see PlatformSettings.js
+// and /api/admin/settings) businesses without a currently-active paid
+// subscription (never subscribed, OR subscribed but subscriptionExpiresAt
+// has passed). This is a live check, not cron-driven: the moment a vendor
+// pays and subscriptionExpiresAt moves into the future, they reappear on
+// the very next fetch — no separate "un-hide" step needed.
 // The owner can still log in and use their dashboard either way — this only
 // gates the public listing, not account access.
 export const getBusinesses = async (req, res) => {
   try {
     const businesses = await Business.find({ isHidden: { $ne: true } }).lean();
+
+    const settings = await PlatformSettings.getSettings();
+    if (!settings.enforceSubscriptionVisibility) {
+      return res.json(businesses); // kill switch is off — subscription status doesn't affect visibility
+    }
 
     const now = Date.now();
     const visible = businesses.filter((b) => {

@@ -77,6 +77,8 @@ const AdminDashboard = () => {
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [vendors, setVendors] = useState([]);
+  const [settings, setSettings] = useState({ enforceSubscriptionVisibility: false });
+  const [settingsSaving, setSettingsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
@@ -101,6 +103,28 @@ const AdminDashboard = () => {
 
   const showToast = (message, type = "success") => setToast({ message, type });
 
+  const handleToggleSubscriptionVisibility = async () => {
+    const next = !settings.enforceSubscriptionVisibility;
+    setSettingsSaving(true);
+    try {
+      const res = await axiosInstance.patch("/api/admin/settings/subscription-visibility", {
+        enabled: next,
+      });
+      setSettings(res.data);
+      showToast(
+        next
+          ? "Subscription visibility gate turned ON — unsubscribed businesses are now hidden from public listings."
+          : "Subscription visibility gate turned OFF — all businesses are visible regardless of subscription status.",
+        "success"
+      );
+      fetchAllData(); // businesses list changes shape immediately when this flips
+    } catch (error) {
+      showToast(error.response?.data?.message || "Could not update the setting.", "error");
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
+
   useEffect(() => {
     if (!user || user.role !== "admin") {
       navigate("/");
@@ -111,13 +135,14 @@ const AdminDashboard = () => {
 
   const fetchAllData = async () => {
     try {
-      const [statsRes, bizRes, userRes, prodRes, ordersRes, vendorsRes] = await Promise.all([
+      const [statsRes, bizRes, userRes, prodRes, ordersRes, vendorsRes, settingsRes] = await Promise.all([
         axiosInstance.get("/api/admin/stats"),
         axiosInstance.get("/api/businesses"),
         axiosInstance.get("/api/admin/users"),
         axiosInstance.get("/api/products/search"),
         axiosInstance.get("/api/admin/orders"),
         axiosInstance.get("/api/admin/vendors"),
+        axiosInstance.get("/api/admin/settings"),
       ]);
 
       setStats(statsRes.data);
@@ -126,6 +151,7 @@ const AdminDashboard = () => {
       setProducts(prodRes.data);
       setOrders(ordersRes.data);
       setVendors(vendorsRes.data);
+      setSettings(settingsRes.data);
     } catch (error) {
       console.error("Error fetching data:", error);
       if (error.response?.status === 403) {
@@ -400,6 +426,49 @@ const AdminDashboard = () => {
         <div className="px-4 sm:px-8 py-8 max-w-7xl">
           {activeTab === "overview" && (
             <div>
+              {/* Platform Settings — subscription visibility kill switch */}
+              <div
+                className={`mb-8 relative rounded-2xl p-6 sm:p-8 border overflow-hidden ${
+                  settings.enforceSubscriptionVisibility
+                    ? "bg-white/5 border-white/10"
+                    : "bg-amber-500/10 border-amber-500/30"
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle
+                      className={settings.enforceSubscriptionVisibility ? "text-gray-500" : "text-amber-400"}
+                      size={22}
+                    />
+                    <div>
+                      <h3 className="font-bold text-white">Subscription Visibility Gate</h3>
+                      <p className="text-sm text-gray-400 mt-1 max-w-xl">
+                        When ON, businesses without a currently active subscription are hidden from
+                        public listings. Currently{" "}
+                        <span className={settings.enforceSubscriptionVisibility ? "text-green-400 font-semibold" : "text-amber-400 font-semibold"}>
+                          {settings.enforceSubscriptionVisibility ? "ON" : "OFF"}
+                        </span>
+                        {!settings.enforceSubscriptionVisibility &&
+                          " — all businesses are showing regardless of subscription status."}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleToggleSubscriptionVisibility}
+                    disabled={settingsSaving}
+                    className={`shrink-0 relative inline-flex h-8 w-14 items-center rounded-full transition-colors disabled:opacity-50 ${
+                      settings.enforceSubscriptionVisibility ? "bg-green-500" : "bg-gray-600"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                        settings.enforceSubscriptionVisibility ? "translate-x-7" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
               {/* Stats Cards */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
                 {[

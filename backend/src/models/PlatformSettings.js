@@ -1,0 +1,30 @@
+import mongoose from "mongoose";
+
+// Singleton: exactly one document ever exists for this collection. Add more
+// global on/off switches here as flat booleans rather than creating a new
+// model per switch.
+const PlatformSettingsSchema = new mongoose.Schema(
+  {
+    // When true, getBusinesses() hides any business without a currently
+    // active subscription (see businessController.js). Defaults to false —
+    // OFF — so existing pre-subscription businesses aren't suddenly hidden
+    // the moment this collection is created; an admin turns it on
+    // deliberately once vendors have had a fair chance to actually pay.
+    enforceSubscriptionVisibility: { type: Boolean, default: false },
+  },
+  { timestamps: true }
+);
+
+const PlatformSettings = mongoose.model("PlatformSettings", PlatformSettingsSchema);
+
+// There is only ever one settings document — this creates it with defaults
+// on first access if it doesn't exist yet, and returns it either way.
+PlatformSettings.getSettings = async function () {
+  let settings = await this.findOne();
+  if (!settings) {
+    settings = await this.create({});
+  }
+  return settings;
+};
+
+export default PlatformSettings;
