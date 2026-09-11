@@ -166,6 +166,9 @@ export const reviewVendor = async (req, res) => {
         reviewedAt: new Date(),
         reviewedBy: req.user._id,
         notificationSeen: false, // vendor sees this next time they check their status
+        // Approval is the manual review that a bank-change hold is waiting
+        // on — clear it so their subaccount can receive payouts again.
+        ...(decision === "approved" ? { payoutHold: false, payoutHoldReason: "" } : {}),
       },
       { new: true }
     );

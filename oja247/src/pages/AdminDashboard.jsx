@@ -22,6 +22,7 @@ import {
   XCircle,
   FileText,
   Search,
+  AlertTriangle,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -876,6 +877,15 @@ const AdminDashboard = () => {
                             </span>
                             {v.reviewStatus === "rejected" && v.reviewNotes && (
                               <p className="text-xs text-gray-500 mt-1 max-w-[220px]">{v.reviewNotes}</p>
+                            )}
+                            {v.payoutHold && (
+                              <span className="mt-1 flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-orange-500/15 text-orange-400 border border-orange-500/30 w-fit">
+                                <AlertTriangle size={11} />
+                                Payout on hold
+                              </span>
+                            )}
+                            {v.payoutHold && v.payoutHoldReason && (
+                              <p className="text-xs text-orange-400/80 mt-1 max-w-[220px]">{v.payoutHoldReason}</p>
                             )}
                           </td>
                           <td className="p-4">

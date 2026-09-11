@@ -18,6 +18,12 @@ const VendorSchema = new mongoose.Schema(
     subaccountCode: { type: String, required: true }, // used at checkout to build the split
     subaccountId: { type: String, default: "" },
 
+    // Set automatically when a bank-detail change fails the name-match
+    // check (see onboardVendor) — blocks the vendor's subaccount from
+    // receiving checkout payouts until an admin clears it via reviewVendor.
+    payoutHold: { type: Boolean, default: false },
+    payoutHoldReason: { type: String, default: "" },
+
     // KYC
     nin: { type: String, required: true },
     cacDocumentUrl: { type: String, default: null },

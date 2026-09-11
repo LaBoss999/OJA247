@@ -122,6 +122,29 @@ async function createPaystackSubaccount({ businessName, bankCode, accountNumber 
   return response.data.data; // includes subaccount_code
 }
 
+// Repoints an existing Paystack subaccount at a new bank/account — called
+// whenever a vendor changes their payout bank so live checkout splits
+// actually follow the change, instead of silently continuing to pay out to
+// whatever bank was on file when the subaccount was first created.
+async function updatePaystackSubaccount(subaccountCode, { businessName, bankCode, accountNumber }) {
+  const response = await axios.put(
+    `https://api.paystack.co/subaccount/${subaccountCode}`,
+    {
+      business_name: businessName,
+      bank_code: bankCode,
+      account_number: accountNumber,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  return response.data.data;
+}
+
 function uploadBufferToCloudinary(fileBuffer, filename, resourceType = "auto") {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
@@ -240,6 +263,11 @@ export const onboardVendor = async (req, res) => {
     let subaccountCode = existingVendor?.subaccountCode;
     let subaccountId = existingVendor?.subaccountId;
 
+    // Did the payout bank actually change? (vs. e.g. just adding a CAC doc)
+    const bankChanged =
+      Boolean(existingVendor) &&
+      (existingVendor.bankCode !== bank_code || existingVendor.accountNumber !== account_number);
+
     if (!subaccountCode) {
       const subaccount = await createPaystackSubaccount({
         businessName: business_name,
@@ -248,7 +276,26 @@ export const onboardVendor = async (req, res) => {
       });
       subaccountCode = subaccount.subaccount_code;
       subaccountId = subaccount.id ? String(subaccount.id) : "";
+    } else if (bankChanged) {
+      // Repoint the live subaccount at the new bank so checkout splits
+      // actually follow the change — previously this was silently skipped,
+      // leaving payouts routed to the old bank indefinitely.
+      await updatePaystackSubaccount(subaccountCode, {
+        businessName: business_name,
+        bankCode: bank_code,
+        accountNumber: account_number,
+      });
     }
+
+    // Auto re-verification on bank change: a changed bank account only
+    // keeps receiving live payouts if the new account name still matches
+    // the vendor's name. A failed match holds payouts until an admin
+    // reviews and approves it (see reviewVendor) — this is the main
+    // account-takeover guard on the payout path.
+    const payoutHold = bankChanged && !bankNameMatch;
+    const payoutHoldReason = payoutHold
+      ? "Bank account was changed and the new account name doesn't match the vendor's name — pending admin review."
+      : "";
 
     // --- Persist vendor record (create or update) ---
     const vendor = await Vendor.findOneAndUpdate(
@@ -271,6 +318,7 @@ export const onboardVendor = async (req, res) => {
         verificationTier: tier,
         subaccountCode,
         subaccountId,
+        ...(bankChanged ? { payoutHold, payoutHoldReason } : {}),
         // Any (re)submission needs a fresh admin look, since the vendor may
         // have changed the very details that were previously reviewed.
         reviewStatus: "pending",
@@ -286,8 +334,8 @@ export const onboardVendor = async (req, res) => {
       data: {
         verificationTier: vendor.verificationTier,
         subaccountCode: vendor.subaccountCode,
-        // Admin-controlled — null if the countdown hasn't been started for this business
-        verificationDeadline: business.verificationDeadline,
+        payoutHold: vendor.payoutHold,
+        payoutHoldReason: vendor.payoutHoldReason,
       },
     });
   } catch (error) {

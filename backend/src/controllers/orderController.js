@@ -19,6 +19,12 @@ async function buildPaystackSplit(orderVendors) {
       missing.push(v.businessName || "Unknown vendor");
       return;
     }
+    if (vendor.payoutHold) {
+      // Bank change failed re-verification — treat the same as "not set up
+      // yet" so checkout can't route money to an unverified account.
+      missing.push(v.businessName || "Unknown vendor");
+      return;
+    }
 
     const share = Math.round((v.itemsSubtotal + v.deliveryFee) * 100); // kobo
     if (share > 0) {
