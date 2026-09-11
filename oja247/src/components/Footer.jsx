@@ -8,7 +8,12 @@ const marketplaceLinks = [
   { label: "Explore Vendors", path: "/explore" },
   { label: "Shop Products", path: "/products" },
   { label: "Categories", path: "/explore" },
+];
+
+const growLinks = [
   { label: "Become a Seller", path: "/business-form" },
+  { label: "Become a Marketer", path: "/register-marketer" },
+  { label: "Marketer Login", path: "/marketer-login" },
 ];
 
 const companyLinks = [
@@ -98,7 +103,7 @@ const Footer = () => {
 
       <div className="relative max-w-7xl mx-auto px-6 py-16">
         {/* Top Footer */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-10">
           {/* Brand */}
           <div className="lg:col-span-2">
             <div
@@ -115,7 +120,8 @@ const Footer = () => {
             <p className="text-gray-400 leading-relaxed max-w-sm">
               Nigeria's digital marketplace connecting customers with local
               businesses. Discover products, support entrepreneurs, and grow
-              together with OJA247.
+              together with OJA247 — as a shopper, a seller, or a marketer
+              earning from every business you bring on board.
             </p>
 
             <div className="mt-6 flex gap-4">
@@ -135,6 +141,8 @@ const Footer = () => {
           </div>
 
           <FooterLinkGroup title="Marketplace" links={marketplaceLinks} />
+
+          <FooterLinkGroup title="Grow with OJA247" links={growLinks} />
 
           <FooterLinkGroup title="Company" links={companyLinks} />
 
@@ -178,7 +186,7 @@ const Footer = () => {
           </div>
 
           <a
-            href="https://chat.whatsapp.com/HHZ3GWuJaSXLQO5rIyMEXY"
+            href="https://chat.whatsapp.com/I0QOjcdgOlEDME91pdN2Kl"
             target="_blank"
             rel="noopener noreferrer"
             className="px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 font-bold hover:scale-105 transition whitespace-nowrap"
