@@ -32,8 +32,9 @@ const supportLinks = [
 
 const socialLinks = [
   { Icon: Facebook, href: "https://facebook.com" },
-  { Icon: Twitter, href: "https://twitter.com" },
-  { Icon: Instagram, href: "https://instagram.com" },
+  { Icon: Twitter, href: "https://x.com/oja247store" },
+  { Icon: Tiktok, href: "https://www.tiktok.com" },
+  { Icon: Instagram, href: "https://www.instagram.com/oja247.store?stkn=MWw1a3psdGl4YWhqZg==" },
 ];
 
 const GOOGLE_SCRIPT_URL =
