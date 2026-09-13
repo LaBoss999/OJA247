@@ -330,7 +330,7 @@ export const onboardVendor = async (req, res) => {
     );
 
     if (payoutHold) {
-      sendPayoutHoldEmail({
+      await sendPayoutHoldEmail({
         to: vendor.contactEmail,
         businessName: vendor.businessName,
         reason: payoutHoldReason,

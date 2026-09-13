@@ -205,7 +205,7 @@ export async function handleSubscriptionConversion({
     const marketer = await Marketer.findById(attribution.referrerId).select("email name");
     const business = await Business.findById(businessId).select("name");
     if (marketer) {
-      sendMarketerConversionEmail({
+      await sendMarketerConversionEmail({
         to: marketer.email,
         name: marketer.name,
         businessName: business?.name || "a business",
@@ -229,7 +229,7 @@ export async function handleSubscriptionConversion({
     const referringOwner = await User.findOne({ businessId: referringBusiness._id }).select("email");
     const referredBusiness = await Business.findById(businessId).select("name");
     if (referringOwner) {
-      sendBusinessReferralConversionEmail({
+      await sendBusinessReferralConversionEmail({
         to: referringOwner.email,
         businessName: referringBusiness.name,
         referredBusinessName: referredBusiness?.name || "a business",
