@@ -149,6 +149,12 @@ const LoginPage = () => {
               </div>
             </motion.div>
 
+            <div className="text-right -mt-2">
+              <Link to="/forgot-password" className="text-sm text-green-600 hover:text-green-700 font-medium">
+                Forgot password?
+              </Link>
+            </div>
+
             <motion.button
               type="submit"
               disabled={loading}

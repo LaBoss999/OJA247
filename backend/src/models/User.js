@@ -31,7 +31,12 @@ const UserSchema = new mongoose.Schema(
     banned: {
       type: Boolean,
       default: false
-    }
+    },
+    // Set by forgotPassword, cleared by resetPassword or on expiry. Only the
+    // SHA-256 hash is stored — the raw token only ever exists in the email
+    // link and the reset request body, never in the database.
+    resetPasswordTokenHash: { type: String, default: null },
+    resetPasswordExpires: { type: Date, default: null }
   },
   { timestamps: true }
 );

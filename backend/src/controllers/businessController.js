@@ -163,6 +163,50 @@ export const updateBusiness = async (req, res) => {
 // Lets a vendor pick their own short referral code (7-8 letters/numbers)
 // in place of the random one assigned at signup — mirrors the custom
 // store-slug pattern in updateBusiness above.
+// GET /api/businesses/:id/earnings-summary
+// Read-only aggregation — no money moves or is held here. Combines order
+// earnings (already settled to the vendor's own bank via Paystack Split —
+// this is just a summary of past payments, not a balance we control),
+// referral points balance, and subscription status into one view so the
+// vendor doesn't have to piece it together from three different tabs.
+export const getEarningsSummary = async (req, res) => {
+  try {
+    const businessId = req.params.id;
+
+    const business = await Business.findById(businessId).select(
+      "pointsBalance subscriptionStatus subscriptionExpiresAt"
+    );
+    if (!business) {
+      return res.status(404).json({ message: "Business not found" });
+    }
+
+    const [orderStats] = await Order.aggregate([
+      { $match: { status: "paid", "vendors.businessId": business._id } },
+      { $unwind: "$vendors" },
+      { $match: { "vendors.businessId": business._id } },
+      {
+        $group: {
+          _id: null,
+          totalEarned: { $sum: { $add: ["$vendors.itemsSubtotal", "$vendors.deliveryFee"] } },
+          ordersCount: { $sum: 1 },
+        },
+      },
+    ]);
+
+    res.json({
+      success: true,
+      totalEarned: orderStats?.totalEarned || 0,
+      ordersCount: orderStats?.ordersCount || 0,
+      pointsBalance: business.pointsBalance || 0,
+      subscriptionStatus: business.subscriptionStatus,
+      subscriptionExpiresAt: business.subscriptionExpiresAt,
+    });
+  } catch (error) {
+    console.error("Get earnings summary error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const updateBusinessReferralCode = async (req, res) => {
   try {
     const { id } = req.params;

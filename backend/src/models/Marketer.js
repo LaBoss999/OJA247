@@ -31,6 +31,10 @@ const MarketerSchema = new mongoose.Schema(
       default: "active",
     },
     banned: { type: Boolean, default: false },
+
+    // Same pattern as User.js — only the SHA-256 hash is ever stored.
+    resetPasswordTokenHash: { type: String, default: null },
+    resetPasswordExpires: { type: Date, default: null },
   },
   { timestamps: true }
 );

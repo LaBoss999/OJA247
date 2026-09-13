@@ -1,7 +1,8 @@
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import Marketer from "../models/Marketer.js";
 import { generateUniqueMarketerCode } from "../services/referralService.js";
-import { sendMarketerWelcomeEmail } from "../services/emailService.js";
+import { sendMarketerWelcomeEmail, sendPasswordResetEmail } from "../services/emailService.js";
 
 const generateToken = (id) => {
   return jwt.sign({ id, type: "marketer" }, process.env.JWT_SECRET, {
@@ -114,6 +115,65 @@ export const getMarketerMe = async (req, res) => {
     res.json({ success: true, marketer });
   } catch (error) {
     console.error("Get marketer me error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// POST /api/marketers/forgot-password — { email }
+export const forgotMarketerPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const genericResponse = {
+      success: true,
+      message: "If an account exists for that email, a reset link has been sent.",
+    };
+
+    if (!email) return res.json(genericResponse);
+
+    const marketer = await Marketer.findOne({ email: email.toLowerCase().trim() });
+    if (!marketer) return res.json(genericResponse);
+
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    marketer.resetPasswordTokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    marketer.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
+    await marketer.save();
+
+    const resetUrl = `${process.env.SITE_URL || "https://oja247.store"}/reset-password?token=${rawToken}&type=marketer`;
+    sendPasswordResetEmail({ to: marketer.email, name: marketer.name, resetUrl });
+
+    res.json(genericResponse);
+  } catch (error) {
+    console.error("Marketer forgot password error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// POST /api/marketers/reset-password — { token, password }
+export const resetMarketerPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) {
+      return res.status(400).json({ message: "Token and new password are required" });
+    }
+
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const marketer = await Marketer.findOne({
+      resetPasswordTokenHash: tokenHash,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!marketer) {
+      return res.status(400).json({ message: "This reset link is invalid or has expired" });
+    }
+
+    marketer.password = password;
+    marketer.resetPasswordTokenHash = null;
+    marketer.resetPasswordExpires = null;
+    await marketer.save();
+
+    res.json({ success: true, message: "Password reset successfully" });
+  } catch (error) {
+    console.error("Marketer reset password error:", error);
     res.status(500).json({ message: error.message });
   }
 };

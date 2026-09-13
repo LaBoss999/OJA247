@@ -2,6 +2,9 @@ import axios from "axios";
 import ReferralAttribution from "../models/ReferralAttribution.js";
 import MarketerPayout from "../models/MarketerPayout.js";
 import Marketer from "../models/Marketer.js";
+import { sendMarketerWithdrawalRequestEmail } from "../services/emailService.js";
+
+const MIN_WITHDRAWAL_AMOUNT = 1000;
 
 // GET /api/marketers/dashboard
 // Everything the marketer dashboard needs in one call: their referral list
@@ -57,6 +60,55 @@ export const getMarketerDashboard = async (req, res) => {
     });
   } catch (error) {
     console.error("Get marketer dashboard error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// POST /api/marketers/withdraw
+// On-demand version of the weekly batch job — pulls this marketer's
+// "pending" payouts into a batch right now instead of waiting for Monday's
+// cron, and emails an admin so it actually gets paid promptly. Still a
+// manual bank transfer either way (Paystack Transfers are blocked until the
+// Preapproved-tier review finishes) — this just skips the wait for the
+// weekly sweep, it doesn't make the payment itself instant.
+export const requestMarketerWithdrawal = async (req, res) => {
+  try {
+    const marketerId = req.marketer._id;
+
+    if (!req.marketer.hasPayoutDetails()) {
+      return res.status(400).json({
+        message: "Add your payout bank details before requesting a withdrawal.",
+      });
+    }
+
+    const pendingPayouts = await MarketerPayout.find({ marketerId, status: "pending" });
+    const pendingTotal = pendingPayouts.reduce((sum, p) => sum + p.amount, 0);
+
+    if (pendingTotal < MIN_WITHDRAWAL_AMOUNT) {
+      return res.status(400).json({
+        message: `You need at least ₦${MIN_WITHDRAWAL_AMOUNT.toLocaleString()} pending to request a withdrawal (currently ₦${pendingTotal.toLocaleString()}).`,
+      });
+    }
+
+    const payoutWeekStart = new Date();
+    await MarketerPayout.updateMany(
+      { marketerId, status: "pending" },
+      { status: "batched", payoutWeekStart }
+    );
+
+    sendMarketerWithdrawalRequestEmail({
+      marketerName: req.marketer.name,
+      marketerEmail: req.marketer.email,
+      amount: pendingTotal,
+    });
+
+    res.json({
+      success: true,
+      message: "Withdrawal requested — an admin has been notified and will process it shortly.",
+      amountRequested: pendingTotal,
+    });
+  } catch (error) {
+    console.error("Request marketer withdrawal error:", error);
     res.status(500).json({ message: error.message });
   }
 };

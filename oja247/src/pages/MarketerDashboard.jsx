@@ -33,6 +33,25 @@ const MarketerDashboard = () => {
   const [resolveError, setResolveError] = useState("");
   const [savingPayout, setSavingPayout] = useState(false);
   const [payoutMessage, setPayoutMessage] = useState("");
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawMessage, setWithdrawMessage] = useState("");
+  const [withdrawError, setWithdrawError] = useState("");
+
+  const MIN_WITHDRAWAL = 1000;
+
+  const handleWithdraw = async () => {
+    setWithdrawing(true);
+    setWithdrawError("");
+    setWithdrawMessage("");
+    try {
+      const res = await marketerApi.post("/api/marketers/withdraw");
+      setWithdrawMessage(res.data.message);
+      loadDashboard();
+    } catch (err) {
+      setWithdrawError(err.response?.data?.message || "Could not request withdrawal.");
+    }
+    setWithdrawing(false);
+  };
 
   const loadDashboard = () => {
     marketerApi
@@ -232,9 +251,27 @@ const MarketerDashboard = () => {
             </p>
           </div>
         </div>
-        <p className="text-xs text-gray-400 mb-6">
-          Pending payouts are released weekly. Converted = the business has paid their subscription.
+        <p className="text-xs text-gray-400 mb-4">
+          Converted = the business has paid their subscription. Request a withdrawal any time you have at least
+          ₦{MIN_WITHDRAWAL.toLocaleString()} pending — an admin is notified right away to process it.
         </p>
+
+        <div className="mb-6">
+          <button
+            onClick={handleWithdraw}
+            disabled={withdrawing || data.stats.pendingPayoutTotal < MIN_WITHDRAWAL}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold px-6 py-2.5 rounded-xl shadow hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {withdrawing ? "Requesting..." : `Withdraw ₦${data.stats.pendingPayoutTotal.toLocaleString()}`}
+          </button>
+          {data.stats.pendingPayoutTotal < MIN_WITHDRAWAL && (
+            <p className="text-xs text-gray-400 mt-2">
+              Need at least ₦{MIN_WITHDRAWAL.toLocaleString()} pending to withdraw.
+            </p>
+          )}
+          {withdrawMessage && <p className="text-sm text-green-700 mt-2">{withdrawMessage}</p>}
+          {withdrawError && <p className="text-sm text-red-600 mt-2">{withdrawError}</p>}
+        </div>
 
         {/* Payout details */}
         <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6">

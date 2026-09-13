@@ -104,6 +104,46 @@ function button(label, url) {
 }
 
 const SITE_URL = process.env.SITE_URL || "https://oja247.store";
+// Where admin-facing notifications (like withdrawal requests) go. Falls
+// back to the same mailbox everything sends FROM, so this works with zero
+// extra setup — override with ADMIN_NOTIFICATION_EMAIL if you want these
+// routed to a different inbox than support@oja247.store.
+const ADMIN_EMAIL = process.env.ADMIN_NOTIFICATION_EMAIL || process.env.ZOHO_SMTP_USER;
+
+export async function sendMarketerWithdrawalRequestEmail({ marketerName, marketerEmail, amount }) {
+  return sendEmail({
+    to: ADMIN_EMAIL,
+    subject: `Withdrawal request: ${marketerName} — ₦${amount.toLocaleString()}`,
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Marketer withdrawal request</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;"><strong>${marketerName}</strong> (${marketerEmail}) just requested a withdrawal of their pending balance.</p>
+      <div style="background:#f0fdf4; border-radius:10px; padding:18px; text-align:center; margin:20px 0;">
+        <p style="margin:0; font-size:28px; font-weight:800; color:#16a34a;">₦${amount.toLocaleString()}</p>
+      </div>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Your Paystack account is still on the Preapproved tier, so this needs a manual bank transfer — please review and pay it in the admin panel's payout batches, then mark it paid.</p>
+      ${button("Review payout batches", `${SITE_URL}/admin`)}
+      `,
+      { preheader: `${marketerName} requested a ₦${amount.toLocaleString()} withdrawal` }
+    ),
+  });
+}
+
+export async function sendPasswordResetEmail({ to, name, resetUrl }) {
+  return sendEmail({
+    to,
+    subject: "Reset your OJA247 password",
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Reset your password</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${name || "there"}, we got a request to reset your OJA247 password. Click below to choose a new one — this link works for the next hour.</p>
+      ${button("Reset my password", resetUrl)}
+      <p style="color:#9ca3af; font-size:13px; line-height:1.6;">Didn't request this? You can safely ignore this email — your password won't change unless you click the link above.</p>
+      `,
+      { preheader: "Reset your OJA247 password — link expires in 1 hour" }
+    ),
+  });
+}
 
 // --- Vendor / business -----------------------------------------------------
 
@@ -506,6 +546,8 @@ export async function sendMarketerPayoutPaidEmail({ to, name, amount }) {
 
 export default {
   sendEmail,
+  sendPasswordResetEmail,
+  sendMarketerWithdrawalRequestEmail,
   sendVendorWelcomeEmail,
   sendVerificationReviewedEmail,
   sendPayoutHoldEmail,

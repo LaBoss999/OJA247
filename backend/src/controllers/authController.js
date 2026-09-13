@@ -1,11 +1,12 @@
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import User from "../models/User.js";
 import Business from "../models/Business.js";
 import {
   generateUniqueBusinessReferralCode,
   attributeReferral,
 } from "../services/referralService.js";
-import { sendVendorWelcomeEmail } from "../services/emailService.js";
+import { sendVendorWelcomeEmail, sendPasswordResetEmail } from "../services/emailService.js";
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -206,6 +207,69 @@ export const updatePassword = async (req, res) => {
     res.json({ success: true, message: "Password updated successfully" });
   } catch (error) {
     console.error("Update password error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// POST /api/auth/forgot-password — { email }
+// Always responds with the same generic message whether or not the email
+// exists, so this endpoint can't be used to check who's registered.
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const genericResponse = {
+      success: true,
+      message: "If an account exists for that email, a reset link has been sent.",
+    };
+
+    if (!email) return res.json(genericResponse);
+
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!user) return res.json(genericResponse); // don't reveal whether the email exists
+
+    // Raw token goes in the email link; only its hash is stored, same
+    // reasoning as never storing plaintext passwords.
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    user.resetPasswordTokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
+
+    const resetUrl = `${process.env.SITE_URL || "https://oja247.store"}/reset-password?token=${rawToken}&type=vendor`;
+    sendPasswordResetEmail({ to: user.email, name: "", resetUrl });
+
+    res.json(genericResponse);
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// POST /api/auth/reset-password — { token, password }
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) {
+      return res.status(400).json({ message: "Token and new password are required" });
+    }
+
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const user = await User.findOne({
+      resetPasswordTokenHash: tokenHash,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "This reset link is invalid or has expired" });
+    }
+
+    user.password = password; // pre-save hook hashes it
+    user.resetPasswordTokenHash = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    res.json({ success: true, message: "Password reset successfully" });
+  } catch (error) {
+    console.error("Reset password error:", error);
     res.status(500).json({ message: error.message });
   }
 };

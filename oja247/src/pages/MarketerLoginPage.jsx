@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import marketerApi from "../services/marketerApi";
 import Logo from "../assets/OJA247 VX1.png";
@@ -79,6 +79,11 @@ const MarketerLoginPage = () => {
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
+              </div>
+              <div className="text-right mt-2">
+                <Link to="/marketer-forgot-password" className="text-sm text-green-600 hover:text-green-700 font-medium">
+                  Forgot password?
+                </Link>
               </div>
             </div>
 

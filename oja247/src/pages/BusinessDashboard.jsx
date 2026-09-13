@@ -46,13 +46,24 @@ const BusinessDashboard = () => {
   const [copiedLink, setCopiedLink] = useState(false);
 
   const [vendorStatus, setVendorStatus] = useState(null);
+  const [earningsSummary, setEarningsSummary] = useState(null);
 
   const showLoader = useMinimumLoadingTime(loading);
 
   useEffect(() => {
     fetchBusiness();
     fetchVendorStatus();
+    fetchEarningsSummary();
   }, [businessId]);
+
+  const fetchEarningsSummary = async () => {
+    try {
+      const res = await axiosInstance.get(`/api/businesses/${businessId}/earnings-summary`);
+      setEarningsSummary(res.data);
+    } catch (err) {
+      console.error("Failed to load earnings summary", err);
+    }
+  };
 
   useEffect(() => {
     if (business) {
@@ -370,6 +381,53 @@ const BusinessDashboard = () => {
             </button>
           </div>
         </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 pt-6">
+        {earningsSummary && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-2">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+              <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Total earned</p>
+              <p className="text-2xl font-black text-gray-900 mt-1">
+                ₦{earningsSummary.totalEarned.toLocaleString()}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                From {earningsSummary.ordersCount} paid order{earningsSummary.ordersCount === 1 ? "" : "s"} — already
+                settled to your bank
+              </p>
+            </div>
+
+            <button
+              onClick={() => setActiveTab("referrals")}
+              className="text-left bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:border-green-300 transition"
+            >
+              <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Referral points</p>
+              <p className="text-2xl font-black text-green-700 mt-1">
+                {earningsSummary.pointsBalance.toLocaleString()} pts
+              </p>
+              <p className="text-xs text-gray-400 mt-1">Use toward your subscription or withdraw →</p>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("subscription")}
+              className="text-left bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:border-green-300 transition"
+            >
+              <p className="text-xs uppercase tracking-wide text-gray-400 font-semibold">Subscription</p>
+              <p
+                className={`text-2xl font-black mt-1 capitalize ${
+                  earningsSummary.subscriptionStatus === "active" ? "text-gray-900" : "text-red-600"
+                }`}
+              >
+                {earningsSummary.subscriptionStatus || "inactive"}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                {earningsSummary.subscriptionExpiresAt
+                  ? `Until ${new Date(earningsSummary.subscriptionExpiresAt).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}`
+                  : "Subscribe to appear in search →"}
+              </p>
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
