@@ -1,7 +1,13 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Facebook, Twitter, Instagram, MessageCircle } from "lucide-react";
+import {
+  Facebook,
+  Twitter,
+  Instagram,
+  MessageCircle,
+} from "lucide-react";
+
 import Logo1 from "../assets/OJA247..PNG";
 
 const marketplaceLinks = [
@@ -30,11 +36,35 @@ const supportLinks = [
   { label: "Terms & Conditions", path: "/about" },
 ];
 
+const TikTokIcon = ({ size = 20 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d="M19.589 6.686a4.793 4.793 0 0 1-4.186-4.418V2h-3.923v13.667a2.896 2.896 0 1 1-2.896-2.896c.17 0 .337.015.5.044v-3.99a6.84 6.84 0 0 0-.5-.018A6.86 6.86 0 1 0 15.423 15V8.23a8.67 8.67 0 0 0 4.166 1.063V5.39Z" />
+  </svg>
+);
+
 const socialLinks = [
-  { Icon: Facebook, href: "https://facebook.com" },
-  { Icon: Twitter, href: "https://x.com/oja247store" },
-  { Icon: Tiktok, href: "https://www.tiktok.com" },
-  { Icon: Instagram, href: "https://www.instagram.com/oja247.store?stkn=MWw1a3psdGl4YWhqZg==" },
+  {
+    Icon: Facebook,
+    href: "https://facebook.com",
+  },
+  {
+    Icon: Twitter,
+    href: "https://x.com/oja247store",
+  },
+  {
+    Icon: TikTokIcon,
+    href: "https://www.tiktok.com",
+  },
+  {
+    Icon: Instagram,
+    href: "https://www.instagram.com/oja247.store?stkn=MWw1a3psdGl4YWhqZg==",
+  },
 ];
 
 const GOOGLE_SCRIPT_URL =
@@ -111,7 +141,11 @@ const Footer = () => {
               className="flex items-center gap-3 mb-5 cursor-pointer w-fit"
               onClick={() => navigate("/")}
             >
-              <img src={Logo1} alt="OJA247" className="w-20 object-contain" />
+              <img
+                src={Logo1}
+                alt="OJA247"
+                className="w-20 object-contain"
+              />
 
               <span className="text-4xl font-black bg-gradient-to-r from-green-400 to-yellow-400 bg-clip-text text-transparent">
                 OJA247
@@ -141,13 +175,25 @@ const Footer = () => {
             </div>
           </div>
 
-          <FooterLinkGroup title="Marketplace" links={marketplaceLinks} />
+          <FooterLinkGroup
+            title="Marketplace"
+            links={marketplaceLinks}
+          />
 
-          <FooterLinkGroup title="Grow with OJA247" links={growLinks} />
+          <FooterLinkGroup
+            title="Grow with OJA247"
+            links={growLinks}
+          />
 
-          <FooterLinkGroup title="Company" links={companyLinks} />
+          <FooterLinkGroup
+            title="Company"
+            links={companyLinks}
+          />
 
-          <FooterLinkGroup title="Support" links={supportLinks} />
+          <FooterLinkGroup
+            title="Support"
+            links={supportLinks}
+          />
         </div>
 
         {/* WhatsApp Community */}
@@ -159,7 +205,8 @@ const Footer = () => {
             </h3>
 
             <p className="text-gray-400 mt-2">
-              Get real-time updates, drops and offers straight from OJA247 vendors.
+              Get real-time updates, drops and offers straight from OJA247
+              vendors.
             </p>
           </div>
 
@@ -182,7 +229,8 @@ const Footer = () => {
             </h3>
 
             <p className="text-gray-400 mt-2">
-              Connect with other OJA247 marketers, get tips and grow your referral earnings.
+              Connect with other OJA247 marketers, get tips and grow your
+              referral earnings.
             </p>
           </div>
 
@@ -199,7 +247,9 @@ const Footer = () => {
         {/* Newsletter */}
         <div className="mt-16 p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
-            <h3 className="text-2xl font-bold">Join the OJA247 community 🚀</h3>
+            <h3 className="text-2xl font-bold">
+              Join the OJA247 community 🚀
+            </h3>
 
             <p className="text-gray-400 mt-2">
               Get updates about new vendors, products and offers.
@@ -207,7 +257,10 @@ const Footer = () => {
           </div>
 
           <div className="w-full md:w-auto">
-            <form onSubmit={handleSubmit} className="flex w-full md:w-auto">
+            <form
+              onSubmit={handleSubmit}
+              className="flex w-full md:w-auto"
+            >
               <input
                 type="email"
                 placeholder="Enter your email"
@@ -228,7 +281,9 @@ const Footer = () => {
             </form>
 
             {message && (
-              <p className="mt-3 text-sm text-green-400">{message}</p>
+              <p className="mt-3 text-sm text-green-400">
+                {message}
+              </p>
             )}
           </div>
         </div>
@@ -237,8 +292,11 @@ const Footer = () => {
         <div className="mt-12 pt-6 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
           <p>
             © {new Date().getFullYear()}
-            <span className="text-green-400 font-bold"> OJA247</span>. Made with
-            ❤️ in Nigeria 🇳🇬
+            <span className="text-green-400 font-bold">
+              {" "}
+              OJA247
+            </span>
+            . Made with ❤️ in Nigeria 🇳🇬
           </p>
 
           <p>Built for Sellers. Made for Buyers.</p>
