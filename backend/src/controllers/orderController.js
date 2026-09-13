@@ -1,6 +1,92 @@
 import crypto from "crypto";
 import Order from "../models/Order.js";
 import Vendor from "../models/Vendor.js";
+import { sendOrderConfirmationEmail, sendVendorNewOrderEmail, sendOrderPaymentFailedEmail } from "../services/emailService.js";
+
+// Shared by /verify and the webhook — idempotent, safe to call twice for the
+// same reference (e.g. if the customer's browser confirms AND the webhook
+// fires). Only ever transitions an order into "paid" once, and only sends
+// the confirmation/notification emails on that one transition.
+async function markOrderPaid(reference) {
+  const existing = await Order.findOne({ reference });
+  if (!existing) return null;
+  if (existing.status === "paid") return existing; // already processed, no-op
+
+  const order = await Order.findOneAndUpdate(
+    { reference },
+    { status: "paid", paymentStatus: "paid" },
+    { new: true }
+  );
+
+  const fullAddress = [order.customer?.address, order.customer?.city, order.customer?.state]
+    .filter(Boolean)
+    .join(", ");
+
+  sendOrderConfirmationEmail({
+    to: order.customer?.email,
+    customerName: order.customer?.fullName,
+    reference: order.reference,
+    items: order.items,
+    subtotal: order.subtotal,
+    deliveryFee: order.deliveryFee,
+    serviceFee: order.serviceFee,
+    vat: order.vat,
+    total: order.total,
+    deliveryMethod: order.deliveryMethod,
+    address: fullAddress,
+  });
+
+  const businessIds = order.vendors.map((v) => v.businessId).filter(Boolean);
+  const vendorRecords = await Vendor.find({ businessId: { $in: businessIds } }).select(
+    "businessId contactEmail"
+  );
+  const emailByBusinessId = new Map(vendorRecords.map((v) => [v.businessId.toString(), v.contactEmail]));
+
+  order.vendors.forEach((v) => {
+    const vendorEmail = v.businessId && emailByBusinessId.get(v.businessId.toString());
+    if (!vendorEmail) return;
+
+    const vendorItems = order.items.filter((i) => i.businessId === v.businessId);
+    sendVendorNewOrderEmail({
+      to: vendorEmail,
+      businessName: v.businessName,
+      customerName: order.customer?.fullName,
+      customerPhone: order.customer?.phone,
+      reference: order.reference,
+      items: vendorItems,
+      subtotal: v.itemsSubtotal,
+      deliveryFee: v.deliveryFee,
+      deliveryMethod: order.deliveryMethod,
+      address: fullAddress,
+      note: order.customer?.note,
+    });
+  });
+
+  return order;
+}
+
+// Same idempotency shape as markOrderPaid — never overwrites an order that's
+// already "paid" (a late charge.failed webhook arriving after a successful
+// verify shouldn't undo it), and only emails the customer once per order.
+async function markOrderFailed(reference) {
+  const existing = await Order.findOne({ reference });
+  if (!existing) return null;
+  if (existing.status === "paid" || existing.status === "failed") return existing;
+
+  const order = await Order.findOneAndUpdate(
+    { reference },
+    { status: "failed", paymentStatus: "failed" },
+    { new: true }
+  );
+
+  sendOrderPaymentFailedEmail({
+    to: order.customer?.email,
+    customerName: order.customer?.fullName,
+    reference: order.reference,
+  });
+
+  return order;
+}
 
 // Looks up each vendor's Paystack subaccount and builds the dynamic "flat"
 // split payload (Paystack keeps whatever isn't allocated to a subaccount,
@@ -162,11 +248,7 @@ export const verifyOrderPayment = async (req, res) => {
     }
 
     if (!verificationResponse.ok || !verificationData.status || verificationData.data?.status !== "success") {
-      const failedOrder = await Order.findOneAndUpdate(
-        { reference },
-        { status: "failed", paymentStatus: "failed" },
-        { new: true }
-      );
+      const failedOrder = await markOrderFailed(reference);
 
       return res.status(400).json({
         message: "Payment verification failed",
@@ -175,11 +257,7 @@ export const verifyOrderPayment = async (req, res) => {
       });
     }
 
-    const paidOrder = await Order.findOneAndUpdate(
-      { reference },
-      { status: "paid", paymentStatus: "paid" },
-      { new: true }
-    );
+    const paidOrder = await markOrderPaid(reference);
 
     return res.json({
       message: "Payment verified successfully",
@@ -218,10 +296,11 @@ export const handlePaystackWebhook = async (req, res) => {
     // findOneAndUpdate is idempotent — safe if Paystack retries, or if
     // /verify already marked this order paid via the redirect callback.
     if (event.event === "charge.success" && event.data?.reference) {
-      await Order.findOneAndUpdate(
-        { reference: event.data.reference },
-        { status: "paid", paymentStatus: "paid" }
-      );
+      await markOrderPaid(event.data.reference);
+    }
+
+    if (event.event === "charge.failed" && event.data?.reference) {
+      await markOrderFailed(event.data.reference);
     }
 
     return res.sendStatus(200);

@@ -4,6 +4,7 @@ import Product from "../models/Product.js";
 import Order from "../models/Order.js";
 import Vendor from "../models/Vendor.js";
 import PlatformSettings from "../models/PlatformSettings.js";
+import { sendVerificationReviewedEmail } from "../services/emailService.js";
 
 // Get all users
 export const getAllUsers = async (req, res) => {
@@ -177,6 +178,13 @@ export const reviewVendor = async (req, res) => {
     if (!vendor) {
       return res.status(404).json({ message: "Vendor not found" });
     }
+
+    sendVerificationReviewedEmail({
+      to: vendor.contactEmail,
+      businessName: vendor.businessName,
+      decision,
+      reviewNotes: notes || "",
+    });
 
     res.json(vendor);
   } catch (error) {

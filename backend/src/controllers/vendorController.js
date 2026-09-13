@@ -2,6 +2,7 @@ import axios from "axios";
 import cloudinary from "../config/cloudinaryConfig.js";
 import Vendor from "../models/Vendor.js";
 import Business from "../models/Business.js";
+import { sendPayoutHoldEmail } from "../services/emailService.js";
 
 // Simple in-memory cache — bank list changes rarely, no need to hit
 // Paystack on every page load. Swap for Redis if you're running multiple
@@ -327,6 +328,14 @@ export const onboardVendor = async (req, res) => {
       },
       { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
     );
+
+    if (payoutHold) {
+      sendPayoutHoldEmail({
+        to: vendor.contactEmail,
+        businessName: vendor.businessName,
+        reason: payoutHoldReason,
+      });
+    }
 
     return res.status(201).json({
       status: true,

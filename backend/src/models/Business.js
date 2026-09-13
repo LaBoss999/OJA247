@@ -37,6 +37,13 @@ const BusinessSchema = new mongoose.Schema(
     subscriptionExpiresAt: { type: Date, default: null },
     hasPaidFirstSubscription: { type: Boolean, default: false }, // gates the marketer payout rule
 
+    // Tracks which subscription-expiry emails have already gone out for the
+    // CURRENT subscriptionExpiresAt value, so the daily cron doesn't re-send
+    // the same reminder every day it runs. Both reset to null on the next
+    // successful subscription payment (see subscriptionController.js).
+    subscriptionReminderSentAt: { type: Date, default: null },
+    subscriptionExpiredEmailSentAt: { type: Date, default: null },
+
     // --- Referral (new) ---
     // This business's OWN code, for referring other businesses (business-owner track)
     referralCode: { type: String, unique: true, sparse: true, uppercase: true },

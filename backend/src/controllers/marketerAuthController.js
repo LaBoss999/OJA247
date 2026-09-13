@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import Marketer from "../models/Marketer.js";
 import { generateUniqueMarketerCode } from "../services/referralService.js";
+import { sendMarketerWelcomeEmail } from "../services/emailService.js";
 
 const generateToken = (id) => {
   return jwt.sign({ id, type: "marketer" }, process.env.JWT_SECRET, {
@@ -40,6 +41,8 @@ export const registerMarketer = async (req, res) => {
 
     const saved = await marketer.save();
     const token = generateToken(saved._id);
+
+    sendMarketerWelcomeEmail({ to: saved.email, name: saved.name, referralCode: saved.referralCode });
 
     res.status(201).json({
       success: true,

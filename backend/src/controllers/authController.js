@@ -5,6 +5,7 @@ import {
   generateUniqueBusinessReferralCode,
   attributeReferral,
 } from "../services/referralService.js";
+import { sendVendorWelcomeEmail } from "../services/emailService.js";
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -83,6 +84,9 @@ export const register = async (req, res) => {
 
     const savedUser = await user.save();
     console.log("User created:", savedUser._id);
+
+    // Fire-and-forget — a mail server hiccup should never block registration.
+    sendVendorWelcomeEmail({ to: savedUser.email, businessName: savedBusiness.name });
 
     const token = generateToken(savedUser._id);
 

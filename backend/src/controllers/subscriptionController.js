@@ -1,8 +1,17 @@
 import crypto from "crypto";
 import Business from "../models/Business.js";
+import User from "../models/User.js";
 import SubscriptionPayment, { PLAN_PRICES } from "../models/SubscriptionPayment.js";
 import PointsLedger from "../models/PointsLedger.js";
 import { handleSubscriptionConversion } from "../services/referralService.js";
+import { sendSubscriptionReceiptEmail } from "../services/emailService.js";
+
+// Looks up the business owner's login email for the receipt — Business
+// itself only stores a public contact phone, not an email.
+async function getOwnerEmail(businessId) {
+  const owner = await User.findOne({ businessId }).select("email");
+  return owner?.email || null;
+}
 
 const PLAN_DURATIONS_DAYS = {
   monthly: 30,
@@ -148,9 +157,23 @@ export const initiateSubscription = async (req, res) => {
         subscriptionStatus: "active",
         subscriptionExpiresAt: periodEnd,
         hasPaidFirstSubscription: true,
+        subscriptionReminderSentAt: null,
+        subscriptionExpiredEmailSentAt: null,
       });
 
       await deductAppliedPoints(payment);
+
+      sendSubscriptionReceiptEmail({
+        to: await getOwnerEmail(businessId),
+        businessName: business.name,
+        planType,
+        amountPaid: 0,
+        planPrice: payment.amount,
+        pointsApplied: payment.pointsApplied,
+        paidAt: new Date(),
+        reference: payment.paystackReference,
+        expiresAt: periodEnd,
+      });
 
       // No Paystack cash was collected on this payment — it's covered
       // entirely by points, which are themselves money the platform already
@@ -203,15 +226,31 @@ async function markSubscriptionPaid(reference) {
     subscriptionStatus: "active",
     subscriptionExpiresAt: periodEnd,
     hasPaidFirstSubscription: true,
+    subscriptionReminderSentAt: null,
+    subscriptionExpiredEmailSentAt: null,
   });
 
   await deductAppliedPoints(payment);
+
+  const cashCollected = payment.amount - (payment.pointsApplied || 0);
+
+  const business = await Business.findById(payment.businessId).select("name");
+  sendSubscriptionReceiptEmail({
+    to: await getOwnerEmail(payment.businessId),
+    businessName: business?.name || "",
+    planType: payment.planType,
+    amountPaid: cashCollected,
+    planPrice: payment.amount,
+    pointsApplied: payment.pointsApplied,
+    paidAt: new Date(),
+    reference: payment.paystackReference,
+    expiresAt: periodEnd,
+  });
 
   // Conversion is based on cash actually collected on THIS payment
   // (plan price minus whatever was covered by points) — never the full
   // nominal plan price. See the points-only branch in initiateSubscription
   // for the full reasoning; this covers the partial-points-partial-cash case.
-  const cashCollected = payment.amount - (payment.pointsApplied || 0);
   if (cashCollected > 0) {
     await safeHandleSubscriptionConversion({
       paymentId: payment._id,

@@ -1,5 +1,6 @@
 import MarketerPayout from "../models/MarketerPayout.js";
 import Marketer from "../models/Marketer.js";
+import { sendMarketerPayoutPaidEmail } from "../services/emailService.js";
 
 // GET /api/cron/payout-batch  (called weekly by Vercel Cron — see vercel.json)
 // Groups every "pending" MarketerPayout row into this week's batch.
@@ -84,10 +85,22 @@ export const markPayoutBatchPaid = async (req, res) => {
     const { marketerId } = req.params;
     const { transferReference } = req.body;
 
+    // Grab the amount being paid out before the update, for the email —
+    // updateMany only returns a modified count, not the documents.
+    const payoutsBeingPaid = await MarketerPayout.find({ marketerId, status: "batched" }).select("amount");
+    const totalAmount = payoutsBeingPaid.reduce((sum, p) => sum + p.amount, 0);
+
     const result = await MarketerPayout.updateMany(
       { marketerId, status: "batched" },
       { status: "paid", paidAt: new Date(), transferReference: transferReference || "" }
     );
+
+    if (totalAmount > 0) {
+      const marketer = await Marketer.findById(marketerId).select("email name");
+      if (marketer) {
+        sendMarketerPayoutPaidEmail({ to: marketer.email, name: marketer.name, amount: totalAmount });
+      }
+    }
 
     res.json({
       success: true,

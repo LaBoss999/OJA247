@@ -5,6 +5,7 @@ import User from "../models/User.js";
 import ReferralAttribution from "../models/ReferralAttribution.js";
 import MarketerPayout from "../models/MarketerPayout.js";
 import PointsLedger from "../models/PointsLedger.js";
+import { sendMarketerConversionEmail, sendBusinessReferralConversionEmail } from "./emailService.js";
 
 // Marketer payout rate is tiered by which plan the referral bought — the rate
 // drops as the plan (and payout) grows, so acquisition cost doesn't scale
@@ -194,11 +195,23 @@ export async function handleSubscriptionConversion({
       throw new Error(`Unknown planType "${planType}" — cannot determine marketer payout rate`);
     }
 
+    const payoutAmount = Math.round(amountPaid * rate);
     await MarketerPayout.create({
       marketerId: attribution.referrerId,
       referralAttributionId: attribution._id,
-      amount: Math.round(amountPaid * rate),
+      amount: payoutAmount,
     });
+
+    const marketer = await Marketer.findById(attribution.referrerId).select("email name");
+    const business = await Business.findById(businessId).select("name");
+    if (marketer) {
+      sendMarketerConversionEmail({
+        to: marketer.email,
+        name: marketer.name,
+        businessName: business?.name || "a business",
+        payoutAmount,
+      });
+    }
   } else {
     const referringBusiness = await Business.findById(attribution.referrerId);
     const newBalance = (referringBusiness.pointsBalance || 0) + BUSINESS_REFERRAL_POINTS;
@@ -212,6 +225,18 @@ export async function handleSubscriptionConversion({
     });
     referringBusiness.pointsBalance = newBalance;
     await referringBusiness.save();
+
+    const referringOwner = await User.findOne({ businessId: referringBusiness._id }).select("email");
+    const referredBusiness = await Business.findById(businessId).select("name");
+    if (referringOwner) {
+      sendBusinessReferralConversionEmail({
+        to: referringOwner.email,
+        businessName: referringBusiness.name,
+        referredBusinessName: referredBusiness?.name || "a business",
+        points: BUSINESS_REFERRAL_POINTS,
+        newBalance,
+      });
+    }
   }
 
   return attribution;

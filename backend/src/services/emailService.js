@@ -1,0 +1,522 @@
+import nodemailer from "nodemailer";
+
+// Zoho Mail SMTP — matches the mailbox already set up for support@oja247.store.
+// ZOHO_SMTP_USER / ZOHO_SMTP_PASS go in your .env (the password is a Zoho
+// "app password" generated under Zoho Mail account security settings, not
+// the regular mailbox login password — Zoho requires this for SMTP access
+// once 2FA is on, and it's the safer option either way since it can be
+// revoked independently of the main password).
+let transporter = null;
+function getTransporter() {
+  if (transporter) return transporter;
+
+  if (!process.env.ZOHO_SMTP_USER || !process.env.ZOHO_SMTP_PASS) {
+    console.warn(
+      "Email not sent: ZOHO_SMTP_USER / ZOHO_SMTP_PASS are not set. See backend/.env.example."
+    );
+    return null;
+  }
+
+  transporter = nodemailer.createTransport({
+    host: process.env.ZOHO_SMTP_HOST || "smtp.zoho.com",
+    port: Number(process.env.ZOHO_SMTP_PORT) || 465,
+    secure: true, // port 465 is implicit TLS
+    auth: {
+      user: process.env.ZOHO_SMTP_USER,
+      pass: process.env.ZOHO_SMTP_PASS,
+    },
+  });
+
+  return transporter;
+}
+
+const FROM_NAME = process.env.EMAIL_FROM_NAME || "OJA247 STORE";
+// Hosted logo used in every email header — same image as the site favicon.
+// Override with LOGO_URL in .env if you host a smaller/optimized version
+// elsewhere (the favicon is ~1MB, which is fine but not ideal for email).
+const LOGO_URL = process.env.LOGO_URL || "https://oja247.store/favicon.png";
+const NAIRA = (n) => `₦${Number(n || 0).toLocaleString("en-NG")}`;
+const formatDate = (d) =>
+  new Date(d).toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" });
+
+// Every send goes through here. Failures are logged, not thrown — a broken
+// mail server should never take down a checkout or registration flow, so
+// every call site is deliberately "fire and forget" (no await required by
+// the caller, though awaiting is fine too).
+async function sendEmail({ to, subject, html, text }) {
+  const t = getTransporter();
+  if (!t || !to) return { sent: false };
+
+  try {
+    await t.sendMail({
+      from: `"${FROM_NAME}" <${process.env.ZOHO_SMTP_USER}>`,
+      to,
+      subject,
+      html,
+      text: text || html.replace(/<[^>]+>/g, " "),
+    });
+    return { sent: true };
+  } catch (error) {
+    console.error(`Email send failed (to: ${to}, subject: "${subject}"):`, error.message);
+    return { sent: false, error: error.message };
+  }
+}
+
+// Shared wrapper so every email looks like it's from the same platform,
+// without repeating header/footer markup in every template below. Modeled
+// on how most transactional email actually looks: light gray page
+// background, a centered white "card", a real logo, and a proper footer
+// with a tagline — not just a colored div with text in it.
+function layout(bodyHtml, { preheader = "" } = {}) {
+  return `
+  <div style="background:#f3f4f6; padding:32px 16px; font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+    ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${preheader}</div>` : ""}
+    <div style="max-width:560px; margin:0 auto;">
+      <div style="text-align:center; padding-bottom:20px;">
+        <img src="${LOGO_URL}" alt="OJA247" width="52" height="52" style="border-radius:12px; display:inline-block;" />
+        <div style="font-weight:800; font-size:15px; letter-spacing:0.12em; color:#111827; margin-top:8px;">OJA247</div>
+      </div>
+      <div style="background:#ffffff; border-radius:14px; padding:32px; box-shadow:0 1px 3px rgba(0,0,0,0.06); border:1px solid #eef0f3;">
+        ${bodyHtml}
+      </div>
+      <div style="text-align:center; padding-top:24px;">
+        <p style="color:#9ca3af; font-size:12px; margin:0 0 4px;">
+          OJA247 &middot; Nigeria's marketplace for local businesses
+        </p>
+        <p style="color:#c1c5cc; font-size:12px; margin:0;">
+          Need help? Reply to this email or write to
+          <a href="mailto:support@oja247.store" style="color:#16a34a; text-decoration:none;">support@oja247.store</a>
+        </p>
+      </div>
+    </div>
+  </div>`;
+}
+
+// Small shared building block for a plain "big button" call to action.
+function button(label, url) {
+  if (!url) return "";
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 20px 0;">
+      <tr><td style="border-radius:10px; background:#16a34a;">
+        <a href="${url}" style="display:inline-block; padding:12px 24px; color:#ffffff; font-weight:600; font-size:14px; text-decoration:none; border-radius:10px;">${label}</a>
+      </td></tr>
+    </table>`;
+}
+
+const SITE_URL = process.env.SITE_URL || "https://oja247.store";
+
+// --- Vendor / business -----------------------------------------------------
+
+export async function sendVendorWelcomeEmail({ to, businessName }) {
+  return sendEmail({
+    to,
+    subject: `Welcome to OJA247, ${businessName}!`,
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Welcome to OJA247, ${businessName} 🎉</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Your store is live on OJA247 — Nigeria's marketplace built for local businesses to sell to the customers they already have.</p>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6; margin-bottom:4px;">Here's what to do next:</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; margin: 12px 0 4px;">
+        <tr>
+          <td style="padding:10px 0; border-bottom:1px solid #f1f2f4; font-size:14px; color:#374151;">✅&nbsp;&nbsp;Complete vendor verification for higher payout limits and a verified badge</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0; border-bottom:1px solid #f1f2f4; font-size:14px; color:#374151;">📦&nbsp;&nbsp;Add your first products</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 0; font-size:14px; color:#374151;">💳&nbsp;&nbsp;Subscribe to a plan so your store shows up in customer search</td>
+        </tr>
+      </table>
+      ${button("Go to my dashboard", `${SITE_URL}/dashboard`)}
+      `,
+      { preheader: `Your OJA247 store for ${businessName} is ready.` }
+    ),
+  });
+}
+
+export async function sendVerificationReviewedEmail({ to, businessName, decision, reviewNotes }) {
+  const approved = decision === "approved";
+  return sendEmail({
+    to,
+    subject: approved ? "Your vendor verification was approved" : "Your vendor verification needs attention",
+    html: layout(
+      approved
+        ? `
+          <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">You're verified ✅</h1>
+          <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${businessName}, your vendor verification documents have been approved. Higher payout limits and your verified badge are now active on your storefront.</p>
+          ${button("View my dashboard", `${SITE_URL}/dashboard`)}
+          `
+        : `
+          <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Action needed on your verification</h1>
+          <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${businessName}, we weren't able to approve your verification submission.</p>
+          ${reviewNotes ? `<div style="background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:12px 14px; color:#991b1b; font-size:14px; margin:14px 0;">${reviewNotes}</div>` : ""}
+          <p style="color:#4b5563; font-size:14px; line-height:1.6;">Please update your details and resubmit from your dashboard.</p>
+          ${button("Update my details", `${SITE_URL}/dashboard`)}
+          `
+    ),
+  });
+}
+
+export async function sendPayoutHoldEmail({ to, businessName, reason }) {
+  return sendEmail({
+    to,
+    subject: "Your payouts are on hold — action needed",
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Your payouts are temporarily on hold</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${businessName}, we've paused payouts to your account.</p>
+      ${reason ? `<div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:12px 14px; color:#9a3412; font-size:14px; margin:14px 0;">${reason}</div>` : ""}
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">This is usually because a bank account change couldn't be automatically verified. An admin will review it shortly — you don't need to do anything else right now, but orders can't be split to your account until it's cleared.</p>
+      ${button("View my dashboard", `${SITE_URL}/dashboard`)}
+      `,
+      { preheader: "Your account needs a quick review before payouts resume" }
+    ),
+  });
+}
+
+// --- Orders ------------------------------------------------------------
+
+function orderItemsTable(items) {
+  const rows = items
+    .map(
+      (i) => `
+      <tr>
+        <td style="padding:10px 0; font-size:14px; color:#374151; border-bottom:1px solid #f1f2f4;">${i.name}</td>
+        <td style="padding:10px 0; font-size:14px; color:#6b7280; text-align:center; border-bottom:1px solid #f1f2f4;">&times;${i.quantity}</td>
+        <td style="padding:10px 0; font-size:14px; color:#111827; text-align:right; border-bottom:1px solid #f1f2f4; white-space:nowrap;">${NAIRA(i.price * i.quantity)}</td>
+      </tr>`
+    )
+    .join("");
+
+  return `
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; margin:16px 0;">
+      <tr>
+        <td style="padding-bottom:8px; font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em; border-bottom:2px solid #111827;">Item</td>
+        <td style="padding-bottom:8px; font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em; border-bottom:2px solid #111827; text-align:center;">Qty</td>
+        <td style="padding-bottom:8px; font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em; border-bottom:2px solid #111827; text-align:right;">Amount</td>
+      </tr>
+      ${rows}
+    </table>`;
+}
+
+// Shared receipt-style summary rows (subtotal / fees / total) used by both
+// the customer order confirmation and (in a lighter form) elsewhere.
+function summaryRow(label, value, { bold = false } = {}) {
+  const weight = bold ? "700" : "400";
+  const color = bold ? "#111827" : "#6b7280";
+  const size = bold ? "15px" : "13px";
+  return `
+    <tr>
+      <td style="padding:4px 0; font-size:${size}; font-weight:${weight}; color:${color};">${label}</td>
+      <td style="padding:4px 0; font-size:${size}; font-weight:${weight}; color:${color}; text-align:right;">${value}</td>
+    </tr>`;
+}
+
+export async function sendOrderConfirmationEmail({
+  to,
+  customerName,
+  reference,
+  items,
+  subtotal,
+  deliveryFee,
+  serviceFee,
+  vat,
+  total,
+  deliveryMethod,
+  address,
+}) {
+  const summaryHtml = `
+    <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; margin-top:8px;">
+      ${summaryRow("Subtotal", NAIRA(subtotal))}
+      ${deliveryFee > 0 ? summaryRow("Delivery fee", NAIRA(deliveryFee)) : ""}
+      ${serviceFee > 0 ? summaryRow("Service fee", NAIRA(serviceFee)) : ""}
+      ${vat > 0 ? summaryRow("VAT", NAIRA(vat)) : ""}
+      <tr><td colspan="2" style="border-top:1px solid #e5e7eb; padding-top:8px;"></td></tr>
+      ${summaryRow("Total paid", NAIRA(total), { bold: true })}
+    </table>`;
+
+  return sendEmail({
+    to,
+    subject: `Your OJA247 order is confirmed — ${reference}`,
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Thanks for your order${customerName ? `, ${customerName}` : ""}! 🛍️</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Your payment was successful and your order is being prepared for ${deliveryMethod === "pickup" ? "pickup" : "delivery"}.</p>
+
+      <div style="background:#f9fafb; border-radius:10px; padding:16px 18px; margin:20px 0;">
+        <p style="margin:0 0 2px; font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em;">Order reference</p>
+        <p style="margin:0; font-size:15px; font-weight:700; color:#111827; font-family:monospace;">${reference}</p>
+      </div>
+
+      ${orderItemsTable(items)}
+      ${summaryHtml}
+
+      ${
+        address
+          ? `<div style="margin-top:22px; padding-top:18px; border-top:1px solid #f1f2f4;">
+              <p style="margin:0 0 4px; font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em;">Delivering to</p>
+              <p style="margin:0; font-size:14px; color:#374151; line-height:1.5;">${address}</p>
+            </div>`
+          : ""
+      }
+      `,
+      { preheader: `Order ${reference} confirmed — total ${NAIRA(total)}` }
+    ),
+  });
+}
+
+export async function sendVendorNewOrderEmail({
+  to,
+  businessName,
+  customerName,
+  customerPhone,
+  reference,
+  items,
+  subtotal,
+  deliveryFee,
+  deliveryMethod,
+  address,
+  note,
+}) {
+  return sendEmail({
+    to,
+    subject: `New order received — ${reference}`,
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">You've got a new order! 📦</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${businessName}, ${customerName || "a customer"} just placed an order on OJA247.</p>
+
+      <div style="background:#f9fafb; border-radius:10px; padding:16px 18px; margin:20px 0;">
+        <p style="margin:0 0 2px; font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em;">Order reference</p>
+        <p style="margin:0; font-size:15px; font-weight:700; color:#111827; font-family:monospace;">${reference}</p>
+      </div>
+
+      ${orderItemsTable(items)}
+      <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; margin-top:8px;">
+        ${summaryRow("Your share", NAIRA(subtotal), { bold: true })}
+        ${deliveryFee > 0 ? summaryRow("Delivery fee (yours to fulfil)", NAIRA(deliveryFee)) : ""}
+      </table>
+
+      <div style="margin-top:22px; padding-top:18px; border-top:1px solid #f1f2f4;">
+        <p style="margin:0 0 8px; font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em;">Customer &amp; delivery details</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; font-size:14px; color:#374151;">
+          <tr><td style="padding:4px 0; color:#9ca3af; width:110px;">Name</td><td style="padding:4px 0;">${customerName || "—"}</td></tr>
+          ${customerPhone ? `<tr><td style="padding:4px 0; color:#9ca3af;">Phone</td><td style="padding:4px 0;">${customerPhone}</td></tr>` : ""}
+          <tr><td style="padding:4px 0; color:#9ca3af;">Method</td><td style="padding:4px 0; text-transform:capitalize;">${deliveryMethod || "delivery"}</td></tr>
+          ${address ? `<tr><td style="padding:4px 0; color:#9ca3af; vertical-align:top;">Address</td><td style="padding:4px 0;">${address}</td></tr>` : ""}
+          ${note ? `<tr><td style="padding:4px 0; color:#9ca3af; vertical-align:top;">Note</td><td style="padding:4px 0;">${note}</td></tr>` : ""}
+        </table>
+      </div>
+
+      ${button("View order in dashboard", `${SITE_URL}/dashboard`)}
+      `,
+      { preheader: `New order ${reference} from ${customerName || "a customer"} — ${NAIRA(subtotal)}` }
+    ),
+  });
+}
+
+export async function sendOrderPaymentFailedEmail({ to, customerName, reference }) {
+  return sendEmail({
+    to,
+    subject: "Your payment didn't go through",
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Your payment didn't go through</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${customerName || "there"}, we weren't able to confirm your payment for this order, so it hasn't been placed and nothing was charged.</p>
+      <div style="background:#f9fafb; border-radius:10px; padding:16px 18px; margin:20px 0;">
+        <p style="margin:0 0 2px; font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em;">Order reference</p>
+        <p style="margin:0; font-size:15px; font-weight:700; color:#111827; font-family:monospace;">${reference}</p>
+      </div>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">This can happen from a declined card, an expired session, or a network hiccup mid-payment. You can just try checking out again — your cart items weren't lost.</p>
+      ${button("Try again", `${SITE_URL}`)}
+      `,
+      { preheader: "Your order wasn't placed — no charge was made" }
+    ),
+  });
+}
+
+// --- Subscription --------------------------------------------------------
+
+const PLAN_LABELS = {
+  monthly: "Monthly Plan",
+  six_month: "6-Month Plan",
+  yearly: "Yearly Plan",
+};
+
+export async function sendSubscriptionReceiptEmail({
+  to,
+  businessName,
+  planType,
+  amountPaid,
+  pointsApplied,
+  planPrice,
+  paidAt,
+  reference,
+  expiresAt,
+}) {
+  const planLabel = PLAN_LABELS[planType] || planType;
+  const paidWithPoints = pointsApplied > 0;
+
+  return sendEmail({
+    to,
+    subject: "Your OJA247 subscription receipt",
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Payment received ✅</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${businessName}, here's your receipt.</p>
+
+      <div style="border:1px solid #eef0f3; border-radius:12px; padding:20px 22px; margin:20px 0;">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; margin-bottom:14px;">
+          <tr>
+            <td style="font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em;">Receipt for</td>
+            <td style="font-size:12px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.05em; text-align:right;">Date</td>
+          </tr>
+          <tr>
+            <td style="font-size:14px; font-weight:600; color:#111827;">${businessName}</td>
+            <td style="font-size:14px; color:#111827; text-align:right;">${formatDate(paidAt || new Date())}</td>
+          </tr>
+        </table>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">
+          ${summaryRow(planLabel, NAIRA(planPrice != null ? planPrice : amountPaid + (pointsApplied || 0)))}
+          ${paidWithPoints ? summaryRow("Paid with points", `-${NAIRA(pointsApplied)}`) : ""}
+          <tr><td colspan="2" style="border-top:1px solid #e5e7eb; padding-top:8px;"></td></tr>
+          ${summaryRow("Amount charged", NAIRA(amountPaid), { bold: true })}
+        </table>
+
+        ${reference ? `<p style="margin:14px 0 0; font-size:12px; color:#9ca3af; font-family:monospace;">Ref: ${reference}</p>` : ""}
+      </div>
+
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Your store will remain visible to customers until <strong>${formatDate(expiresAt)}</strong>.</p>
+      ${button("Manage my subscription", `${SITE_URL}/dashboard`)}
+      `,
+      { preheader: `Receipt for your ${planLabel} — ${NAIRA(amountPaid)}` }
+    ),
+  });
+}
+
+export async function sendBusinessReferralConversionEmail({ to, businessName, referredBusinessName, points, newBalance }) {
+  return sendEmail({
+    to,
+    subject: "You just earned referral points!",
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Nice work, ${businessName} 🎉</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;"><strong>${referredBusinessName}</strong> just subscribed using your referral link.</p>
+      <div style="background:#f0fdf4; border-radius:10px; padding:18px; text-align:center; margin:20px 0;">
+        <p style="margin:0; font-size:28px; font-weight:800; color:#16a34a;">+${points} points</p>
+        <p style="margin:6px 0 0; font-size:13px; color:#166534;">New balance: ${newBalance} points</p>
+      </div>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">You can use your points toward your next subscription payment at checkout.</p>
+      ${button("View my dashboard", `${SITE_URL}/dashboard`)}
+      `,
+      { preheader: `You earned ${points} points from ${referredBusinessName}` }
+    ),
+  });
+}
+
+export async function sendSubscriptionExpiringEmail({ to, businessName, daysLeft, expiresAt }) {
+  return sendEmail({
+    to,
+    subject: `Your subscription expires in ${daysLeft} day${daysLeft === 1 ? "" : "s"}`,
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Your subscription is expiring soon ⏳</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${businessName}, your subscription expires on <strong>${formatDate(expiresAt)}</strong> — that's ${daysLeft} day${daysLeft === 1 ? "" : "s"} away.</p>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Renew before then so your store stays visible to customers without any interruption.</p>
+      ${button("Renew my subscription", `${SITE_URL}/dashboard`)}
+      `,
+      { preheader: `${daysLeft} day${daysLeft === 1 ? "" : "s"} left on your subscription` }
+    ),
+  });
+}
+
+export async function sendSubscriptionExpiredEmail({ to, businessName }) {
+  return sendEmail({
+    to,
+    subject: "Your subscription has expired",
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Your subscription has expired</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${businessName}, your subscription period has ended, so your store is currently hidden from customer search.</p>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Renew now to bring it back — your store goes live again immediately after payment.</p>
+      ${button("Renew now", `${SITE_URL}/dashboard`)}
+      `,
+      { preheader: "Your store is hidden from search until you renew" }
+    ),
+  });
+}
+
+// --- Marketer --------------------------------------------------------------
+
+export async function sendMarketerWelcomeEmail({ to, name, referralCode }) {
+  return sendEmail({
+    to,
+    subject: "Welcome to the OJA247 Marketer Program",
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Welcome, ${name} 🚀</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Your marketer account is ready. Share your referral code with businesses — you'll earn a payout whenever one of them subscribes.</p>
+
+      <div style="background:#f0fdf4; border:1px dashed #16a34a; border-radius:10px; padding:18px; text-align:center; margin:20px 0;">
+        <p style="margin:0 0 4px; font-size:11px; color:#166534; text-transform:uppercase; letter-spacing:0.1em;">Your referral code</p>
+        <p style="margin:0; font-size:24px; font-weight:800; letter-spacing:0.1em; color:#16a34a; font-family:monospace;">${referralCode}</p>
+      </div>
+
+      ${button("Go to my marketer dashboard", `${SITE_URL}/marketer-dashboard`)}
+      `,
+      { preheader: `Your referral code is ${referralCode}` }
+    ),
+  });
+}
+
+export async function sendMarketerConversionEmail({ to, name, businessName, payoutAmount }) {
+  return sendEmail({
+    to,
+    subject: "You just earned a referral payout!",
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Nice work, ${name} 💰</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;"><strong>${businessName}</strong> just subscribed using your referral link.</p>
+      <div style="background:#f0fdf4; border-radius:10px; padding:18px; text-align:center; margin:20px 0;">
+        <p style="margin:0; font-size:28px; font-weight:800; color:#16a34a;">+${NAIRA(payoutAmount)}</p>
+      </div>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">This has been added to your pending payout balance and will go out in the next weekly batch.</p>
+      ${button("View my earnings", `${SITE_URL}/marketer-dashboard`)}
+      `,
+      { preheader: `You earned ${NAIRA(payoutAmount)} from ${businessName}` }
+    ),
+  });
+}
+
+export async function sendMarketerPayoutPaidEmail({ to, name, amount }) {
+  return sendEmail({
+    to,
+    subject: "Your marketer payout has been sent",
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Payout sent 💸</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${name}, <strong>${NAIRA(amount)}</strong> has been paid out to your registered bank account.</p>
+      ${button("View payout history", `${SITE_URL}/marketer-dashboard`)}
+      `,
+      { preheader: `${NAIRA(amount)} has been sent to your bank account` }
+    ),
+  });
+}
+
+export default {
+  sendEmail,
+  sendVendorWelcomeEmail,
+  sendVerificationReviewedEmail,
+  sendPayoutHoldEmail,
+  sendOrderConfirmationEmail,
+  sendOrderPaymentFailedEmail,
+  sendVendorNewOrderEmail,
+  sendSubscriptionReceiptEmail,
+  sendSubscriptionExpiringEmail,
+  sendSubscriptionExpiredEmail,
+  sendMarketerWelcomeEmail,
+  sendMarketerConversionEmail,
+  sendMarketerPayoutPaidEmail,
+  sendBusinessReferralConversionEmail,
+};
