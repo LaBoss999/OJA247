@@ -28,6 +28,22 @@ const BusinessSchema = new mongoose.Schema(
     // so the business is never auto-hidden regardless of verification tier.
     verificationDeadline: { type: Date, default: null },
 
+    // Kill-switch tab: per-business override, independent of the global
+    // enforceSubscriptionVisibility flag (see PlatformSettings.js). When
+    // true, this business is ALWAYS shown in public listings regardless of
+    // subscription status — an admin exempts specific businesses one at a
+    // time rather than only flipping the global switch.
+    visibilityExempt: { type: Boolean, default: false },
+
+    // Grandfather-period tab: separate mechanism from visibilityExempt
+    // above. When set to a future date, this business is shown in public
+    // listings (regardless of subscription status) until that date, then
+    // reverts to being governed by the normal rule. Null = no grandfather
+    // period active. Kept distinct from visibilityExempt because this one
+    // is time-boxed and meant for "give existing vendors N months to pay",
+    // not a permanent exemption.
+    grandfatherExemptUntil: { type: Date, default: null },
+
     // --- Subscription (new) ---
     subscriptionStatus: {
       type: String,

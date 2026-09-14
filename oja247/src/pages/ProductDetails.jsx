@@ -40,13 +40,11 @@ function pushRecentlyViewed(product) {
 function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart, itemCount } = useCart();
+  const { itemCount } = useCart();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
-  const [added, setAdded] = useState(false);
-  const [quantity, setQuantity] = useState(1);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [recentlyViewed, setRecentlyViewed] = useState([]);
   const [shareFeedback, setShareFeedback] = useState(false);
@@ -58,8 +56,6 @@ function ProductDetails() {
 
   useEffect(() => {
     setActiveImage(0);
-    setAdded(false);
-    setQuantity(1);
     setRelatedProducts([]);
     window.scrollTo({ top: 0, behavior: "instant" });
 
@@ -96,14 +92,6 @@ function ProductDetails() {
 
     fetchProduct();
   }, [id]);
-
-  const handleAddToCart = () => {
-    for (let i = 0; i < quantity; i++) {
-      addToCart(product, product.businessId);
-    }
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1800);
-  };
 
   const handleShare = async () => {
     const url = window.location.href;
@@ -150,7 +138,6 @@ function ProductDetails() {
 
   const images = product.images && product.images.length > 0 ? product.images : [];
   const business = product.businessId;
-  const maxQuantity = product.stock > 0 ? product.stock : 99;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
@@ -319,6 +306,7 @@ function ProductDetails() {
             {business && (
               <Link
                 to={`/business/${business._id}`}
+                state={{ internalNav: true }}
                 className="inline-flex items-center gap-2.5 mb-5 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition"
               >
                 {business.logo ? (
@@ -359,66 +347,26 @@ function ProductDetails() {
               </div>
             )}
 
-            {/* Quantity selector */}
-            {product.inStock && (
-              <div className="mb-5">
-                <h2 className="text-sm font-semibold text-gray-900 mb-2">Quantity</h2>
-                <div className="inline-flex items-center border border-gray-300 rounded-xl overflow-hidden">
-                  <button
-                    type="button"
-                    onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                    disabled={quantity <= 1}
-                    className="w-11 h-11 flex items-center justify-center text-lg text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition"
-                  >
-                    −
-                  </button>
-                  <span className="w-12 text-center font-semibold text-gray-900">{quantity}</span>
-                  <button
-                    type="button"
-                    onClick={() => setQuantity((q) => Math.min(maxQuantity, q + 1))}
-                    disabled={quantity >= maxQuantity}
-                    className="w-11 h-11 flex items-center justify-center text-lg text-gray-700 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
+            {business ? (
+              <Link
+                to={`/business/${business.slug || business._id}`}
+                state={{ internalNav: true }}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl text-base font-semibold transition-colors bg-green-600 hover:bg-green-700 text-white"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 6M17 13l1.5 6M9 19h.01M15 19h.01"
+                  />
+                </svg>
+                Shop {business.name ? `${business.name}'s` : "vendor's"} storefront
+              </Link>
+            ) : (
+              <span className="w-full sm:w-auto flex items-center justify-center px-8 py-3.5 rounded-xl text-base font-semibold bg-gray-200 text-gray-500">
+                Storefront unavailable
+              </span>
             )}
-
-            <button
-              type="button"
-              onClick={handleAddToCart}
-              disabled={!product.inStock}
-              className={`w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl text-base font-semibold transition-colors ${
-                !product.inStock
-                  ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                  : added
-                  ? "bg-green-700 text-white"
-                  : "bg-green-600 hover:bg-green-700 text-white"
-              }`}
-            >
-              {added ? (
-                <>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                  Added to cart
-                </>
-              ) : product.inStock ? (
-                <>
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 6M17 13l1.5 6M9 19h.01M15 19h.01"
-                    />
-                  </svg>
-                  Add {quantity > 1 ? `${quantity} ` : ""}to Cart
-                </>
-              ) : (
-                "Out of Stock"
-              )}
-            </button>
           </div>
         </div>
 
@@ -432,6 +380,7 @@ function ProductDetails() {
               {business && (
                 <Link
                   to={`/business/${business._id}`}
+                  state={{ internalNav: true }}
                   className="text-sm text-green-600 hover:text-green-700 font-medium"
                 >
                   View store

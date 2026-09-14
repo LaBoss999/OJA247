@@ -7,7 +7,7 @@ import useMinimumLoadingTime from "../hooks/useMinimumLoadingTime";
 import { SlidersHorizontal, X } from "lucide-react";
 
 function Products() {
-  const { addToCart, itemCount } = useCart();
+  const { itemCount } = useCart();
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -365,26 +365,22 @@ function Products() {
                 </div>
 
                 <div className="mt-3 space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => addToCart(product, product.businessId)}
-                    disabled={!product.inStock}
-                    className={`w-full py-2 rounded-lg text-sm sm:text-base font-medium transition-colors ${
-                      product.inStock
-                        ? "bg-green-600 hover:bg-green-700 text-white"
-                        : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                    }`}
-                  >
-                    {product.inStock ? "Add to Cart" : "Out of Stock"}
-                  </button>
-
-                  {getBusinessId(product) && (
-                    <a
-                      href={getBusinessLink(product)}
-                      className="flex items-center justify-center w-full text-center bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors"
+                  {getBusinessId(product) ? (
+                    <Link
+                      to={getBusinessLink(product)}
+                      state={{ internalNav: true }}
+                      className={`flex items-center justify-center w-full text-center py-2 rounded-lg text-sm sm:text-base font-medium transition-colors ${
+                        product.inStock
+                          ? "bg-green-600 hover:bg-green-700 text-white"
+                          : "bg-gray-200 text-gray-500 cursor-not-allowed pointer-events-none"
+                      }`}
                     >
-                      View Store
-                    </a>
+                      Shop {getBusinessName(product) ? `${getBusinessName(product)}'s` : "vendor"} storefront
+                    </Link>
+                  ) : (
+                    <span className="block w-full text-center py-2 rounded-lg text-sm sm:text-base font-medium bg-gray-100 text-gray-400">
+                      Storefront unavailable
+                    </span>
                   )}
                 </div>
               </div>

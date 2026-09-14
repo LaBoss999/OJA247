@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { getBusinessById, getProductsByBusiness } from "../services/api";
 import { useCart } from "../context/CartContext";
@@ -87,6 +87,7 @@ function StarRating({ rating }) {
 
 function BusinessDetails() {
   const { id } = useParams();
+  const location = useLocation();
   const { addToCart, itemCount } = useCart();
   const [business, setBusiness] = useState(null);
   const [products, setProducts] = useState([]);
@@ -95,11 +96,20 @@ function BusinessDetails() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
   const [copyFeedback, setCopyFeedback] = useState(false);
+  // Third-party disclaimer popup — shown once per landing on this page.
+  // "internal" means they got here via a Link inside the app (tagged with
+  // state: { internalNav: true } — see Products.jsx, ProductDetails.jsx,
+  // BusinessCard.jsx, ExplorePage.jsx, LandingPage.jsx). Anything without
+  // that tag (a shared link, an ad, a direct URL, a page refresh) is
+  // treated as "external" and gets the stronger wording.
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
+  const arrivedInternally = Boolean(location.state?.internalNav);
 
   const showLoader = useMinimumLoadingTime(loading);
 
   useEffect(() => {
     fetchBusinessAndProducts();
+    setShowDisclaimer(true);
   }, [id]);
 
   const fetchBusinessAndProducts = async () => {
@@ -178,6 +188,46 @@ function BusinessDetails() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Third-party storefront disclaimer — popup, shown once per landing
+          on this page. Wording differs based on how the buyer arrived. */}
+      {showDisclaimer && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <svg
+                  className="w-5 h-5 text-amber-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth="2"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"
+                  />
+                </svg>
+              </div>
+              <h3 className="font-bold text-gray-900 text-lg pt-1">
+                {arrivedInternally ? `Viewing ${business.name}'s storefront` : `You followed a link to ${business.name}`}
+              </h3>
+            </div>
+            <p className="text-sm text-gray-600 leading-relaxed mb-6">
+              {arrivedInternally
+                ? "OJA247 provides this storefront but doesn't verify vendors beyond the \u201cVerified\u201d badge (CAC/ID-checked). Shop as you would with any independent seller."
+                : "OJA247 only provides the storefront — this vendor's information (CAC, identity, etc.) hasn't been verified unless they carry a \u201cVerified\u201d badge. Shop with the same caution you would with any independent seller you don't know."}
+            </p>
+            <button
+              onClick={() => setShowDisclaimer(false)}
+              className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Banner */}
       <div
         className="relative w-full h-48 sm:h-64 bg-gradient-to-r from-gray-300 to-gray-400 overflow-hidden"

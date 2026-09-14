@@ -27,6 +27,11 @@ import {
   BarChart3,
   Award,
   Clock,
+  ToggleLeft,
+  CalendarClock,
+  UserCog,
+  Receipt,
+  ArrowLeft,
 } from "lucide-react";
 import {
   LineChart,
@@ -48,6 +53,10 @@ const NAV_ITEMS = [
   { id: "orders", label: "Orders", icon: ShoppingCart },
   { id: "users", label: "Users", icon: Users },
   { id: "vendors", label: "Vendor Verification", icon: ShieldCheck },
+  { id: "marketers", label: "Marketers", icon: UserCog },
+  { id: "transactions", label: "Transactions", icon: Receipt },
+  { id: "visibility", label: "Kill Switch", icon: ToggleLeft },
+  { id: "grandfather", label: "Grandfather Exemptions", icon: CalendarClock },
 ];
 
 // Small, reusable empty-state block so every table has somewhere
@@ -113,6 +122,25 @@ const AdminDashboard = () => {
   const [productSearch, setProductSearch] = useState("");
   const [orderSearch, setOrderSearch] = useState("");
   const [userSearch, setUserSearch] = useState("");
+
+  // Unfiltered business list (all businesses regardless of visibility
+  // rules) — used by the Kill Switch and Grandfather Exemptions tabs.
+  const [adminBusinesses, setAdminBusinesses] = useState([]);
+  const [visibilitySearch, setVisibilitySearch] = useState("");
+  const [grandfatherSearch, setGrandfatherSearch] = useState("");
+  const [grandfatherDrafts, setGrandfatherDrafts] = useState({}); // businessId -> date input value being edited
+
+  // Marketer management
+  const [marketers, setMarketers] = useState([]);
+  const [marketerSearch, setMarketerSearch] = useState("");
+  const [marketerDetail, setMarketerDetail] = useState(null); // set when drilled into one marketer
+  const [marketerDetailLoading, setMarketerDetailLoading] = useState(false);
+
+  // Unified transactions
+  const [transactions, setTransactions] = useState([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [transactionTypeFilter, setTransactionTypeFilter] = useState("all"); // all | subscription | marketer_payout | points
+  const [transactionSearch, setTransactionSearch] = useState("");
 
   // Toast replaces alert() for non-blocking confirmations/errors.
   const [toast, setToast] = useState(null); // { message, type: "success" | "error" }
@@ -195,6 +223,94 @@ const AdminDashboard = () => {
       .catch(() => showToast("Couldn't load analytics. Try switching tabs and back.", "error"))
       .finally(() => setAnalyticsLoading(false));
   }, [activeTab]);
+
+  // Kill Switch + Grandfather Exemptions both need the unfiltered business
+  // list — fetch once, shared between both tabs.
+  useEffect(() => {
+    if ((activeTab !== "visibility" && activeTab !== "grandfather") || adminBusinesses.length) return;
+    axiosInstance
+      .get("/api/admin/businesses")
+      .then((res) => setAdminBusinesses(res.data))
+      .catch(() => showToast("Couldn't load businesses.", "error"));
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== "marketers" || marketers.length) return;
+    axiosInstance
+      .get("/api/admin/marketers")
+      .then((res) => setMarketers(res.data))
+      .catch(() => showToast("Couldn't load marketers.", "error"));
+  }, [activeTab]);
+
+  const fetchTransactions = (type = transactionTypeFilter) => {
+    setTransactionsLoading(true);
+    axiosInstance
+      .get("/api/admin/transactions", { params: type === "all" ? {} : { type } })
+      .then((res) => setTransactions(res.data.transactions))
+      .catch(() => showToast("Couldn't load transactions.", "error"))
+      .finally(() => setTransactionsLoading(false));
+  };
+
+  useEffect(() => {
+    if (activeTab !== "transactions") return;
+    fetchTransactions();
+  }, [activeTab, transactionTypeFilter]);
+
+  const viewMarketerDetail = (id) => {
+    setMarketerDetailLoading(true);
+    setMarketerDetail({ id }); // show the detail panel immediately with a loading state
+    axiosInstance
+      .get(`/api/admin/marketers/${id}`)
+      .then((res) => setMarketerDetail(res.data))
+      .catch(() => {
+        showToast("Couldn't load that marketer's details.", "error");
+        setMarketerDetail(null);
+      })
+      .finally(() => setMarketerDetailLoading(false));
+  };
+
+  const toggleMarketerBan = async (id, currentlyBanned) => {
+    try {
+      const res = await axiosInstance.patch(`/api/admin/marketers/${id}/ban`, {
+        banned: !currentlyBanned,
+      });
+      setMarketers((prev) => prev.map((m) => (m._id === id ? { ...m, banned: res.data.banned } : m)));
+      showToast(currentlyBanned ? "Marketer unbanned" : "Marketer banned");
+    } catch (error) {
+      showToast("Failed to update marketer status", "error");
+    }
+  };
+
+  const toggleVisibilityExempt = async (id, currentlyExempt) => {
+    try {
+      const res = await axiosInstance.patch(`/api/admin/businesses/${id}/visibility-exempt`, {
+        exempt: !currentlyExempt,
+      });
+      setAdminBusinesses((prev) =>
+        prev.map((b) => (b._id === id ? { ...b, visibilityExempt: res.data.visibilityExempt } : b))
+      );
+      showToast(
+        currentlyExempt ? "Removed individual exemption" : "Business exempted — always visible regardless of subscription status"
+      );
+    } catch (error) {
+      showToast("Failed to update exemption", "error");
+    }
+  };
+
+  const saveGrandfatherExemption = async (id, dateValue) => {
+    try {
+      const exemptUntil = dateValue ? new Date(dateValue).toISOString() : null;
+      const res = await axiosInstance.patch(`/api/admin/businesses/${id}/grandfather-exemption`, {
+        exemptUntil,
+      });
+      setAdminBusinesses((prev) =>
+        prev.map((b) => (b._id === id ? { ...b, grandfatherExemptUntil: res.data.grandfatherExemptUntil } : b))
+      );
+      showToast(exemptUntil ? "Grandfather exemption saved" : "Grandfather exemption cleared");
+    } catch (error) {
+      showToast("Failed to save exemption", "error");
+    }
+  };
 
   const fetchAllData = async () => {
     try {
@@ -364,6 +480,28 @@ const AdminDashboard = () => {
     if (!userSearch) return true;
     const q = userSearch.toLowerCase();
     return u.email?.toLowerCase().includes(q) || u.businessId?.name?.toLowerCase().includes(q);
+  });
+
+  const filteredVisibilityBusinesses = adminBusinesses.filter((biz) => {
+    if (!visibilitySearch) return true;
+    return biz.name?.toLowerCase().includes(visibilitySearch.toLowerCase());
+  });
+
+  const filteredGrandfatherBusinesses = adminBusinesses.filter((biz) => {
+    if (!grandfatherSearch) return true;
+    return biz.name?.toLowerCase().includes(grandfatherSearch.toLowerCase());
+  });
+
+  const filteredMarketers = marketers.filter((m) => {
+    if (!marketerSearch) return true;
+    const q = marketerSearch.toLowerCase();
+    return m.name?.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q) || m.referralCode?.toLowerCase().includes(q);
+  });
+
+  const filteredTransactions = transactions.filter((t) => {
+    if (!transactionSearch) return true;
+    const q = transactionSearch.toLowerCase();
+    return t.party?.toLowerCase().includes(q) || t.reference?.toLowerCase().includes(q);
   });
 
   if (showLoader) {
@@ -1197,6 +1335,376 @@ const AdminDashboard = () => {
                           </td>
                         </tr>
                       ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "marketers" && (
+            <div>
+              {marketerDetail ? (
+                <div className="bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+                  <div className="p-6 border-b border-gray-200 flex items-center gap-3">
+                    <button
+                      onClick={() => setMarketerDetail(null)}
+                      className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+                    >
+                      <ArrowLeft size={18} />
+                    </button>
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">
+                        {marketerDetail.marketer?.name || "Loading…"}
+                      </h2>
+                      <p className="text-sm text-gray-500">{marketerDetail.marketer?.email}</p>
+                    </div>
+                  </div>
+                  {marketerDetailLoading ? (
+                    <div className="p-10 text-center text-gray-500 text-sm">Loading…</div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-6 border-b border-gray-200">
+                        {[
+                          { label: "Total Referred", value: marketerDetail.stats?.totalReferred || 0 },
+                          { label: "Converted", value: marketerDetail.stats?.totalConverted || 0 },
+                          { label: "Pending Payout", value: `₦${(marketerDetail.stats?.pendingPayoutTotal || 0).toLocaleString()}` },
+                          { label: "Lifetime Paid", value: `₦${(marketerDetail.stats?.lifetimePaidTotal || 0).toLocaleString()}` },
+                        ].map((s) => (
+                          <div key={s.label} className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                            <p className="text-xs text-gray-500 font-medium">{s.label}</p>
+                            <p className="text-lg font-bold text-gray-900 mt-1">{s.value}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="p-6">
+                        <h3 className="font-semibold text-gray-900 mb-3">Referrals</h3>
+                        {(marketerDetail.referrals || []).length === 0 ? (
+                          <p className="text-sm text-gray-500">No referrals yet.</p>
+                        ) : (
+                          <div className="space-y-2 mb-6">
+                            {marketerDetail.referrals.map((r) => (
+                              <div
+                                key={r.id}
+                                className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                              >
+                                <span className="font-medium text-gray-900">{r.businessName}</span>
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${
+                                    r.status === "converted"
+                                      ? "bg-green-500/15 text-green-700 border-green-500/30"
+                                      : "bg-yellow-500/15 text-amber-700 border-yellow-500/30"
+                                  }`}
+                                >
+                                  {r.status}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <h3 className="font-semibold text-gray-900 mb-3">Payout History</h3>
+                        {(marketerDetail.payouts || []).length === 0 ? (
+                          <p className="text-sm text-gray-500">No payouts yet.</p>
+                        ) : (
+                          <div className="space-y-2">
+                            {marketerDetail.payouts.map((p) => (
+                              <div
+                                key={p._id}
+                                className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm"
+                              >
+                                <span className="text-gray-900 font-medium">₦{p.amount.toLocaleString()}</span>
+                                <span className="text-gray-500 capitalize">{p.status}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+                  <div className="p-6 border-b border-gray-200 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <h2 className="text-xl font-bold text-gray-900">
+                      All Marketers <span className="text-gray-500 font-normal">({filteredMarketers.length})</span>
+                    </h2>
+                    <SearchField value={marketerSearch} onChange={setMarketerSearch} placeholder="Search by name, email, or referral code" />
+                  </div>
+                  {filteredMarketers.length === 0 ? (
+                    <EmptyState
+                      icon={UserCog}
+                      title={marketerSearch ? "No matching marketers" : "No marketers yet"}
+                      message={marketerSearch ? `Nothing matches "${marketerSearch}".` : "Marketers will appear here once people register."}
+                    />
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[820px]">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Marketer</th>
+                            <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Referral Code</th>
+                            <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Referred / Converted</th>
+                            <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Pending / Paid</th>
+                            <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredMarketers.map((m) => (
+                            <tr key={m._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                              <td className="p-4">
+                                <p className="font-medium text-gray-900">{m.name}</p>
+                                <p className="text-sm text-gray-500">{m.email}</p>
+                              </td>
+                              <td className="p-4 text-gray-500 font-mono text-sm">{m.referralCode}</td>
+                              <td className="p-4 text-gray-500">
+                                {m.totalReferred} / {m.totalConverted}
+                              </td>
+                              <td className="p-4 text-gray-500">
+                                ₦{(m.pendingPayoutTotal || 0).toLocaleString()} / ₦{(m.lifetimePaidTotal || 0).toLocaleString()}
+                              </td>
+                              <td className="p-4">
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => viewMarketerDetail(m._id)}
+                                    className="px-3 py-1.5 bg-green-500 text-gray-900 rounded-lg hover:bg-green-600 text-sm font-medium transition"
+                                  >
+                                    View
+                                  </button>
+                                  <button
+                                    onClick={() => toggleMarketerBan(m._id, m.banned)}
+                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                                      m.banned
+                                        ? "bg-green-500/15 text-green-700 border border-green-500/30 hover:bg-green-500/25"
+                                        : "bg-red-500/15 text-red-600 border border-red-500/30 hover:bg-red-500/25"
+                                    }`}
+                                  >
+                                    {m.banned ? "Unban" : "Ban"}
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "transactions" && (
+            <div className="bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+              <div className="p-6 border-b border-gray-200 flex flex-col gap-4">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Transactions <span className="text-gray-500 font-normal">({filteredTransactions.length})</span>
+                  </h2>
+                  <SearchField value={transactionSearch} onChange={setTransactionSearch} placeholder="Search by business, marketer, or reference" />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: "all", label: "All" },
+                    { id: "subscription", label: "Subscriptions" },
+                    { id: "marketer_payout", label: "Marketer Payouts" },
+                    { id: "points", label: "Points Ledger" },
+                  ].map((f) => (
+                    <button
+                      key={f.id}
+                      onClick={() => setTransactionTypeFilter(f.id)}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${
+                        transactionTypeFilter === f.id
+                          ? "bg-green-500/15 text-green-700 border-green-500/30"
+                          : "bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100"
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {transactionsLoading ? (
+                <div className="p-10 text-center text-gray-500 text-sm">Loading…</div>
+              ) : filteredTransactions.length === 0 ? (
+                <EmptyState
+                  icon={Receipt}
+                  title="No transactions"
+                  message="Subscription payments, marketer payouts, and points activity will show up here."
+                />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[820px]">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Type</th>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Party</th>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Amount</th>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Status</th>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredTransactions.map((t) => (
+                        <tr key={`${t.kind}-${t.id}`} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                          <td className="p-4">
+                            <span className="px-2.5 py-1 rounded-full text-xs font-semibold border bg-blue-500/15 text-blue-700 border-blue-500/30 capitalize">
+                              {t.kind === "marketer_payout" ? "Marketer Payout" : t.kind === "points" ? `Points (${t.pointsType})` : `Subscription (${t.planType})`}
+                            </span>
+                          </td>
+                          <td className="p-4 font-medium text-gray-900">{t.party}</td>
+                          <td className="p-4 text-gray-500">
+                            {t.kind === "points" ? t.amount : `₦${Number(t.amount).toLocaleString()}`}
+                          </td>
+                          <td className="p-4">
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-xs font-semibold border capitalize ${
+                                ["success", "paid"].includes(t.status)
+                                  ? "bg-green-500/15 text-green-700 border-green-500/30"
+                                  : ["failed"].includes(t.status)
+                                  ? "bg-red-500/15 text-red-600 border-red-500/30"
+                                  : "bg-yellow-500/15 text-amber-700 border-yellow-500/30"
+                              }`}
+                            >
+                              {t.status}
+                            </span>
+                          </td>
+                          <td className="p-4 text-gray-500 text-sm">
+                            {new Date(t.date).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "visibility" && (
+            <div className="bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+              <div className="p-6 border-b border-gray-200 flex flex-col gap-4">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Kill Switch — Per-Business Overrides</h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Exempt individual businesses from the global Subscription Visibility Gate (Overview tab). An
+                    exempted business is always shown regardless of subscription status.
+                  </p>
+                </div>
+                <SearchField value={visibilitySearch} onChange={setVisibilitySearch} placeholder="Search by business name" />
+              </div>
+              {filteredVisibilityBusinesses.length === 0 ? (
+                <EmptyState icon={ToggleLeft} title="No businesses" message="Businesses will appear here once vendors sign up." />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[600px]">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Business</th>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Subscription Status</th>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Exempt</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredVisibilityBusinesses.map((biz) => (
+                        <tr key={biz._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                          <td className="p-4 font-medium text-gray-900">{biz.name}</td>
+                          <td className="p-4 text-gray-500 capitalize">{biz.subscriptionStatus}</td>
+                          <td className="p-4">
+                            <button
+                              onClick={() => toggleVisibilityExempt(biz._id, biz.visibilityExempt)}
+                              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+                                biz.visibilityExempt ? "bg-green-500" : "bg-gray-300"
+                              }`}
+                            >
+                              <span
+                                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                                  biz.visibilityExempt ? "translate-x-6" : "translate-x-1"
+                                }`}
+                              />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "grandfather" && (
+            <div className="bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+              <div className="p-6 border-b border-gray-200 flex flex-col gap-4">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Grandfather Exemptions</h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Give a specific business a time-boxed exemption from the subscription-visibility gate — e.g. a
+                    current month or more of grace before they need to pay to stay visible.
+                  </p>
+                </div>
+                <SearchField value={grandfatherSearch} onChange={setGrandfatherSearch} placeholder="Search by business name" />
+              </div>
+              {filteredGrandfatherBusinesses.length === 0 ? (
+                <EmptyState icon={CalendarClock} title="No businesses" message="Businesses will appear here once vendors sign up." />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[680px]">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Business</th>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Exempt Until</th>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredGrandfatherBusinesses.map((biz) => {
+                        const draft =
+                          grandfatherDrafts[biz._id] !== undefined
+                            ? grandfatherDrafts[biz._id]
+                            : biz.grandfatherExemptUntil
+                            ? new Date(biz.grandfatherExemptUntil).toISOString().slice(0, 10)
+                            : "";
+                        const isActive = biz.grandfatherExemptUntil && new Date(biz.grandfatherExemptUntil) > new Date();
+                        return (
+                          <tr key={biz._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                            <td className="p-4 font-medium text-gray-900">{biz.name}</td>
+                            <td className="p-4">
+                              <span
+                                className={`text-xs font-semibold mr-2 ${isActive ? "text-green-700" : "text-gray-400"}`}
+                              >
+                                {isActive ? "Active" : "None"}
+                              </span>
+                              <input
+                                type="date"
+                                value={draft}
+                                onChange={(e) =>
+                                  setGrandfatherDrafts((prev) => ({ ...prev, [biz._id]: e.target.value }))
+                                }
+                                className="px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-900"
+                              />
+                            </td>
+                            <td className="p-4">
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => saveGrandfatherExemption(biz._id, draft)}
+                                  className="px-3 py-1.5 bg-green-500 text-gray-900 rounded-lg hover:bg-green-600 text-sm font-medium transition"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setGrandfatherDrafts((prev) => ({ ...prev, [biz._id]: "" }));
+                                    saveGrandfatherExemption(biz._id, "");
+                                  }}
+                                  className="px-3 py-1.5 bg-red-500/15 text-red-600 border border-red-500/30 rounded-lg hover:bg-red-500/25 text-sm font-medium transition"
+                                >
+                                  Clear
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

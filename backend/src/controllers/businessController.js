@@ -54,6 +54,12 @@ export const getBusinesses = async (req, res) => {
 
     const now = Date.now();
     const visible = businesses.filter((b) => {
+      // Kill-switch tab override — always shown regardless of subscription.
+      if (b.visibilityExempt) return true;
+      // Grandfather tab override — shown until the exemption date passes.
+      if (b.grandfatherExemptUntil && now <= new Date(b.grandfatherExemptUntil).getTime()) {
+        return true;
+      }
       if (!b.subscriptionExpiresAt) return false;
       return now <= new Date(b.subscriptionExpiresAt).getTime();
     });

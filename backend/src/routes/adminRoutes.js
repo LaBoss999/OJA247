@@ -13,6 +13,13 @@ import {
   setVerificationDeadline,
   getPlatformSettings,
   setSubscriptionVisibilityEnforcement,
+  getAllBusinessesAdmin,
+  setBusinessVisibilityExempt,
+  setBusinessGrandfatherExemption,
+  getAllMarketersAdmin,
+  getMarketerDetailAdmin,
+  toggleMarketerBan,
+  getTransactions,
 } from "../controllers/adminController.js";
 import { getPayoutBatches, markPayoutBatchPaid } from "../controllers/payoutBatchController.js";
 
@@ -40,5 +47,22 @@ router.post("/payout-batches/:marketerId/mark-paid", markPayoutBatchPaid);
 // Platform settings (global kill switches)
 router.get("/settings", getPlatformSettings);
 router.patch("/settings/subscription-visibility", setSubscriptionVisibilityEnforcement);
+
+// Unfiltered business list for admin management (see getAllBusinessesAdmin)
+router.get("/businesses", getAllBusinessesAdmin);
+
+// Kill-switch tab: per-business override (independent of the global toggle above)
+router.patch("/businesses/:id/visibility-exempt", setBusinessVisibilityExempt);
+
+// Grandfather-exemption tab: time-boxed per-business override
+router.patch("/businesses/:id/grandfather-exemption", setBusinessGrandfatherExemption);
+
+// Marketer management (mirrors business management)
+router.get("/marketers", getAllMarketersAdmin);
+router.get("/marketers/:id", getMarketerDetailAdmin);
+router.patch("/marketers/:id/ban", toggleMarketerBan);
+
+// Unified transactions feed (subscriptions + marketer payouts + points ledger)
+router.get("/transactions", getTransactions);
 
 export default router;

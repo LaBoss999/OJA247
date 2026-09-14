@@ -227,6 +227,7 @@ const ExplorePage = () => {
               <Link
                 key={business._id}
                 to={`/business/${business.slug || business._id}`}
+                state={{ internalNav: true }}
                 className="block bg-white/90 backdrop-blur-xl border border-gray-200 rounded-2xl shadow-lg overflow-hidden cursor-pointer hover:shadow-2xl transition-all hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-green-400"
               >
                 {/* Banner */}
@@ -312,7 +313,7 @@ const ExplorePage = () => {
                     onClick={(event) => {
                       event.preventDefault();
                       event.stopPropagation();
-                      navigate(`/business/${business.slug || business._id}`);
+                      navigate(`/business/${business.slug || business._id}`, { state: { internalNav: true } });
                     }}
                     className="w-full py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-xl transition shadow-md"
                   >
