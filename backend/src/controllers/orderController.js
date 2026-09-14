@@ -22,7 +22,7 @@ async function markOrderPaid(reference) {
     .filter(Boolean)
     .join(", ");
 
-  sendOrderConfirmationEmail({
+  await sendOrderConfirmationEmail({
     to: order.customer?.email,
     customerName: order.customer?.fullName,
     reference: order.reference,
@@ -42,25 +42,31 @@ async function markOrderPaid(reference) {
   );
   const emailByBusinessId = new Map(vendorRecords.map((v) => [v.businessId.toString(), v.contactEmail]));
 
-  order.vendors.forEach((v) => {
-    const vendorEmail = v.businessId && emailByBusinessId.get(v.businessId.toString());
-    if (!vendorEmail) return;
+  // forEach can't be awaited (its callback's returned promises are
+  // discarded), so this used to race the same way the other unawaited
+  // sends did — Promise.all over a map() actually blocks until every
+  // vendor's email is done.
+  await Promise.all(
+    order.vendors.map((v) => {
+      const vendorEmail = v.businessId && emailByBusinessId.get(v.businessId.toString());
+      if (!vendorEmail) return null;
 
-    const vendorItems = order.items.filter((i) => i.businessId === v.businessId);
-    sendVendorNewOrderEmail({
-      to: vendorEmail,
-      businessName: v.businessName,
-      customerName: order.customer?.fullName,
-      customerPhone: order.customer?.phone,
-      reference: order.reference,
-      items: vendorItems,
-      subtotal: v.itemsSubtotal,
-      deliveryFee: v.deliveryFee,
-      deliveryMethod: order.deliveryMethod,
-      address: fullAddress,
-      note: order.customer?.note,
-    });
-  });
+      const vendorItems = order.items.filter((i) => i.businessId === v.businessId);
+      return sendVendorNewOrderEmail({
+        to: vendorEmail,
+        businessName: v.businessName,
+        customerName: order.customer?.fullName,
+        customerPhone: order.customer?.phone,
+        reference: order.reference,
+        items: vendorItems,
+        subtotal: v.itemsSubtotal,
+        deliveryFee: v.deliveryFee,
+        deliveryMethod: order.deliveryMethod,
+        address: fullAddress,
+        note: order.customer?.note,
+      });
+    })
+  );
 
   return order;
 }
@@ -79,7 +85,7 @@ async function markOrderFailed(reference) {
     { new: true }
   );
 
-  sendOrderPaymentFailedEmail({
+  await sendOrderPaymentFailedEmail({
     to: order.customer?.email,
     customerName: order.customer?.fullName,
     reference: order.reference,

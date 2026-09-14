@@ -96,7 +96,7 @@ export const requestMarketerWithdrawal = async (req, res) => {
       { status: "batched", payoutWeekStart }
     );
 
-    sendMarketerWithdrawalRequestEmail({
+    await sendMarketerWithdrawalRequestEmail({
       marketerName: req.marketer.name,
       marketerEmail: req.marketer.email,
       amount: pendingTotal,

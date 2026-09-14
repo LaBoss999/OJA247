@@ -163,7 +163,7 @@ export const initiateSubscription = async (req, res) => {
 
       await deductAppliedPoints(payment);
 
-      sendSubscriptionReceiptEmail({
+      await sendSubscriptionReceiptEmail({
         to: await getOwnerEmail(businessId),
         businessName: business.name,
         planType,
@@ -235,7 +235,7 @@ async function markSubscriptionPaid(reference) {
   const cashCollected = payment.amount - (payment.pointsApplied || 0);
 
   const business = await Business.findById(payment.businessId).select("name");
-  sendSubscriptionReceiptEmail({
+  await sendSubscriptionReceiptEmail({
     to: await getOwnerEmail(payment.businessId),
     businessName: business?.name || "",
     planType: payment.planType,

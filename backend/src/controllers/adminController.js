@@ -184,7 +184,7 @@ export const reviewVendor = async (req, res) => {
       return res.status(404).json({ message: "Vendor not found" });
     }
 
-    sendVerificationReviewedEmail({
+    await sendVerificationReviewedEmail({
       to: vendor.contactEmail,
       businessName: vendor.businessName,
       decision,

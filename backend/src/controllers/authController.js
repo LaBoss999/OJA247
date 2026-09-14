@@ -235,7 +235,7 @@ export const forgotPassword = async (req, res) => {
     await user.save();
 
     const resetUrl = `${process.env.SITE_URL || "https://oja247.store"}/reset-password?token=${rawToken}&type=vendor`;
-    sendPasswordResetEmail({ to: user.email, name: "", resetUrl });
+    await sendPasswordResetEmail({ to: user.email, name: "", resetUrl });
 
     res.json(genericResponse);
   } catch (error) {

@@ -43,7 +43,7 @@ export const registerMarketer = async (req, res) => {
     const saved = await marketer.save();
     const token = generateToken(saved._id);
 
-    sendMarketerWelcomeEmail({ to: saved.email, name: saved.name, referralCode: saved.referralCode });
+    await sendMarketerWelcomeEmail({ to: saved.email, name: saved.name, referralCode: saved.referralCode });
 
     res.status(201).json({
       success: true,
@@ -139,7 +139,7 @@ export const forgotMarketerPassword = async (req, res) => {
     await marketer.save();
 
     const resetUrl = `${process.env.SITE_URL || "https://oja247.store"}/reset-password?token=${rawToken}&type=marketer`;
-    sendPasswordResetEmail({ to: marketer.email, name: marketer.name, resetUrl });
+    await sendPasswordResetEmail({ to: marketer.email, name: marketer.name, resetUrl });
 
     res.json(genericResponse);
   } catch (error) {

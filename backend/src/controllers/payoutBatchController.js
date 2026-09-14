@@ -98,7 +98,7 @@ export const markPayoutBatchPaid = async (req, res) => {
     if (totalAmount > 0) {
       const marketer = await Marketer.findById(marketerId).select("email name");
       if (marketer) {
-        sendMarketerPayoutPaidEmail({ to: marketer.email, name: marketer.name, amount: totalAmount });
+        await sendMarketerPayoutPaidEmail({ to: marketer.email, name: marketer.name, amount: totalAmount });
       }
     }
 
