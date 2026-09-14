@@ -87,7 +87,7 @@ export const register = async (req, res) => {
     console.log("User created:", savedUser._id);
 
     // Fire-and-forget — a mail server hiccup should never block registration.
-    sendVendorWelcomeEmail({ to: savedUser.email, businessName: savedBusiness.name });
+    await sendVendorWelcomeEmail({ to: savedUser.email, businessName: savedBusiness.name });
 
     const token = generateToken(savedUser._id);
 
