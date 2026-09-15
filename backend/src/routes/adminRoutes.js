@@ -19,6 +19,7 @@ import {
   getAllMarketersAdmin,
   getMarketerDetailAdmin,
   toggleMarketerBan,
+  deleteMarketer,
   getTransactions,
   markPointsWithdrawalPaid,
   getTaxLedger,
@@ -64,6 +65,7 @@ router.patch("/businesses/:id/grandfather-exemption", setBusinessGrandfatherExem
 router.get("/marketers", getAllMarketersAdmin);
 router.get("/marketers/:id", getMarketerDetailAdmin);
 router.patch("/marketers/:id/ban", toggleMarketerBan);
+router.delete("/marketers/:id", deleteMarketer);
 
 // Unified transactions feed (subscriptions + marketer payouts + points ledger)
 router.get("/transactions", getTransactions);

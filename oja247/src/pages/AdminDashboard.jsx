@@ -390,6 +390,18 @@ const AdminDashboard = () => {
     }
   };
 
+  const deleteMarketer = async (id, name) => {
+    if (!window.confirm(`Delete ${name}? This removes their account and payout records permanently.`)) return;
+    try {
+      await axiosInstance.delete(`/api/admin/marketers/${id}`);
+      setMarketers((prev) => prev.filter((m) => m._id !== id));
+      if (marketerDetail?.marketer?._id === id) setMarketerDetail(null);
+      showToast("Marketer deleted");
+    } catch (error) {
+      showToast("Failed to delete marketer", "error");
+    }
+  };
+
   const toggleVisibilityExempt = async (id, currentlyExempt) => {
     try {
       const res = await axiosInstance.patch(`/api/admin/businesses/${id}/visibility-exempt`, {
@@ -1588,6 +1600,13 @@ const AdminDashboard = () => {
                                     }`}
                                   >
                                     {m.banned ? "Unban" : "Ban"}
+                                  </button>
+                                  <button
+                                    onClick={() => deleteMarketer(m._id, m.name)}
+                                    className="px-3 py-1.5 bg-red-500/15 text-red-600 border border-red-500/30 rounded-lg hover:bg-red-500/25 text-sm font-medium flex items-center gap-1 transition"
+                                  >
+                                    <Trash2 size={14} />
+                                    Delete
                                   </button>
                                 </div>
                               </td>

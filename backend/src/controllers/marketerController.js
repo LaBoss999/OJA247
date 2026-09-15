@@ -3,7 +3,7 @@ import ReferralAttribution from "../models/ReferralAttribution.js";
 import MarketerPayout from "../models/MarketerPayout.js";
 import Marketer from "../models/Marketer.js";
 import { isValidCustomReferralCode, isMarketerReferralCodeTaken } from "../services/referralService.js";
-import { sendMarketerWithdrawalRequestEmail } from "../services/emailService.js";
+import { sendMarketerWithdrawalRequestEmail, sendMarketerReferralCodeChangedEmail, sendMarketerPayoutDetailsChangedEmail } from "../services/emailService.js";
 
 const MIN_WITHDRAWAL_AMOUNT = 1000;
 
@@ -160,6 +160,18 @@ export const updateMarketerPayoutDetails = async (req, res) => {
       { new: true, runValidators: true }
     ).select("-password");
 
+    // Security-relevant: this account is where future payouts go. Same
+    // reasoning as sendBankDetailsUpdatedEmail on the vendor side.
+    if (updated?.email) {
+      sendMarketerPayoutDetailsChangedEmail({
+        to: updated.email,
+        name: updated.name,
+        bankName: updated.bankName,
+        accountNumber: updated.accountNumber,
+        accountName: updated.accountName,
+      });
+    }
+
     res.json({
       success: true,
       message: "Payout details saved.",
@@ -195,6 +207,8 @@ export const updateMarketerReferralCode = async (req, res) => {
       return res.status(400).json({ message: "That referral code is already taken. Try another." });
     }
 
+    const oldCode = req.marketer.referralCode;
+
     const updated = await Marketer.findByIdAndUpdate(
       id,
       { referralCode: raw },
@@ -203,6 +217,15 @@ export const updateMarketerReferralCode = async (req, res) => {
 
     if (!updated) {
       return res.status(404).json({ message: "Marketer not found" });
+    }
+
+    if (oldCode && oldCode !== updated.referralCode) {
+      sendMarketerReferralCodeChangedEmail({
+        to: updated.email,
+        name: updated.name,
+        oldCode,
+        newCode: updated.referralCode,
+      });
     }
 
     res.json({ success: true, referralCode: updated.referralCode });

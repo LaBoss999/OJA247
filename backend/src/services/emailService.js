@@ -582,6 +582,102 @@ export async function sendMarketerPayoutPaidEmail({ to, name, amount }) {
   });
 }
 
+export async function sendMarketerReferralCodeChangedEmail({ to, name, oldCode, newCode }) {
+  return sendEmail({
+    to,
+    subject: "Your OJA247 referral code has changed",
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Your referral code changed</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${name}, this confirms your OJA247 marketer referral code was just updated. If you didn't make this change, contact support right away — anyone with access to your account can redirect who gets credit for new referrals.</p>
+
+      <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:16px; margin:20px 0;">
+        <p style="margin:0 0 6px; font-size:12px; color:#9ca3af;">Old code</p>
+        <p style="margin:0 0 14px; font-size:16px; font-weight:700; color:#9ca3af; text-decoration:line-through; font-family:monospace;">${oldCode}</p>
+        <p style="margin:0 0 6px; font-size:12px; color:#166534;">New code</p>
+        <p style="margin:0; font-size:22px; font-weight:800; letter-spacing:0.08em; color:#16a34a; font-family:monospace;">${newCode}</p>
+      </div>
+
+      <p style="color:#6b7280; font-size:13px; line-height:1.6;">Links or codes shared before this change will no longer credit you — update anything you've already shared.</p>
+
+      ${button("Go to my marketer dashboard", `${SITE_URL}/marketer-dashboard`)}
+      `,
+      { preheader: `Your referral code is now ${newCode}` }
+    ),
+  });
+}
+
+export async function sendBusinessReferralCodeChangedEmail({ to, businessName, oldCode, newCode }) {
+  return sendEmail({
+    to,
+    subject: "Your OJA247 referral code has changed",
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Your referral code changed</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${businessName}, this confirms your OJA247 referral code was just updated. If you didn't make this change, contact support right away.</p>
+
+      <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:16px; margin:20px 0;">
+        <p style="margin:0 0 6px; font-size:12px; color:#9ca3af;">Old code</p>
+        <p style="margin:0 0 14px; font-size:16px; font-weight:700; color:#9ca3af; text-decoration:line-through; font-family:monospace;">${oldCode}</p>
+        <p style="margin:0 0 6px; font-size:12px; color:#166534;">New code</p>
+        <p style="margin:0; font-size:22px; font-weight:800; letter-spacing:0.08em; color:#16a34a; font-family:monospace;">${newCode}</p>
+      </div>
+
+      <p style="color:#6b7280; font-size:13px; line-height:1.6;">Links or codes shared before this change will no longer credit you — update anything you've already shared.</p>
+
+      ${button("Go to my dashboard", `${SITE_URL}/business-dashboard`)}
+      `,
+      { preheader: `Your referral code is now ${newCode}` }
+    ),
+  });
+}
+
+export async function sendMarketerPayoutDetailsChangedEmail({ to, name, bankName, accountNumber, accountName }) {
+  const maskedAccount = accountNumber ? `••••${String(accountNumber).slice(-4)}` : "unknown";
+  return sendEmail({
+    to,
+    subject: "Your OJA247 payout account was changed",
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Payout account updated</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${name}, this confirms your OJA247 marketer payout details were just changed. If this wasn't you, contact support immediately — future payouts will be sent to this account.</p>
+
+      <div style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:16px; margin:20px 0;">
+        <p style="margin:0 0 4px; font-size:13px; color:#111827;"><strong>${bankName}</strong></p>
+        <p style="margin:0 0 4px; font-size:13px; color:#4b5563;">${accountName}</p>
+        <p style="margin:0; font-size:13px; color:#6b7280; font-family:monospace;">${maskedAccount}</p>
+      </div>
+
+      ${button("Go to my marketer dashboard", `${SITE_URL}/marketer-dashboard`)}
+      `,
+      { preheader: "Your payout account details were changed" }
+    ),
+  });
+}
+
+// Shared by both the User (business owner/buyer account) and Marketer ban
+// flows — same message shape either way, just a different dashboard link.
+export async function sendAccountBanStatusEmail({ to, name, banned, dashboardUrl }) {
+  return sendEmail({
+    to,
+    subject: banned ? "Your OJA247 account has been suspended" : "Your OJA247 account has been reinstated",
+    html: layout(
+      banned
+        ? `
+        <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Account suspended</h1>
+        <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${name}, your OJA247 account has been suspended by an administrator. You won't be able to log in while this is in effect.</p>
+        <p style="color:#6b7280; font-size:13px; line-height:1.6;">If you believe this is a mistake, reply to this email or contact support to ask about the reason and next steps.</p>
+        `
+        : `
+        <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Account reinstated</h1>
+        <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${name}, your OJA247 account has been reinstated — you can log in and use OJA247 normally again.</p>
+        ${button("Go to my dashboard", dashboardUrl || SITE_URL)}
+        `,
+      { preheader: banned ? "Your account has been suspended" : "Your account has been reinstated" }
+    ),
+  });
+}
+
 export default {
   sendEmail,
   sendPasswordResetEmail,

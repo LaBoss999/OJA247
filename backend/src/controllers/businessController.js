@@ -2,7 +2,17 @@ import mongoose from "mongoose";
 import Business from "../models/Business.js";
 import Order from "../models/Order.js";
 import PlatformSettings from "../models/PlatformSettings.js";
+import User from "../models/User.js";
 import { isValidCustomReferralCode, isBusinessReferralCodeTaken } from "../services/referralService.js";
+import { sendBusinessReferralCodeChangedEmail } from "../services/emailService.js";
+
+// Looks up the business owner's login email — Business itself only stores
+// a public contact phone, not an email. Same pattern as the identically-
+// named helper in subscriptionController.js/subscriptionExpiryCronController.js.
+async function getOwnerEmail(businessId) {
+  const owner = await User.findOne({ businessId }).select("email");
+  return owner?.email || null;
+}
 
 // Turns "Chioma Fashion & Co." into "chioma-fashion-co"
 const slugify = (text) =>
@@ -231,6 +241,9 @@ export const updateBusinessReferralCode = async (req, res) => {
       return res.status(400).json({ message: "That referral code is already taken. Try another." });
     }
 
+    const before = await Business.findById(id).select("referralCode");
+    const oldCode = before?.referralCode;
+
     const updated = await Business.findByIdAndUpdate(
       id,
       { referralCode: raw },
@@ -239,6 +252,18 @@ export const updateBusinessReferralCode = async (req, res) => {
 
     if (!updated) {
       return res.status(404).json({ message: "Business not found" });
+    }
+
+    if (oldCode && oldCode !== updated.referralCode) {
+      const to = await getOwnerEmail(id);
+      if (to) {
+        sendBusinessReferralCodeChangedEmail({
+          to,
+          businessName: updated.name,
+          oldCode,
+          newCode: updated.referralCode,
+        });
+      }
     }
 
     res.json({ success: true, referralCode: updated.referralCode });

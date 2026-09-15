@@ -10,7 +10,7 @@ import ReferralAttribution from "../models/ReferralAttribution.js";
 import SubscriptionPayment from "../models/SubscriptionPayment.js";
 import PointsLedger from "../models/PointsLedger.js";
 import TaxLedger from "../models/TaxLedger.js";
-import { sendVerificationReviewedEmail } from "../services/emailService.js";
+import { sendVerificationReviewedEmail, sendAccountBanStatusEmail } from "../services/emailService.js";
 
 // Get all users
 export const getAllUsers = async (req, res) => {
@@ -131,11 +131,23 @@ export const toggleUserBan = async (req, res) => {
       id,
       { banned },
       { new: true }
-    ).select("-password");
+    )
+      .select("-password")
+      .populate("businessId", "name");
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+
+    // User has no name field of its own — fall back to their business name,
+    // then plain email, so the greeting isn't blank for admin accounts
+    // (role: "admin" has no businessId) or edge cases.
+    sendAccountBanStatusEmail({
+      to: user.email,
+      name: user.businessId?.name || user.email,
+      banned: user.banned,
+      dashboardUrl: `${process.env.SITE_URL || "https://oja247.store"}/business-dashboard`,
+    });
 
     res.json(user);
   } catch (error) {
@@ -423,7 +435,34 @@ export const toggleMarketerBan = async (req, res) => {
     const marketer = await Marketer.findByIdAndUpdate(id, { banned }, { new: true }).select("-password");
     if (!marketer) return res.status(404).json({ message: "Marketer not found" });
 
+    sendAccountBanStatusEmail({
+      to: marketer.email,
+      name: marketer.name,
+      banned: marketer.banned,
+      dashboardUrl: `${process.env.SITE_URL || "https://oja247.store"}/marketer-dashboard`,
+    });
+
     res.json(marketer);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// DELETE /api/admin/marketers/:id — mirrors deleteBusiness's pattern.
+// Also removes their payout records; referral attributions that named them
+// as the referrer are left as-is (same tradeoff deleteBusiness makes with
+// old orders) — historical record of the referral stays, just with a
+// referrer that no longer resolves on populate.
+export const deleteMarketer = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await MarketerPayout.deleteMany({ marketerId: id });
+
+    const marketer = await Marketer.findByIdAndDelete(id);
+    if (!marketer) return res.status(404).json({ message: "Marketer not found" });
+
+    res.json({ message: "Marketer and their payout records deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
