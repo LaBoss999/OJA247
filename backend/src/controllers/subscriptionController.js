@@ -257,7 +257,6 @@ async function markSubscriptionPaid(reference) {
       businessId: payment.businessId,
       amountPaid: cashCollected,
       planType: payment.planType,
-      isFirstPayment: payment.isFirstPayment,
     });
   }
 

@@ -37,6 +37,12 @@ const MarketerDashboard = () => {
   const [withdrawMessage, setWithdrawMessage] = useState("");
   const [withdrawError, setWithdrawError] = useState("");
 
+  // Referral code editing
+  const [editingCode, setEditingCode] = useState(false);
+  const [codeInput, setCodeInput] = useState("");
+  const [savingCode, setSavingCode] = useState(false);
+  const [codeMessage, setCodeMessage] = useState("");
+
   const MIN_WITHDRAWAL = 1000;
 
   const handleWithdraw = async () => {
@@ -51,6 +57,34 @@ const MarketerDashboard = () => {
       setWithdrawError(err.response?.data?.message || "Could not request withdrawal.");
     }
     setWithdrawing(false);
+  };
+
+  const startEditingCode = () => {
+    setCodeInput(data.referralCode);
+    setCodeMessage("");
+    setEditingCode(true);
+  };
+
+  const handleSaveCode = async (e) => {
+    e.preventDefault();
+    setCodeMessage("");
+    const raw = codeInput.trim().toUpperCase();
+
+    if (!/^[A-Z0-9]{7,8}$/.test(raw)) {
+      setCodeMessage("Code must be 7-8 characters, letters and numbers only.");
+      return;
+    }
+
+    setSavingCode(true);
+    try {
+      await marketerApi.patch("/api/marketers/me/referral-code", { referralCode: raw });
+      setEditingCode(false);
+      loadDashboard();
+    } catch (err) {
+      setCodeMessage(err.response?.data?.message || "Could not save that code. Please try again.");
+    } finally {
+      setSavingCode(false);
+    }
   };
 
   const loadDashboard = () => {
@@ -199,7 +233,48 @@ const MarketerDashboard = () => {
         {/* Referral code + link */}
         <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6">
           <p className="text-sm font-semibold text-gray-500 mb-1">Your Referral Code</p>
-          <p className="text-2xl font-extrabold text-gray-900 mb-4">{data.referralCode}</p>
+
+          {editingCode ? (
+            <form onSubmit={handleSaveCode} className="mb-4">
+              <div className="flex items-center gap-2">
+                <input
+                  autoFocus
+                  value={codeInput}
+                  onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                  maxLength={8}
+                  placeholder="e.g. CHIOMA1"
+                  className="flex-1 p-3 border border-gray-300 rounded-lg text-lg font-bold tracking-wide focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+                <button
+                  type="submit"
+                  disabled={savingCode}
+                  className="px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm disabled:bg-gray-400"
+                >
+                  {savingCode ? "Saving..." : "Save"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingCode(false)}
+                  className="px-4 py-3 text-gray-500 hover:text-gray-700 text-sm font-semibold"
+                >
+                  Cancel
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">7-8 characters, letters and numbers only.</p>
+              {codeMessage && <p className="text-xs text-red-600 mt-1">{codeMessage}</p>}
+            </form>
+          ) : (
+            <div className="flex items-center gap-2 mb-4">
+              <p className="text-2xl font-extrabold text-gray-900">{data.referralCode}</p>
+              <button
+                onClick={startEditingCode}
+                className="flex items-center gap-1 text-xs font-semibold text-green-600 hover:text-green-700"
+              >
+                <Pencil size={12} /> Customize
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center gap-2">
             <input
               readOnly

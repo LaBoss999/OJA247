@@ -75,6 +75,15 @@ export async function isBusinessReferralCodeTaken(code, excludeBusinessId = null
   return Boolean(await Business.exists(query));
 }
 
+// Marketer's own referral code, editable the same way a vendor's is —
+// same 7-8 char alphanumeric format (isValidCustomReferralCode above),
+// just checked against Marketer instead of Business for uniqueness.
+export async function isMarketerReferralCodeTaken(code, excludeMarketerId = null) {
+  const query = { referralCode: code };
+  if (excludeMarketerId) query._id = { $ne: excludeMarketerId };
+  return Boolean(await Marketer.exists(query));
+}
+
 // --- Attribution -------------------------------------------------------
 
 const normalizeEmail = (s) => String(s || "").toLowerCase().trim();
@@ -167,17 +176,23 @@ export async function attributeReferral({ businessId, referralCodeUsed, ownerEma
 // --- Conversion (call this from the subscription payment success handler) --
 
 /**
- * Fires when a SubscriptionPayment transitions to "success".
- * Only the referral's FIRST payment triggers a payout/points award.
+ * Fires when a SubscriptionPayment transitions to "success" and real cash
+ * was actually collected (see subscriptionController.js: the points-only
+ * path never calls this at all).
+ *
+ * Gated purely on the ReferralAttribution still being "pending" — NOT on
+ * payment.isFirstPayment / business.hasPaidFirstSubscription. Those flip to
+ * true on ANY successful payment, including one fully covered by points,
+ * which set the business's "first payment" as done well before any real
+ * cash was ever collected on a referred business. Gating on that flag meant
+ * a referral whose first payment happened to be points-only would never
+ * convert on a later cash payment either — the marketer/business referrer
+ * silently never got paid. The "pending" status is already the correct,
+ * self-idempotent guard: it flips to "converted" the first time this
+ * actually runs, so a second call for the same business is a no-op below
+ * regardless of which payment number it is.
  */
-export async function handleSubscriptionConversion({
-  businessId,
-  amountPaid,
-  planType,
-  isFirstPayment,
-}) {
-  if (!isFirstPayment) return null;
-
+export async function handleSubscriptionConversion({ businessId, amountPaid, planType }) {
   const attribution = await ReferralAttribution.findOne({
     referredBusinessId: businessId,
     status: "pending",

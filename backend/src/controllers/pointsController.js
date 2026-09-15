@@ -2,6 +2,7 @@ import Business from "../models/Business.js";
 import Vendor from "../models/Vendor.js";
 import ReferralAttribution from "../models/ReferralAttribution.js";
 import PointsLedger from "../models/PointsLedger.js";
+import { sendBusinessPointsWithdrawalRequestEmail } from "../services/emailService.js";
 
 // GET /api/businesses/:id/points
 export const getPointsDashboard = async (req, res) => {
@@ -98,7 +99,13 @@ export const withdrawPoints = async (req, res) => {
       type: "withdrawn_cash",
       points: -requestedAmount,
       balanceAfter: business.pointsBalance,
-      status: "pending", // released via the same payout mechanism as marketer payouts, once decided
+      status: "pending",
+    });
+
+    await sendBusinessPointsWithdrawalRequestEmail({
+      businessName: business.name,
+      businessEmail: vendor.contactEmail || "",
+      amount: requestedAmount,
     });
 
     res.json({

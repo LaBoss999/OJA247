@@ -6,7 +6,12 @@ import {
   forgotMarketerPassword,
   resetMarketerPassword,
 } from "../controllers/marketerAuthController.js";
-import { getMarketerDashboard, updateMarketerPayoutDetails, requestMarketerWithdrawal } from "../controllers/marketerController.js";
+import {
+  getMarketerDashboard,
+  updateMarketerPayoutDetails,
+  requestMarketerWithdrawal,
+  updateMarketerReferralCode,
+} from "../controllers/marketerController.js";
 import { protectMarketer } from "../middleware/marketerAuthMiddleware.js";
 
 const router = express.Router();
@@ -19,5 +24,6 @@ router.get("/me", protectMarketer, getMarketerMe);
 router.get("/dashboard", protectMarketer, getMarketerDashboard);
 router.patch("/me/payout-details", protectMarketer, updateMarketerPayoutDetails);
 router.post("/withdraw", protectMarketer, requestMarketerWithdrawal);
+router.patch("/me/referral-code", protectMarketer, updateMarketerReferralCode);
 
 export default router;

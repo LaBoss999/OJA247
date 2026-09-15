@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import Order from "../models/Order.js";
 import Vendor from "../models/Vendor.js";
+import TaxLedger from "../models/TaxLedger.js";
 import { sendOrderConfirmationEmail, sendVendorNewOrderEmail, sendOrderPaymentFailedEmail } from "../services/emailService.js";
 
 // Shared by /verify and the webhook — idempotent, safe to call twice for the
@@ -21,6 +22,29 @@ async function markOrderPaid(reference) {
   const fullAddress = [order.customer?.address, order.customer?.city, order.customer?.state]
     .filter(Boolean)
     .join(", ");
+
+  // Accrue this order's VAT into the tax ledger the moment payment succeeds
+  // — see TaxLedger.js. Never blocks or fails the order itself; a ledger
+  // hiccup shouldn't undo a real payment, just gets logged loudly.
+  if (order.vat > 0) {
+    try {
+      await TaxLedger.create({
+        orderId: order._id,
+        orderReference: order.reference,
+        orderTotal: order.total,
+        pssCharge: order.serviceFee,
+        taxRate: order.serviceFee > 0 ? order.vat / order.serviceFee : 0,
+        taxAmount: order.vat,
+      });
+    } catch (err) {
+      // Unique index on orderId — a duplicate is just the idempotent
+      // re-run guard above having already let this through once; anything
+      // else is worth knowing about.
+      if (err?.code !== 11000) {
+        console.error(`Tax ledger entry failed for order ${order.reference}:`, err.message);
+      }
+    }
+  }
 
   await sendOrderConfirmationEmail({
     to: order.customer?.email,

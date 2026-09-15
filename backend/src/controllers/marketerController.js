@@ -2,6 +2,7 @@ import axios from "axios";
 import ReferralAttribution from "../models/ReferralAttribution.js";
 import MarketerPayout from "../models/MarketerPayout.js";
 import Marketer from "../models/Marketer.js";
+import { isValidCustomReferralCode, isMarketerReferralCodeTaken } from "../services/referralService.js";
 import { sendMarketerWithdrawalRequestEmail } from "../services/emailService.js";
 
 const MIN_WITHDRAWAL_AMOUNT = 1000;
@@ -167,5 +168,48 @@ export const updateMarketerPayoutDetails = async (req, res) => {
   } catch (error) {
     console.error("Update marketer payout details error:", error);
     res.status(500).json({ message: error.message });
+  }
+};
+// PATCH /api/marketers/me/referral-code — marketer picks their own code,
+// same rules as a vendor's own code (updateBusinessReferralCode in
+// businessController.js): 7-8 chars, letters/numbers, unique within its
+// own collection (checked against Marketer here, not Business). Scoped to
+// the authenticated marketer via req.marketer (protectMarketer), same
+// "/me/..." convention as updateMarketerPayoutDetails above — no id needed
+// from the client, no separate ownership check required.
+export const updateMarketerReferralCode = async (req, res) => {
+  try {
+    const id = req.marketer._id;
+
+    const raw = String(req.body.referralCode || "")
+      .trim()
+      .toUpperCase();
+
+    if (!isValidCustomReferralCode(raw)) {
+      return res.status(400).json({
+        message: "Referral code must be 7-8 characters, letters and numbers only.",
+      });
+    }
+
+    if (await isMarketerReferralCodeTaken(raw, id)) {
+      return res.status(400).json({ message: "That referral code is already taken. Try another." });
+    }
+
+    const updated = await Marketer.findByIdAndUpdate(
+      id,
+      { referralCode: raw },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!updated) {
+      return res.status(404).json({ message: "Marketer not found" });
+    }
+
+    res.json({ success: true, referralCode: updated.referralCode });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({ message: "That referral code is already taken. Try another." });
+    }
+    res.status(400).json({ message: error.message });
   }
 };

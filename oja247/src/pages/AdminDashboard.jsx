@@ -57,6 +57,7 @@ const NAV_ITEMS = [
   { id: "transactions", label: "Transactions", icon: Receipt },
   { id: "visibility", label: "Kill Switch", icon: ToggleLeft },
   { id: "grandfather", label: "Grandfather Exemptions", icon: CalendarClock },
+  { id: "tax-ledger", label: "Tax Ledger", icon: FileText },
 ];
 
 // Small, reusable empty-state block so every table has somewhere
@@ -255,6 +256,68 @@ const AdminDashboard = () => {
     if (activeTab !== "transactions") return;
     fetchTransactions();
   }, [activeTab, transactionTypeFilter]);
+
+  const [markingPaidId, setMarkingPaidId] = useState(null);
+  const markPointsWithdrawalPaid = async (id) => {
+    setMarkingPaidId(id);
+    try {
+      await axiosInstance.patch(`/api/admin/points-withdrawals/${id}/mark-paid`, {});
+      showToast("Marked as paid");
+      fetchTransactions();
+    } catch (err) {
+      showToast(err.response?.data?.message || "Couldn't mark as paid.", "error");
+    } finally {
+      setMarkingPaidId(null);
+    }
+  };
+
+  // Tax Ledger tab
+  const [taxEntries, setTaxEntries] = useState([]);
+  const [taxTotals, setTaxTotals] = useState({ accrued: { total: 0, count: 0 }, remitted: { total: 0, count: 0 } });
+  const [taxLoading, setTaxLoading] = useState(false);
+  const [taxStatusFilter, setTaxStatusFilter] = useState("accrued");
+  const [remittingId, setRemittingId] = useState(null);
+  // Keyed by entry id — a single shared string would let a note typed on
+  // one row get submitted against a different row if multiple accrued
+  // entries are visible at once.
+  const [remittanceNoteDrafts, setRemittanceNoteDrafts] = useState({});
+
+  const fetchTaxLedger = (status = taxStatusFilter) => {
+    setTaxLoading(true);
+    axiosInstance
+      .get("/api/admin/tax-ledger", { params: status === "all" ? {} : { status } })
+      .then((res) => {
+        setTaxEntries(res.data.entries);
+        setTaxTotals(res.data.totals);
+      })
+      .catch(() => showToast("Couldn't load tax ledger.", "error"))
+      .finally(() => setTaxLoading(false));
+  };
+
+  useEffect(() => {
+    if (activeTab !== "tax-ledger") return;
+    fetchTaxLedger();
+  }, [activeTab, taxStatusFilter]);
+
+  const markTaxRemitted = async (id) => {
+    setRemittingId(id);
+    try {
+      await axiosInstance.patch(`/api/admin/tax-ledger/${id}/mark-remitted`, {
+        remittanceNote: remittanceNoteDrafts[id] || "",
+      });
+      showToast("Marked as remitted");
+      setRemittanceNoteDrafts((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      fetchTaxLedger();
+    } catch (err) {
+      showToast(err.response?.data?.message || "Couldn't mark as remitted.", "error");
+    } finally {
+      setRemittingId(null);
+    }
+  };
 
   const viewMarketerDetail = (id) => {
     setMarketerDetailLoading(true);
@@ -1541,6 +1604,7 @@ const AdminDashboard = () => {
                         <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Amount</th>
                         <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Status</th>
                         <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Date</th>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1570,6 +1634,17 @@ const AdminDashboard = () => {
                           </td>
                           <td className="p-4 text-gray-500 text-sm">
                             {new Date(t.date).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
+                          </td>
+                          <td className="p-4">
+                            {t.kind === "points" && t.pointsType === "withdrawn_cash" && t.status === "pending" && (
+                              <button
+                                onClick={() => markPointsWithdrawalPaid(t.id)}
+                                disabled={markingPaidId === t.id}
+                                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
+                              >
+                                {markingPaidId === t.id ? "Marking…" : "Mark paid"}
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -1711,8 +1786,122 @@ const AdminDashboard = () => {
               )}
             </div>
           )}
+
+          {activeTab === "tax-ledger" && (
+            <div className="bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+              <div className="p-6 border-b border-gray-200 flex flex-col gap-4">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Tax Ledger</h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    VAT accrued on every paid order, ready to file. Mark entries remitted as you actually pay them —
+                    no automated remittance yet, this is purely a place to track what's owed vs. already filed.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { id: "accrued", label: "Accrued" },
+                      { id: "remitted", label: "Remitted" },
+                      { id: "all", label: "All" },
+                    ].map((f) => (
+                      <button
+                        key={f.id}
+                        onClick={() => setTaxStatusFilter(f.id)}
+                        className={`px-3 py-1.5 rounded-full text-sm font-medium border transition ${
+                          taxStatusFilter === f.id
+                            ? "bg-green-500/15 text-green-700 border-green-500/30"
+                            : "bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100"
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-4 text-sm text-gray-600 ml-auto">
+                    <span>
+                      Accrued: <strong className="text-gray-900">₦{taxTotals.accrued.total.toLocaleString()}</strong>{" "}
+                      ({taxTotals.accrued.count})
+                    </span>
+                    <span>
+                      Remitted: <strong className="text-gray-900">₦{taxTotals.remitted.total.toLocaleString()}</strong>{" "}
+                      ({taxTotals.remitted.count})
+                    </span>
+                  </div>
+                </div>
+              </div>
+              {taxLoading ? (
+                <div className="p-10 text-center text-gray-500 text-sm">Loading…</div>
+              ) : taxEntries.length === 0 ? (
+                <EmptyState icon={FileText} title="No tax entries" message="VAT from paid orders will show up here." />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[820px]">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Order Ref</th>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Order Total</th>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">VAT</th>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Status</th>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Date</th>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {taxEntries.map((entry) => (
+                        <tr key={entry._id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                          <td className="p-4 font-medium text-gray-900">{entry.orderReference}</td>
+                          <td className="p-4 text-gray-500">₦{Number(entry.orderTotal).toLocaleString()}</td>
+                          <td className="p-4 text-gray-500">₦{Number(entry.taxAmount).toLocaleString()}</td>
+                          <td className="p-4">
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-xs font-semibold border capitalize ${
+                                entry.taxStatus === "remitted"
+                                  ? "bg-green-500/15 text-green-700 border-green-500/30"
+                                  : "bg-yellow-500/15 text-amber-700 border-yellow-500/30"
+                              }`}
+                            >
+                              {entry.taxStatus}
+                            </span>
+                            {entry.taxStatus === "remitted" && entry.remittanceNote && (
+                              <p className="text-xs text-gray-400 mt-1 max-w-[200px]">{entry.remittanceNote}</p>
+                            )}
+                          </td>
+                          <td className="p-4 text-gray-500 text-sm">
+                            {new Date(entry.createdAt).toLocaleDateString("en-NG", { day: "numeric", month: "short", year: "numeric" })}
+                          </td>
+                          <td className="p-4">
+                            {entry.taxStatus === "accrued" && (
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  placeholder="Filing note (optional)"
+                                  value={remittanceNoteDrafts[entry._id] || ""}
+                                  onChange={(e) =>
+                                    setRemittanceNoteDrafts((prev) => ({ ...prev, [entry._id]: e.target.value }))
+                                  }
+                                  className="px-2 py-1.5 rounded-lg border border-gray-200 text-xs w-36 focus:outline-none focus:ring-2 focus:ring-green-500/30"
+                                />
+                                <button
+                                  onClick={() => markTaxRemitted(entry._id)}
+                                  disabled={remittingId === entry._id}
+                                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
+                                >
+                                  {remittingId === entry._id ? "Saving…" : "Mark remitted"}
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
+
 
       {/* Toast — replaces alert() for non-blocking confirmations/errors */}
       {toast && (

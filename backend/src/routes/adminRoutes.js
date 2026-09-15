@@ -20,6 +20,9 @@ import {
   getMarketerDetailAdmin,
   toggleMarketerBan,
   getTransactions,
+  markPointsWithdrawalPaid,
+  getTaxLedger,
+  markTaxRemitted,
 } from "../controllers/adminController.js";
 import { getPayoutBatches, markPayoutBatchPaid } from "../controllers/payoutBatchController.js";
 
@@ -64,5 +67,13 @@ router.patch("/marketers/:id/ban", toggleMarketerBan);
 
 // Unified transactions feed (subscriptions + marketer payouts + points ledger)
 router.get("/transactions", getTransactions);
+
+// Business points withdrawal (cash-out) — the points-ledger equivalent of
+// payout-batches/:marketerId/mark-paid above
+router.patch("/points-withdrawals/:id/mark-paid", markPointsWithdrawalPaid);
+
+// Tax Ledger tab (accrued per paid order — see orderController.js)
+router.get("/tax-ledger", getTaxLedger);
+router.patch("/tax-ledger/:id/mark-remitted", markTaxRemitted);
 
 export default router;

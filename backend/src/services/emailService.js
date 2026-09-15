@@ -129,6 +129,25 @@ export async function sendMarketerWithdrawalRequestEmail({ marketerName, markete
   });
 }
 
+export async function sendBusinessPointsWithdrawalRequestEmail({ businessName, businessEmail, amount }) {
+  return sendEmail({
+    to: ADMIN_EMAIL,
+    subject: `Points withdrawal request: ${businessName} — ₦${amount.toLocaleString()}`,
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Business points withdrawal request</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;"><strong>${businessName}</strong> (${businessEmail}) just requested a cash withdrawal of their referral points balance.</p>
+      <div style="background:#f0fdf4; border-radius:10px; padding:18px; text-align:center; margin:20px 0;">
+        <p style="margin:0; font-size:28px; font-weight:800; color:#16a34a;">₦${amount.toLocaleString()}</p>
+      </div>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">This is paid out to the vendor's existing verified payout account — review and mark it paid in the admin panel's transactions tab.</p>
+      ${button("Review transactions", `${SITE_URL}/admin`)}
+      `,
+      { preheader: `${businessName} requested a ₦${amount.toLocaleString()} points withdrawal` }
+    ),
+  });
+}
+
 export async function sendPasswordResetEmail({ to, name, resetUrl }) {
   return sendEmail({
     to,
@@ -548,6 +567,7 @@ export default {
   sendEmail,
   sendPasswordResetEmail,
   sendMarketerWithdrawalRequestEmail,
+  sendBusinessPointsWithdrawalRequestEmail,
   sendVendorWelcomeEmail,
   sendVerificationReviewedEmail,
   sendPayoutHoldEmail,

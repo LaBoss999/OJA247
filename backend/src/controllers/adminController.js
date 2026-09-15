@@ -9,6 +9,7 @@ import MarketerPayout from "../models/MarketerPayout.js";
 import ReferralAttribution from "../models/ReferralAttribution.js";
 import SubscriptionPayment from "../models/SubscriptionPayment.js";
 import PointsLedger from "../models/PointsLedger.js";
+import TaxLedger from "../models/TaxLedger.js";
 import { sendVerificationReviewedEmail } from "../services/emailService.js";
 
 // Get all users
@@ -500,6 +501,82 @@ export const getTransactions = async (req, res) => {
     ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     res.json({ transactions: transactions.slice(0, cap) });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PATCH /api/admin/points-withdrawals/:id/mark-paid — the business-points
+// equivalent of markPayoutBatchPaid (payoutBatchController.js). A
+// "withdrawn_cash" PointsLedger entry sits at status "pending" until an
+// admin actually sends the bank transfer, then marks it here.
+export const markPointsWithdrawalPaid = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { transferReference } = req.body;
+
+    const entry = await PointsLedger.findOneAndUpdate(
+      { _id: id, type: "withdrawn_cash", status: "pending" },
+      { status: "paid", transferReference: transferReference || "" },
+      { new: true }
+    );
+
+    if (!entry) {
+      return res.status(404).json({ message: "Pending points withdrawal not found." });
+    }
+
+    res.json({ success: true, entry });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Tax Ledger admin section — "file them there" instead of building out a
+// full remittance/batching pipeline. One row per paid order (see
+// orderController.js:markOrderPaid), each independently markable as
+// remitted with a free-text note (filing period, receipt number, whatever
+// the admin wants to record — no fixed format imposed since there's no
+// live remittance integration to validate against).
+
+// GET /api/admin/tax-ledger?status=accrued|remitted
+export const getTaxLedger = async (req, res) => {
+  try {
+    const { status } = req.query;
+    const query = status ? { taxStatus: status } : {};
+
+    const entries = await TaxLedger.find(query).sort({ createdAt: -1 }).limit(500).lean();
+
+    const totals = await TaxLedger.aggregate([
+      { $group: { _id: "$taxStatus", total: { $sum: "$taxAmount" }, count: { $sum: 1 } } },
+    ]);
+    const totalsByStatus = { accrued: { total: 0, count: 0 }, remitted: { total: 0, count: 0 } };
+    totals.forEach((t) => {
+      totalsByStatus[t._id] = { total: t.total, count: t.count };
+    });
+
+    res.json({ entries, totals: totalsByStatus });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PATCH /api/admin/tax-ledger/:id/mark-remitted
+export const markTaxRemitted = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { remittanceNote } = req.body;
+
+    const entry = await TaxLedger.findOneAndUpdate(
+      { _id: id, taxStatus: "accrued" },
+      { taxStatus: "remitted", remittedAt: new Date(), remittanceNote: remittanceNote || "" },
+      { new: true }
+    );
+
+    if (!entry) {
+      return res.status(404).json({ message: "Accrued tax ledger entry not found." });
+    }
+
+    res.json({ success: true, entry });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
