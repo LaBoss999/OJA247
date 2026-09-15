@@ -32,6 +32,7 @@ import {
   UserCog,
   Receipt,
   ArrowLeft,
+  Wallet,
 } from "lucide-react";
 import {
   LineChart,
@@ -54,6 +55,7 @@ const NAV_ITEMS = [
   { id: "users", label: "Users", icon: Users },
   { id: "vendors", label: "Vendor Verification", icon: ShieldCheck },
   { id: "marketers", label: "Marketers", icon: UserCog },
+  { id: "payout-batches", label: "Payout Batches", icon: Wallet },
   { id: "transactions", label: "Transactions", icon: Receipt },
   { id: "visibility", label: "Kill Switch", icon: ToggleLeft },
   { id: "grandfather", label: "Grandfather Exemptions", icon: CalendarClock },
@@ -142,6 +144,16 @@ const AdminDashboard = () => {
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [transactionTypeFilter, setTransactionTypeFilter] = useState("all"); // all | subscription | marketer_payout | points
   const [transactionSearch, setTransactionSearch] = useState("");
+
+  // Marketer payout batches — this week's frozen ("batched") payouts,
+  // grouped by marketer with bank details, awaiting a manual bank
+  // transfer + confirmation here. See payoutBatchController.js: your
+  // Paystack account is still Preapproved-tier, so this can't be an
+  // automatic Transfer yet.
+  const [payoutBatches, setPayoutBatches] = useState([]);
+  const [payoutBatchesLoading, setPayoutBatchesLoading] = useState(false);
+  const [markingBatchPaidId, setMarkingBatchPaidId] = useState(null);
+  const [batchTransferRefDrafts, setBatchTransferRefDrafts] = useState({});
 
   // Toast replaces alert() for non-blocking confirmations/errors.
   const [toast, setToast] = useState(null); // { message, type: "success" | "error" }
@@ -268,6 +280,40 @@ const AdminDashboard = () => {
       showToast(err.response?.data?.message || "Couldn't mark as paid.", "error");
     } finally {
       setMarkingPaidId(null);
+    }
+  };
+
+  const fetchPayoutBatches = () => {
+    setPayoutBatchesLoading(true);
+    axiosInstance
+      .get("/api/admin/payout-batches")
+      .then((res) => setPayoutBatches(res.data.batches))
+      .catch(() => showToast("Couldn't load payout batches.", "error"))
+      .finally(() => setPayoutBatchesLoading(false));
+  };
+
+  useEffect(() => {
+    if (activeTab !== "payout-batches") return;
+    fetchPayoutBatches();
+  }, [activeTab]);
+
+  const markBatchPaid = async (marketerId) => {
+    setMarkingBatchPaidId(marketerId);
+    try {
+      await axiosInstance.post(`/api/admin/payout-batches/${marketerId}/mark-paid`, {
+        transferReference: batchTransferRefDrafts[marketerId] || "",
+      });
+      showToast("Marked as paid — marketer notified by email");
+      setBatchTransferRefDrafts((prev) => {
+        const next = { ...prev };
+        delete next[marketerId];
+        return next;
+      });
+      fetchPayoutBatches();
+    } catch (err) {
+      showToast(err.response?.data?.message || "Couldn't mark as paid.", "error");
+    } finally {
+      setMarkingBatchPaidId(null);
     }
   };
 
@@ -1551,6 +1597,88 @@ const AdminDashboard = () => {
                       </table>
                     </div>
                   )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === "payout-batches" && (
+            <div className="bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-xl font-bold text-gray-900">
+                  Payout Batches <span className="text-gray-500 font-normal">({payoutBatches.length})</span>
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  This week's frozen marketer payouts, grouped by marketer. Pay manually (bank transfer or
+                  Paystack dashboard — Transfers are blocked until the Preapproved-tier review finishes), then
+                  mark paid here. The marketer gets an email confirmation automatically.
+                </p>
+              </div>
+              {payoutBatchesLoading ? (
+                <div className="p-10 text-center text-gray-500 text-sm">Loading…</div>
+              ) : payoutBatches.length === 0 ? (
+                <EmptyState
+                  icon={Wallet}
+                  title="No batches awaiting payment"
+                  message="Pending marketer payouts get frozen into a batch by the weekly cron job — nothing's due right now."
+                />
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[900px]">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Marketer</th>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Bank Details</th>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Total Owed</th>
+                        <th className="text-left p-4 font-semibold text-gray-500 text-xs uppercase tracking-wide">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payoutBatches.map((b) => (
+                        <tr key={b.marketerId} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                          <td className="p-4">
+                            <p className="font-medium text-gray-900">{b.name}</p>
+                            <p className="text-xs text-gray-500">{b.email}</p>
+                          </td>
+                          <td className="p-4 text-sm text-gray-600">
+                            {b.hasPayoutDetails ? (
+                              <>
+                                <p>{b.bankName}</p>
+                                <p className="text-xs text-gray-400">
+                                  {b.accountNumber} — {b.accountName}
+                                </p>
+                              </>
+                            ) : (
+                              <span className="px-2 py-1 rounded-full text-xs font-semibold bg-red-500/15 text-red-600 border border-red-500/30">
+                                No payout details on file
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-4 font-semibold text-gray-900">₦{Number(b.total).toLocaleString()}</td>
+                          <td className="p-4">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                placeholder="Transfer ref (optional)"
+                                value={batchTransferRefDrafts[b.marketerId] || ""}
+                                onChange={(e) =>
+                                  setBatchTransferRefDrafts((prev) => ({ ...prev, [b.marketerId]: e.target.value }))
+                                }
+                                className="px-2 py-1.5 rounded-lg border border-gray-200 text-xs w-36 focus:outline-none focus:ring-2 focus:ring-green-500/30"
+                              />
+                              <button
+                                onClick={() => markBatchPaid(b.marketerId)}
+                                disabled={markingBatchPaidId === b.marketerId}
+                                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-green-600 text-white hover:bg-green-700 transition disabled:opacity-50"
+                              >
+                                {markingBatchPaidId === b.marketerId ? "Marking…" : "Mark paid"}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
