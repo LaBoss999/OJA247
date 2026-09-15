@@ -2,7 +2,7 @@ import axios from "axios";
 import cloudinary from "../config/cloudinaryConfig.js";
 import Vendor from "../models/Vendor.js";
 import Business from "../models/Business.js";
-import { sendPayoutHoldEmail } from "../services/emailService.js";
+import { sendPayoutHoldEmail, sendBankDetailsUpdatedEmail } from "../services/emailService.js";
 
 // Simple in-memory cache — bank list changes rarely, no need to hit
 // Paystack on every page load. Swap for Redis if you're running multiple
@@ -334,6 +334,16 @@ export const onboardVendor = async (req, res) => {
         to: vendor.contactEmail,
         businessName: vendor.businessName,
         reason: payoutHoldReason,
+      });
+    } else if (bankChanged) {
+      // Name matched, so the change went through with no hold — vendor still
+      // gets zero confirmation otherwise, which is a bad experience for
+      // something touching where their money goes.
+      await sendBankDetailsUpdatedEmail({
+        to: vendor.contactEmail,
+        businessName: vendor.businessName,
+        bankName: vendor.bankName,
+        accountNumberLast4: String(vendor.accountNumber).slice(-4),
       });
     }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
 import {
@@ -13,6 +13,11 @@ import {
   Share2,
   Wallet,
   ArrowRight,
+  ShieldCheck,
+  CheckCircle2,
+  Zap,
+  Crown,
+  Sparkles,
 } from "lucide-react";
 import { getAllBusinesses, getAllProducts } from "../services/api";
 import axiosInstance from "../services/api";
@@ -29,12 +34,93 @@ const LandingPage = () => {
     categories: 0,
   });
 
+  // Generate particle positions/timings once — previously these called
+  // Math.random() directly in JSX, so ANY re-render (e.g. our new scroll-
+  // linked step state updating) regenerated all 20 particles' positions,
+  // causing them to visibly jump/reset. Memoizing with an empty dep array
+  // fixes the jitter without changing the look.
+  const particles = useMemo(
+    () =>
+      [...Array(20)].map(() => ({
+        startX: Math.random() * (typeof window !== "undefined" ? window.innerWidth : 1200),
+        startY: Math.random() * (typeof window !== "undefined" ? window.innerHeight : 800),
+        driftY1: Math.random() * -500,
+        driftY2: Math.random() * 500,
+        driftX: Math.random() * 100 - 50,
+        duration: Math.random() * 10 + 10,
+      })),
+    []
+  );
+
   const { scrollY } = useScroll();
   // Fade only the heading/badge as the user scrolls — spread over a longer
   // distance, and never fully vanish, so it doesn't visibly shift the layout
   // out from under someone who's scrolling and then trying to type.
   const opacity = useTransform(scrollY, [0, 450], [1, 0.4]);
   const scale = useTransform(scrollY, [0, 450], [1, 0.94]);
+
+  // "How it works" step cards and "Why vendors pick OJA247" cards — plain
+  // data now. These used to drive a pinned/scroll-jacked sliding section;
+  // simplified to regular whileInView reveals, same card styling kept.
+  const storySteps = [
+    {
+      icon: Store,
+      color: "from-green-500 to-emerald-500",
+      title: "Your own storefront",
+      body: "Every vendor gets a branded storefront with a shareable link — bring the customers you already have, no cold discovery needed.",
+    },
+    {
+      icon: ShieldCheck,
+      color: "from-yellow-400 to-orange-400",
+      title: "Buyers always land on your storefront",
+      body: "Browsing and search work across the whole marketplace, but every purchase — and our third-party disclaimer — happens on your storefront, where your branding and trust signals are visible.",
+    },
+    {
+      icon: Share2,
+      color: "from-orange-400 to-orange-600",
+      title: "Live referral tracking",
+      body: "Watch referrals move from signed-up to subscription-pending to paid, in real time — for both vendors and marketers.",
+    },
+    {
+      icon: Wallet,
+      color: "from-green-500 to-yellow-400",
+      title: "Instant payouts",
+      body: "Paystack splits your share automatically on every order — no holding period, no manual settlement.",
+    },
+  ];
+
+  const hScrollCards = [
+    {
+      icon: Rocket,
+      color: "from-green-500 to-emerald-500",
+      title: "List in minutes",
+      body: "Sign up, add your products, and you're live — no waiting on approval to start selling.",
+    },
+    {
+      icon: TrendingUp,
+      color: "from-yellow-400 to-orange-400",
+      title: "Grow with insight",
+      body: "See views, conversion, and your top products so you know what's actually working.",
+    },
+    {
+      icon: Megaphone,
+      color: "from-orange-400 to-orange-600",
+      title: "Marketer network",
+      body: "A built-in referral network of marketers can bring you new vendors and customers.",
+    },
+    {
+      icon: MapPin,
+      color: "from-green-500 to-yellow-400",
+      title: "Built for Nigeria",
+      body: "Paystack payouts, WhatsApp order alerts, and pricing that fits how Nigerian vendors actually sell.",
+    },
+    {
+      icon: ShieldCheck,
+      color: "from-emerald-500 to-green-600",
+      title: "Verified trust badges",
+      body: "CAC and ID verification earn vendors a visible badge, so buyers know who they're really buying from.",
+    },
+  ];
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -132,21 +218,21 @@ const LandingPage = () => {
       </div>
 
       {/* Floating Particles */}
-      {[...Array(20)].map((_, i) => (
+      {particles.map((p, i) => (
         <motion.div
           key={i}
           className="absolute w-2 h-2 bg-green-400/20 rounded-full"
           initial={{
-            x: Math.random() * window.innerWidth,
-            y: Math.random() * window.innerHeight,
+            x: p.startX,
+            y: p.startY,
           }}
           animate={{
-            y: [null, Math.random() * -500, Math.random() * 500],
-            x: [null, Math.random() * 100 - 50],
+            y: [null, p.driftY1, p.driftY2],
+            x: [null, p.driftX],
             opacity: [0.1, 0.3, 0.1],
           }}
           transition={{
-            duration: Math.random() * 10 + 10,
+            duration: p.duration,
             repeat: Infinity,
             ease: "linear",
           }}
@@ -326,6 +412,119 @@ const LandingPage = () => {
           ))}
         </motion.div>
       </main>
+
+      {/* Why vendors pick OJA247 — was a scroll-jacked pinned/sliding
+          section; simplified to a regular whileInView reveal (same as
+          every other section on this page), keeping the same card
+          styling, icons, and colors. */}
+      <section className="relative z-10 py-20 px-6 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="max-w-2xl mx-auto text-center mb-14"
+          >
+            <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-3">
+              How OJA247 works for vendors
+            </h2>
+            <p className="text-gray-600">Four steps from sign-up to getting paid.</p>
+          </motion.div>
+
+          <div className="grid sm:grid-cols-2 gap-6 mb-20">
+            {storySteps.map((step, i) => {
+              const Icon = step.icon;
+              return (
+                <motion.div
+                  key={step.title}
+                  initial={{ opacity: 0, y: 40, scale: 0.9 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.12, type: "spring", stiffness: 180, damping: 18 }}
+                  whileHover={{ y: -8, scale: 1.03 }}
+                  className="group relative p-6 sm:p-8 rounded-3xl border border-gray-200 bg-white shadow-lg hover:shadow-2xl transition-shadow overflow-hidden"
+                >
+                  {/* Big faint step number in the corner, matching the
+                      other sections' habit of a subtle background flourish */}
+                  <div className="absolute -top-2 -right-2 text-7xl font-black text-gray-100 select-none group-hover:text-gray-200 transition-colors">
+                    {i + 1}
+                  </div>
+                  <div className="relative">
+                    <motion.div
+                      whileHover={{ rotate: 360, scale: 1.15 }}
+                      transition={{ duration: 0.6 }}
+                      className={`inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br ${step.color} items-center justify-center shadow-md mb-5`}
+                    >
+                      <Icon size={26} className="text-white" />
+                    </motion.div>
+                    <div className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1">
+                      Step {i + 1}
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-black text-gray-900 mb-2">
+                      {step.title}
+                    </h3>
+                    <p className="text-gray-600 leading-relaxed">{step.body}</p>
+                  </div>
+                  {/* Connecting arrow to the next step, desktop only */}
+                  {i < storySteps.length - 1 && i % 2 === 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, x: -6 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: i * 0.12 + 0.3 }}
+                      className="hidden sm:flex absolute top-1/2 -right-3 -translate-y-1/2 w-6 h-6 rounded-full bg-white border border-gray-200 shadow items-center justify-center text-gray-300 z-10"
+                    >
+                      <ArrowRight size={12} />
+                    </motion.div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="max-w-2xl mx-auto text-center mb-14"
+          >
+            <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-3">
+              Why vendors pick OJA247
+            </h2>
+          </motion.div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {hScrollCards.map((card, i) => {
+              const Icon = card.icon;
+              return (
+                <motion.div
+                  key={card.title}
+                  initial={{ opacity: 0, scale: 0.85, rotate: -3 }}
+                  whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.08, type: "spring", stiffness: 200, damping: 18 }}
+                  whileHover={{ y: -8, scale: 1.03 }}
+                  className="group relative rounded-3xl border border-gray-200 bg-white shadow-xl p-8 sm:p-10 flex flex-col gap-5 overflow-hidden"
+                >
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-br ${card.color} opacity-0 group-hover:opacity-[0.06] transition-opacity`}
+                  />
+                  <motion.div
+                    whileHover={{ rotate: 360, scale: 1.15 }}
+                    transition={{ duration: 0.6 }}
+                    className={`relative w-16 h-16 rounded-2xl bg-gradient-to-br ${card.color} flex items-center justify-center shadow-md`}
+                  >
+                    <Icon size={30} className="text-white" />
+                  </motion.div>
+                  <h3 className="relative text-2xl font-black text-gray-900">{card.title}</h3>
+                  <p className="relative text-gray-600 leading-relaxed">{card.body}</p>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
 
       {/* Categories Section */}
       <section className="relative z-10 py-20 px-6">
@@ -548,12 +747,23 @@ const LandingPage = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {[
-              { label: "Monthly", price: "1,999", cadence: "/month", blurb: "Billed every month" },
+              {
+                label: "Monthly",
+                price: "1,999",
+                cadence: "/month",
+                blurb: "Billed every month",
+                icon: Zap,
+                accent: "from-gray-700 to-gray-900",
+                features: ["Full storefront & listings", "Order + payout dashboard", "Email & WhatsApp order alerts"],
+              },
               {
                 label: "6 Months",
                 price: "9,999",
                 cadence: "one-time",
                 blurb: "≈ ₦1,666/month — save ~17%",
+                icon: Sparkles,
+                accent: "from-orange-500 to-yellow-500",
+                features: ["Everything in Monthly", "Priority listing placement", "Referral points earn faster"],
               },
               {
                 label: "Yearly",
@@ -561,46 +771,80 @@ const LandingPage = () => {
                 cadence: "one-time",
                 blurb: "≈ ₦1,500/month — save ~25%",
                 recommended: true,
+                icon: Crown,
+                accent: "from-green-500 to-emerald-500",
+                features: ["Everything in 6 Months", "Verified badge eligibility", "Best price locked in for 12 months"],
               },
-            ].map((plan, i) => (
+            ].map((plan, i) => {
+              const PlanIcon = plan.icon;
+              return (
               <motion.div
                 key={plan.label}
                 initial={{ opacity: 0, y: 50 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                whileHover={{ y: -10, scale: 1.03 }}
-                className={`relative p-8 rounded-3xl border-2 backdrop-blur-xl shadow-lg hover:shadow-2xl transition-all ${
+                transition={{ delay: i * 0.1, type: "spring", stiffness: 200, damping: 20 }}
+                whileHover={{ y: -12, scale: 1.03 }}
+                className={`group relative p-8 rounded-3xl border-2 backdrop-blur-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden ${
                   plan.recommended
-                    ? "border-green-500 bg-white/90"
+                    ? "border-green-500 bg-white/90 sm:scale-105 shadow-green-100"
                     : "border-gray-200/50 bg-white/70"
                 }`}
               >
+                {/* Recommended plans get a subtle animated glow sweep */}
                 {plan.recommended && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold px-4 py-1 rounded-full shadow-md whitespace-nowrap">
+                  <motion.div
+                    className="pointer-events-none absolute inset-0 bg-gradient-to-br from-green-400/10 via-transparent to-yellow-300/10"
+                    animate={{ opacity: [0.4, 0.8, 0.4] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                  />
+                )}
+                {plan.recommended && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold px-4 py-1 rounded-full shadow-md whitespace-nowrap z-10">
                     Best Value
                   </span>
                 )}
-                <p className="text-gray-500 font-semibold mb-2">{plan.label}</p>
-                <p className="text-4xl font-black text-gray-900 mb-1">
-                  ₦{plan.price}
-                  <span className="text-base font-medium text-gray-400"> {plan.cadence}</span>
-                </p>
-                <p className="text-sm text-gray-500 mb-6">{plan.blurb}</p>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate("/business-form")}
-                  className={`w-full py-3 rounded-xl font-bold transition ${
-                    plan.recommended
-                      ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg hover:shadow-xl"
-                      : "bg-gray-100 text-gray-800 hover:bg-gray-200"
-                  }`}
-                >
-                  Get Started
-                </motion.button>
+                <div className="relative">
+                  <div
+                    className={`w-12 h-12 rounded-xl bg-gradient-to-br ${plan.accent} flex items-center justify-center shadow-md mb-4 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6`}
+                  >
+                    <PlanIcon size={22} className="text-white" />
+                  </div>
+                  <p className="text-gray-500 font-semibold mb-2">{plan.label}</p>
+                  <p className="text-4xl font-black text-gray-900 mb-1">
+                    ₦{plan.price}
+                    <span className="text-base font-medium text-gray-400"> {plan.cadence}</span>
+                  </p>
+                  <p className="text-sm text-gray-500 mb-6">{plan.blurb}</p>
+
+                  <ul className="space-y-2 mb-6">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2 text-sm text-gray-700">
+                        <CheckCircle2
+                          size={16}
+                          className={`mt-0.5 shrink-0 ${plan.recommended ? "text-green-500" : "text-gray-400"}`}
+                        />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => navigate("/business-form")}
+                    className={`w-full py-3 rounded-xl font-bold transition ${
+                      plan.recommended
+                        ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white shadow-lg hover:shadow-xl"
+                        : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+                    }`}
+                  >
+                    Get Started
+                  </motion.button>
+                </div>
               </motion.div>
-            ))}
+              );
+            })}
           </div>
 
           <motion.p

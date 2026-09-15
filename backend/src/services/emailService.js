@@ -233,6 +233,25 @@ export async function sendPayoutHoldEmail({ to, businessName, reason }) {
   });
 }
 
+export async function sendBankDetailsUpdatedEmail({ to, businessName, bankName, accountNumberLast4 }) {
+  return sendEmail({
+    to,
+    subject: "Your payout bank details were updated",
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Payout bank account updated</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${businessName}, this confirms your payout account on OJA247 was just changed to:</p>
+      <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px 14px; color:#166534; font-size:14px; margin:14px 0;">
+        ${bankName} &middot; account ending in ${accountNumberLast4}
+      </div>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">The account name matched your business name, so this took effect immediately — no admin review needed and payouts continue as normal. If you didn't make this change, contact us right away.</p>
+      ${button("View my dashboard", `${SITE_URL}/dashboard`)}
+      `,
+      { preheader: "Your payout bank account was just changed" }
+    ),
+  });
+}
+
 // --- Orders ------------------------------------------------------------
 
 function orderItemsTable(items) {
