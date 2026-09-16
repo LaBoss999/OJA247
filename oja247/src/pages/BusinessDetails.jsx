@@ -264,7 +264,7 @@ function BusinessDetails() {
               <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 truncate">
                 {business.name}
               </h1>
-              {business.isVerified && (
+              {business.verified && (
                 <span
                   className="inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 bg-blue-500 rounded-full flex-shrink-0"
                   title="Verified business"

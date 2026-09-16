@@ -238,8 +238,15 @@ const BusinessDashboard = () => {
   };
 
   // Documents-incomplete reminder is now a dismissible popup, not a
-  // countdown — verification no longer auto-hides the store.
-  const needsVerification = (vendorStatus?.verificationTier || "incomplete") === "incomplete";
+  // countdown — verification no longer auto-hides the store. An admin
+  // approval overrides the automatic tier check entirely — the bank-name
+  // auto-match can false-negative even for a legit vendor (e.g. name
+  // formatting differences), and once a human has manually approved them
+  // the form shouldn't keep reappearing regardless of what
+  // verificationTier still says.
+  const needsVerification =
+    vendorStatus?.reviewStatus !== "approved" &&
+    (vendorStatus?.verificationTier || "incomplete") === "incomplete";
 
   // Subscription reminder: purely computed from subscriptionExpiresAt, no
   // cron/status field to trust — matches how the backend gates public

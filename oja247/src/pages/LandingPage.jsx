@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { motion, useScroll, useTransform, useMotionValue } from "framer-motion";
 import {
   Rocket,
   Store,
@@ -21,6 +21,55 @@ import {
 } from "lucide-react";
 import { getAllBusinesses, getAllProducts } from "../services/api";
 import axiosInstance from "../services/api";
+
+// Reusable "premium" card wrapper — mouse-tracking 3D tilt with a shine
+// that follows the cursor, plus a blur-to-focus staggered entrance. Its
+// own component because useMotionValue/useTransform can't be called
+// inside the .map() loops that render each card grid.
+function TiltCard({ children, className, onClick, index = 0 }) {
+  const cardRef = useRef(null);
+  const mouseX = useMotionValue(0.5);
+  const mouseY = useMotionValue(0.5);
+  const rotateX = useTransform(mouseY, [0, 1], [7, -7]);
+  const rotateY = useTransform(mouseX, [0, 1], [-7, 7]);
+  const shineBackground = useTransform([mouseX, mouseY], ([mx, my]) =>
+    `radial-gradient(circle at ${mx * 100}% ${my * 100}%, rgba(255,255,255,0.5), transparent 60%)`
+  );
+
+  const handleMouseMove = (e) => {
+    const rect = cardRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    mouseX.set((e.clientX - rect.left) / rect.width);
+    mouseY.set((e.clientY - rect.top) / rect.height);
+  };
+  const handleMouseLeave = () => {
+    mouseX.set(0.5);
+    mouseY.set(0.5);
+  };
+
+  return (
+    <motion.div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      onClick={onClick}
+      initial={{ opacity: 0, y: 40, scale: 0.92, filter: "blur(6px)" }}
+      whileInView={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{ delay: index * 0.08, duration: 0.55, type: "spring", bounce: 0.25 }}
+      whileHover={{ scale: 1.035 }}
+      style={{ rotateX, rotateY, transformPerspective: 800 }}
+      className={className}
+    >
+      {/* Cursor-following shine — sits above the card content, below nothing */}
+      <motion.div
+        className="pointer-events-none absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20"
+        style={{ background: shineBackground }}
+      />
+      {children}
+    </motion.div>
+  );
+}
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -595,13 +644,9 @@ const LandingPage = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {businesses.map((business, i) => (
-                <motion.div
+                <TiltCard
                   key={business._id}
-                  initial={{ opacity: 0, y: 50 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  whileHover={{ y: -10, scale: 1.03 }}
+                  index={i}
                   onClick={() => navigate(`/business/${business.slug || business._id}`, { state: { internalNav: true } })}
                   className="group relative cursor-pointer"
                 >
@@ -640,7 +685,7 @@ const LandingPage = () => {
                       </div>
                     </div>
                   </div>
-                </motion.div>
+                </TiltCard>
               ))}
             </div>
           </div>
@@ -671,13 +716,9 @@ const LandingPage = () => {
 
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {featuredProducts.map((product, i) => (
-                <motion.div
+                <TiltCard
                   key={product._id}
-                  initial={{ opacity: 0, y: 50 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  whileHover={{ y: -10, scale: 1.03 }}
+                  index={i}
                   onClick={() => navigate(`/product/${product._id}`)}
                   className="group relative cursor-pointer"
                 >
@@ -720,7 +761,7 @@ const LandingPage = () => {
                       </span>
                     </div>
                   </div>
-                </motion.div>
+                </TiltCard>
               ))}
             </div>
           </div>

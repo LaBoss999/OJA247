@@ -197,6 +197,15 @@ export const reviewVendor = async (req, res) => {
       return res.status(404).json({ message: "Vendor not found" });
     }
 
+    // Admin approval is what actually grants the "Verified" trust badge on
+    // the storefront — this was never wired up anywhere before, so
+    // approving a vendor had no visible effect on their business record.
+    // Rejecting does NOT un-verify a business that was already verified
+    // from a past approval — only an explicit approval sets this.
+    if (decision === "approved") {
+      await Business.findByIdAndUpdate(vendor.businessId, { verified: true });
+    }
+
     await sendVerificationReviewedEmail({
       to: vendor.contactEmail,
       businessName: vendor.businessName,
