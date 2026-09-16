@@ -71,8 +71,42 @@ function TiltCard({ children, className, onClick, index = 0 }) {
   );
 }
 
+// Wraps a "Why vendors pick" card with real scroll-tied parallax — each
+// card drifts at a slightly different depth as the section scrolls past,
+// on top of the existing fade/scale-in. Split into two nested motion.divs
+// because the outer's `y` is a pure scroll-bound MotionValue (via style)
+// and the inner's `y` comes from whileHover — mixing both on one element
+// would fight over the same transform.
+function ScrollParallaxCard({ children, className, index = 0 }) {
+  const ref = useRef(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const depth = 30 + (index % 3) * 16;
+  const parallaxY = useTransform(scrollYProgress, [0, 1], [depth, -depth]);
+
+  return (
+    <motion.div ref={ref} style={{ y: parallaxY }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.85, rotate: index % 2 === 0 ? -3 : 3 }}
+        whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
+        viewport={{ once: true, margin: "-60px" }}
+        transition={{ delay: (index % 3) * 0.08, type: "spring", stiffness: 200, damping: 18 }}
+        whileHover={{ y: -8, scale: 1.03 }}
+        className={className}
+      >
+        {children}
+      </motion.div>
+    </motion.div>
+  );
+}
+
 const LandingPage = () => {
   const navigate = useNavigate();
+  const stepsRef = useRef(null);
+  const { scrollYProgress: stepsProgress } = useScroll({
+    target: stepsRef,
+    offset: ["start 0.75", "end 0.35"],
+  });
+  const timelineHeight = useTransform(stepsProgress, [0, 1], ["0%", "100%"]);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [businesses, setBusinesses] = useState([]);
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -244,25 +278,67 @@ const LandingPage = () => {
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-white via-gray-50 to-white overflow-hidden">
-      {/* Animated Background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+      {/* Ambient blended background — spans the full page height (via
+          `absolute` inside the page's own relative wrapper, not `fixed`
+          to the viewport) so the same green/yellow/orange blend runs
+          behind every section. Bumped up from the first pass: bigger
+          blobs, higher opacity, more of them spread the length of the
+          page, because at 10% opacity it barely registered. Sections
+          below must stay transparent/translucent for this to read as one
+          continuous background rather than cutting off partway down. */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
-          className="absolute w-96 h-96 bg-green-400/10 rounded-full blur-3xl"
+          className="absolute w-[30rem] h-[30rem] bg-green-400/25 rounded-full blur-3xl"
           animate={{ x: mousePosition.x / 20, y: mousePosition.y / 20 }}
           transition={{ type: "spring", damping: 30 }}
-          style={{ left: "10%", top: "20%" }}
+          style={{ left: "6%", top: "4%" }}
         />
         <motion.div
-          className="absolute w-96 h-96 bg-yellow-400/10 rounded-full blur-3xl"
+          className="absolute w-[30rem] h-[30rem] bg-yellow-400/25 rounded-full blur-3xl"
           animate={{ x: -mousePosition.x / 30, y: -mousePosition.y / 30 }}
           transition={{ type: "spring", damping: 30 }}
-          style={{ right: "10%", bottom: "20%" }}
+          style={{ right: "6%", top: "16%" }}
         />
         <motion.div
-          className="absolute w-64 h-64 bg-orange-400/10 rounded-full blur-3xl"
+          className="absolute w-96 h-96 bg-orange-400/20 rounded-full blur-3xl"
           animate={{ x: mousePosition.x / 40, y: -mousePosition.y / 40 }}
           transition={{ type: "spring", damping: 30 }}
-          style={{ left: "50%", top: "50%" }}
+          style={{ left: "58%", top: "32%" }}
+        />
+        {/* Below-the-fold blobs — not mouse-linked (nobody's cursor
+            reaches down here before scrolling), so they pulse gently on
+            their own to keep the blend feeling alive rather than static
+            once you've scrolled past the hero. Alternating warm/cool so
+            no single stretch of the page reads as flat white. */}
+        <motion.div
+          className="absolute w-[26rem] h-[26rem] bg-emerald-400/20 rounded-full blur-3xl"
+          animate={{ scale: [1, 1.18, 1], opacity: [0.6, 1, 0.6] }}
+          transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
+          style={{ left: "2%", top: "48%" }}
+        />
+        <motion.div
+          className="absolute w-[26rem] h-[26rem] bg-orange-400/20 rounded-full blur-3xl"
+          animate={{ scale: [1, 1.15, 1], opacity: [0.6, 1, 0.6] }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
+          style={{ right: "4%", top: "60%" }}
+        />
+        <motion.div
+          className="absolute w-[24rem] h-[24rem] bg-yellow-300/20 rounded-full blur-3xl"
+          animate={{ scale: [1, 1.2, 1], opacity: [0.6, 1, 0.6] }}
+          transition={{ duration: 11, repeat: Infinity, ease: "easeInOut", delay: 3 }}
+          style={{ left: "12%", top: "74%" }}
+        />
+        <motion.div
+          className="absolute w-[26rem] h-[26rem] bg-green-400/20 rounded-full blur-3xl"
+          animate={{ scale: [1, 1.15, 1], opacity: [0.6, 1, 0.6] }}
+          transition={{ duration: 9.5, repeat: Infinity, ease: "easeInOut", delay: 0.8 }}
+          style={{ right: "10%", top: "84%" }}
+        />
+        <motion.div
+          className="absolute w-96 h-96 bg-orange-300/20 rounded-full blur-3xl"
+          animate={{ scale: [1, 1.2, 1], opacity: [0.6, 1, 0.6] }}
+          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2.2 }}
+          style={{ left: "40%", top: "94%" }}
         />
       </div>
 
@@ -462,17 +538,18 @@ const LandingPage = () => {
         </motion.div>
       </main>
 
-      {/* Why vendors pick OJA247 — was a scroll-jacked pinned/sliding
-          section; simplified to a regular whileInView reveal (same as
-          every other section on this page), keeping the same card
-          styling, icons, and colors. */}
-      <section className="relative z-10 py-20 px-6 bg-white">
+      {/* How OJA247 works for vendors — an alternating left/right timeline
+          instead of a symmetric card grid, with a center line that draws
+          itself in as you scroll through the section (tied to scroll
+          progress via stepsProgress/timelineHeight, not just a one-shot
+          reveal). No opaque bg here, so the ambient blend shows through. */}
+      <section ref={stepsRef} className="relative z-10 py-20 px-6">
         <div className="max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="max-w-2xl mx-auto text-center mb-14"
+            className="max-w-2xl mx-auto text-center mb-16"
           >
             <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-3">
               How OJA247 works for vendors
@@ -480,55 +557,61 @@ const LandingPage = () => {
             <p className="text-gray-600">Four steps from sign-up to getting paid.</p>
           </motion.div>
 
-          <div className="grid sm:grid-cols-2 gap-6 mb-20">
-            {storySteps.map((step, i) => {
-              const Icon = step.icon;
-              return (
-                <motion.div
-                  key={step.title}
-                  initial={{ opacity: 0, y: 40, scale: 0.9 }}
-                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.12, type: "spring", stiffness: 180, damping: 18 }}
-                  whileHover={{ y: -8, scale: 1.03 }}
-                  className="group relative p-6 sm:p-8 rounded-3xl border border-gray-200 bg-white shadow-lg hover:shadow-2xl transition-shadow overflow-hidden"
-                >
-                  {/* Big faint step number in the corner, matching the
-                      other sections' habit of a subtle background flourish */}
-                  <div className="absolute -top-2 -right-2 text-7xl font-black text-gray-100 select-none group-hover:text-gray-200 transition-colors">
-                    {i + 1}
-                  </div>
-                  <div className="relative">
+          <div className="relative max-w-4xl mx-auto mb-24">
+            {/* Center line, desktop only — track in gray, fill draws in
+                as the section scrolls through view */}
+            <div className="hidden sm:block absolute left-1/2 top-2 bottom-2 w-0.5 -translate-x-1/2 bg-gray-200 rounded-full overflow-hidden">
+              <motion.div
+                style={{ height: timelineHeight }}
+                className="w-full bg-gradient-to-b from-green-500 via-yellow-400 to-orange-500"
+              />
+            </div>
+
+            <div className="space-y-10 sm:space-y-16">
+              {storySteps.map((step, i) => {
+                const Icon = step.icon;
+                const isLeft = i % 2 === 0;
+                return (
+                  <div
+                    key={step.title}
+                    className="relative sm:grid sm:grid-cols-2 sm:gap-x-12 sm:items-center"
+                  >
+                    {/* Node on the center line */}
+                    <div className="hidden sm:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-white border-4 border-green-500 shadow z-10" />
+
                     <motion.div
-                      whileHover={{ rotate: 360, scale: 1.15 }}
-                      transition={{ duration: 0.6 }}
-                      className={`inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br ${step.color} items-center justify-center shadow-md mb-5`}
-                    >
-                      <Icon size={26} className="text-white" />
-                    </motion.div>
-                    <div className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1">
-                      Step {i + 1}
-                    </div>
-                    <h3 className="text-xl sm:text-2xl font-black text-gray-900 mb-2">
-                      {step.title}
-                    </h3>
-                    <p className="text-gray-600 leading-relaxed">{step.body}</p>
-                  </div>
-                  {/* Connecting arrow to the next step, desktop only */}
-                  {i < storySteps.length - 1 && i % 2 === 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, x: -6 }}
+                      initial={{ opacity: 0, x: isLeft ? -50 : 50 }}
                       whileInView={{ opacity: 1, x: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ delay: i * 0.12 + 0.3 }}
-                      className="hidden sm:flex absolute top-1/2 -right-3 -translate-y-1/2 w-6 h-6 rounded-full bg-white border border-gray-200 shadow items-center justify-center text-gray-300 z-10"
+                      viewport={{ once: true, margin: "-80px" }}
+                      transition={{ type: "spring", stiffness: 140, damping: 20 }}
+                      whileHover={{ y: -6, scale: 1.02 }}
+                      className={`group relative p-6 sm:p-7 rounded-3xl border border-gray-200/50 bg-white/70 backdrop-blur-xl shadow-lg hover:shadow-2xl transition-shadow ${
+                        isLeft
+                          ? "sm:col-start-1 sm:text-right"
+                          : "sm:col-start-2 sm:row-start-1"
+                      }`}
                     >
-                      <ArrowRight size={12} />
+                      <motion.div
+                        whileHover={{ rotate: 360, scale: 1.15 }}
+                        transition={{ duration: 0.6 }}
+                        className={`inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br ${step.color} items-center justify-center shadow-md mb-4 ${
+                          isLeft ? "sm:ml-auto" : ""
+                        }`}
+                      >
+                        <Icon size={26} className="text-white" />
+                      </motion.div>
+                      <div className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1">
+                        Step {i + 1}
+                      </div>
+                      <h3 className="text-xl sm:text-2xl font-black text-gray-900 mb-2">
+                        {step.title}
+                      </h3>
+                      <p className="text-gray-600 leading-relaxed">{step.body}</p>
                     </motion.div>
-                  )}
-                </motion.div>
-              );
-            })}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <motion.div
@@ -542,18 +625,17 @@ const LandingPage = () => {
             </h2>
           </motion.div>
 
+          {/* Each card now has real scroll-tied parallax (ScrollParallaxCard),
+              so cards visibly drift at slightly different depths as you
+              scroll the section past, not just a fade-in on first view. */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {hScrollCards.map((card, i) => {
               const Icon = card.icon;
               return (
-                <motion.div
+                <ScrollParallaxCard
                   key={card.title}
-                  initial={{ opacity: 0, scale: 0.85, rotate: -3 }}
-                  whileInView={{ opacity: 1, scale: 1, rotate: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.08, type: "spring", stiffness: 200, damping: 18 }}
-                  whileHover={{ y: -8, scale: 1.03 }}
-                  className="group relative rounded-3xl border border-gray-200 bg-white shadow-xl p-8 sm:p-10 flex flex-col gap-5 overflow-hidden"
+                  index={i}
+                  className="group relative rounded-3xl border border-gray-200/50 bg-white/70 backdrop-blur-xl shadow-xl p-8 sm:p-10 flex flex-col gap-5 overflow-hidden"
                 >
                   <div
                     className={`absolute inset-0 bg-gradient-to-br ${card.color} opacity-0 group-hover:opacity-[0.06] transition-opacity`}
@@ -567,13 +649,105 @@ const LandingPage = () => {
                   </motion.div>
                   <h3 className="relative text-2xl font-black text-gray-900">{card.title}</h3>
                   <p className="relative text-gray-600 leading-relaxed">{card.body}</p>
-                </motion.div>
+                </ScrollParallaxCard>
               );
             })}
           </div>
         </div>
       </section>
 
+      {/* Become a Marketer — moved up here (from after the pricing section)
+          and given a real benefits list instead of a bare icon, so
+          marketers get comparable weight to the vendor pitch above rather
+          than reading as an afterthought near the bottom of the page. */}
+      <section className="relative z-10 py-16 px-6">
+        <div className="max-w-5xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="relative overflow-hidden rounded-3xl border border-gray-200/50 bg-gradient-to-br from-green-600 to-emerald-600 shadow-xl p-8 sm:p-12"
+          >
+            <div className="absolute -top-10 -right-10 w-48 h-48 bg-white/10 rounded-full blur-2xl" />
+            <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-yellow-300/10 rounded-full blur-2xl" />
+
+            <div className="relative grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
+              <div className="md:col-span-2">
+                <span className="inline-flex items-center gap-2 bg-white/15 text-white text-xs font-bold px-3 py-1 rounded-full mb-4">
+                  <Megaphone size={14} /> No storefront needed
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-black text-white mb-3">
+                  Don't sell anything? Earn by referring businesses instead.
+                </h2>
+                <p className="text-green-50 text-sm sm:text-base mb-6 max-w-xl">
+                  Become an OJA247 Marketer, share your personal referral link with vendors, and get
+                  paid in cash every time a business you refer subscribes — no inventory, no
+                  storefront, just your network.
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                  <div className="flex items-start gap-2">
+                    <Share2 size={18} className="text-white shrink-0 mt-0.5" />
+                    <p className="text-xs text-green-50">Share your unique referral link or code</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Store size={18} className="text-white shrink-0 mt-0.5" />
+                    <p className="text-xs text-green-50">A business signs up and subscribes</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Wallet size={18} className="text-white shrink-0 mt-0.5" />
+                    <p className="text-xs text-green-50">You get paid out weekly, straight to your bank</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => navigate("/register-marketer")}
+                    className="inline-flex items-center gap-2 bg-white text-green-700 font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition"
+                  >
+                    Become a Marketer <ArrowRight size={18} />
+                  </motion.button>
+
+                  <button
+                    onClick={() => navigate("/marketer-login")}
+                    className="text-sm font-semibold text-white/90 hover:text-white underline underline-offset-4"
+                  >
+                    Already a marketer? Log in
+                  </button>
+                </div>
+              </div>
+
+              {/* Benefits list replacing the old bare megaphone-in-a-circle
+                  graphic — this is the actual "more info on marketers"
+                  content the section was missing. */}
+              <div className="flex flex-col gap-3">
+                {[
+                  { icon: CheckCircle2, text: "Free to join — no inventory, no storefront to manage" },
+                  { icon: TrendingUp, text: "Live dashboard tracks every referral in real time" },
+                  { icon: Wallet, text: "Cash payouts, straight to your bank, weekly" },
+                ].map((item, i) => {
+                  const ItemIcon = item.icon;
+                  return (
+                    <motion.div
+                      key={item.text}
+                      initial={{ opacity: 0, x: 20 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: i * 0.1 }}
+                      className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-2xl px-4 py-3"
+                    >
+                      <ItemIcon size={18} className="text-yellow-300 shrink-0" />
+                      <p className="text-xs sm:text-sm text-white font-medium">{item.text}</p>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
 
       {/* Categories Section */}
       <section className="relative z-10 py-20 px-6">
@@ -888,90 +1062,7 @@ const LandingPage = () => {
             })}
           </div>
 
-          <motion.p
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="text-center text-sm text-gray-500 mt-10"
-          >
-            Prefer to earn by referring businesses instead of listing your own?{" "}
-            <button
-              onClick={() => navigate("/register-marketer")}
-              className="text-green-600 font-bold hover:underline"
-            >
-              Become a Marketer
-            </button>
-          </motion.p>
-        </div>
-      </section>
-
-      {/* Become a Marketer */}
-      <section className="relative z-10 py-16 px-6">
-        <div className="max-w-5xl mx-auto">
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="relative overflow-hidden rounded-3xl border border-gray-200/50 bg-gradient-to-br from-green-600 to-emerald-600 shadow-xl p-8 sm:p-12"
-          >
-            <div className="absolute -top-10 -right-10 w-48 h-48 bg-white/10 rounded-full blur-2xl" />
-            <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-yellow-300/10 rounded-full blur-2xl" />
-
-            <div className="relative grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
-              <div className="md:col-span-2">
-                <span className="inline-flex items-center gap-2 bg-white/15 text-white text-xs font-bold px-3 py-1 rounded-full mb-4">
-                  <Megaphone size={14} /> No storefront needed
-                </span>
-                <h2 className="text-2xl sm:text-3xl font-black text-white mb-3">
-                  Don't sell anything? Earn by referring businesses instead.
-                </h2>
-                <p className="text-green-50 text-sm sm:text-base mb-6 max-w-xl">
-                  Become an OJA247 Marketer, share your personal referral link with vendors, and get
-                  paid in cash every time a business you refer subscribes — no inventory, no
-                  storefront, just your network.
-                </p>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                  <div className="flex items-start gap-2">
-                    <Share2 size={18} className="text-white shrink-0 mt-0.5" />
-                    <p className="text-xs text-green-50">Share your unique referral link or code</p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Store size={18} className="text-white shrink-0 mt-0.5" />
-                    <p className="text-xs text-green-50">A business signs up and subscribes</p>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Wallet size={18} className="text-white shrink-0 mt-0.5" />
-                    <p className="text-xs text-green-50">You get paid out weekly, straight to your bank</p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-4">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => navigate("/register-marketer")}
-                    className="inline-flex items-center gap-2 bg-white text-green-700 font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition"
-                  >
-                    Become a Marketer <ArrowRight size={18} />
-                  </motion.button>
-
-                  <button
-                    onClick={() => navigate("/marketer-login")}
-                    className="text-sm font-semibold text-white/90 hover:text-white underline underline-offset-4"
-                  >
-                    Already a marketer? Log in
-                  </button>
-                </div>
-              </div>
-
-              <div className="hidden md:flex justify-center">
-                <div className="w-40 h-40 rounded-full bg-white/10 flex items-center justify-center">
-                  <Megaphone size={64} className="text-white" />
-                </div>
-              </div>
-            </div>
-          </motion.div>
+         
         </div>
       </section>
 
