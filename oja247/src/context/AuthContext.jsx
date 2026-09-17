@@ -73,6 +73,18 @@ export const AuthProvider = ({ children }) => {
         password
       });
 
+      // Admin accounts route through TOTP before a real session starts —
+      // no token yet, just a short-lived preAuthToken the caller uses to
+      // finish setup or submit a code (see LoginPage.jsx).
+      if (response.data.requiresTotpSetup || response.data.requiresTotpCode) {
+        return {
+          success: true,
+          requiresTotpSetup: response.data.requiresTotpSetup || false,
+          requiresTotpCode: response.data.requiresTotpCode || false,
+          preAuthToken: response.data.preAuthToken
+        };
+      }
+
       const { token, user, business } = response.data;
 
       localStorage.setItem('token', token);
@@ -86,6 +98,60 @@ export const AuthProvider = ({ children }) => {
         success: false,
         message: error.response?.data?.message || 'Login failed'
       };
+    }
+  };
+
+  // Fetches the QR code for an admin setting up TOTP for the first time.
+  // Uses preAuthToken explicitly, not the (nonexistent yet) session token.
+  const getTotpSetupQr = async (preAuthToken) => {
+    try {
+      const response = await axiosInstance.post(
+        '/api/auth/totp/setup-init',
+        {},
+        { headers: { Authorization: `Bearer ${preAuthToken}` } }
+      );
+      return { success: true, ...response.data };
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || 'Could not load 2FA setup' };
+    }
+  };
+
+  // Confirms TOTP setup with a code from the authenticator app — on
+  // success this is what actually completes login and issues a real token.
+  const completeTotpSetup = async (preAuthToken, code) => {
+    try {
+      const response = await axiosInstance.post(
+        '/api/auth/totp/setup-verify',
+        { code },
+        { headers: { Authorization: `Bearer ${preAuthToken}` } }
+      );
+      const { token, user, business } = response.data;
+      localStorage.setItem('token', token);
+      setToken(token);
+      setUser(user);
+      setBusiness(business);
+      return { success: true, user, business };
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || 'Invalid code' };
+    }
+  };
+
+  // Normal-login TOTP step for an admin who already has 2FA enabled.
+  const verifyTotpLogin = async (preAuthToken, code) => {
+    try {
+      const response = await axiosInstance.post(
+        '/api/auth/totp/verify',
+        { code },
+        { headers: { Authorization: `Bearer ${preAuthToken}` } }
+      );
+      const { token, user, business } = response.data;
+      localStorage.setItem('token', token);
+      setToken(token);
+      setUser(user);
+      setBusiness(business);
+      return { success: true, user, business };
+    } catch (error) {
+      return { success: false, message: error.response?.data?.message || 'Invalid code' };
     }
   };
 
@@ -120,6 +186,9 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     updatePassword,
+    getTotpSetupQr,
+    completeTotpSetup,
+    verifyTotpLogin,
     isAuthenticated: !!token
   };
 

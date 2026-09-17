@@ -15,6 +15,12 @@ export const protect = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+    // A pre-auth token issued mid-way through admin TOTP login must never
+    // work as a real session token — only requireTotpPendingToken accepts it.
+    if (decoded.purpose === "totp_pending") {
+      return res.status(401).json({ message: "2FA verification required" });
+    }
+
     req.user = await User.findById(decoded.id).select("-password");
 
     if (!req.user) {
@@ -29,6 +35,46 @@ export const protect = async (req, res, next) => {
   } catch (error) {
     console.error("Auth middleware error:", error);
     return res.status(401).json({ message: "Not authorized, token failed" });
+  }
+};
+
+// Only accepts the short-lived pre-auth token issued after password
+// verification but before TOTP is confirmed (see authController.js
+// login/totpSetupInit/totpSetupVerify/totpVerifyLogin). Deliberately
+// separate from protect() — a pre-auth token must never grant access to
+// any normal route, only to finishing the TOTP step it was issued for.
+export const requireTotpPendingToken = async (req, res, next) => {
+  try {
+    let token;
+
+    if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+      token = req.headers.authorization.split(" ")[1];
+    }
+
+    if (!token) {
+      return res.status(401).json({ message: "Not authorized, no token" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (decoded.purpose !== "totp_pending") {
+      return res.status(401).json({ message: "Invalid token for this step" });
+    }
+
+    req.user = await User.findById(decoded.id).select("+totpSecret");
+
+    if (!req.user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+
+    if (req.user.role !== "admin") {
+      // TOTP is admin-only — nothing else should ever hold this token type.
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    next();
+  } catch (error) {
+    return res.status(401).json({ message: "2FA session expired, please log in again" });
   }
 };
 

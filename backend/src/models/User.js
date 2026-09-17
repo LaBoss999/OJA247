@@ -36,7 +36,14 @@ const UserSchema = new mongoose.Schema(
     // SHA-256 hash is stored — the raw token only ever exists in the email
     // link and the reset request body, never in the database.
     resetPasswordTokenHash: { type: String, default: null },
-    resetPasswordExpires: { type: Date, default: null }
+    resetPasswordExpires: { type: Date, default: null },
+
+    // TOTP 2FA — mandatory for admin accounts only, never offered to
+    // owners. totpSecret is written as soon as setup starts (unconfirmed);
+    // totpEnabled only flips true once the admin has proven they can
+    // generate a valid code with it (see authController.js setup-verify).
+    totpSecret: { type: String, default: null, select: false },
+    totpEnabled: { type: Boolean, default: false }
   },
   { timestamps: true }
 );

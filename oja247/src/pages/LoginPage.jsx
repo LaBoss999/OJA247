@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, LogIn, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, LogIn, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Logo from '../assets/OJA247 VX1.png';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, getTotpSetupQr, completeTotpSetup, verifyTotpLogin } = useAuth();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -16,6 +16,17 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // TOTP step — null means still on the normal email/password form.
+  // 'setup' = first-ever admin login, needs to scan a QR code.
+  // 'verify' = admin already has 2FA enabled, just needs a code.
+  const [totpStep, setTotpStep] = useState(null);
+  const [preAuthToken, setPreAuthToken] = useState('');
+  const [totpCode, setTotpCode] = useState('');
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
+  const [manualEntryKey, setManualEntryKey] = useState('');
+  const [totpLoading, setTotpLoading] = useState(false);
+  const [totpError, setTotpError] = useState('');
 
   const handleChange = (e) => {
     setFormData(prev => ({
@@ -32,6 +43,25 @@ const LoginPage = () => {
     const result = await login(formData.email, formData.password);
 
     if (result.success) {
+      if (result.requiresTotpSetup) {
+        setPreAuthToken(result.preAuthToken);
+        setLoading(false);
+        const qr = await getTotpSetupQr(result.preAuthToken);
+        if (qr.success) {
+          setQrCodeDataUrl(qr.qrCodeDataUrl);
+          setManualEntryKey(qr.manualEntryKey);
+          setTotpStep('setup');
+        } else {
+          setError(qr.message);
+        }
+        return;
+      }
+      if (result.requiresTotpCode) {
+        setPreAuthToken(result.preAuthToken);
+        setTotpStep('verify');
+        setLoading(false);
+        return;
+      }
       if (result.user?.role === 'admin') {
         navigate('/admin');
       } else {
@@ -42,6 +72,25 @@ const LoginPage = () => {
     }
 
     setLoading(false);
+  };
+
+  const handleTotpSubmit = async (e) => {
+    e.preventDefault();
+    setTotpError('');
+    setTotpLoading(true);
+
+    const result =
+      totpStep === 'setup'
+        ? await completeTotpSetup(preAuthToken, totpCode)
+        : await verifyTotpLogin(preAuthToken, totpCode);
+
+    if (result.success) {
+      navigate('/admin');
+    } else {
+      setTotpError(result.message);
+    }
+
+    setTotpLoading(false);
   };
 
   return (
@@ -81,23 +130,123 @@ const LoginPage = () => {
             transition={{ delay: 0.3 }}
             className="text-center mb-8"
           >
-            <h1 className="text-3xl font-black bg-gradient-to-r from-green-600 to-yellow-600 bg-clip-text text-transparent mb-2">
-              Welcome Back!
-            </h1>
-            <p className="text-gray-600">Login to manage your business</p>
+            {totpStep ? (
+              <>
+                <h1 className="text-3xl font-black bg-gradient-to-r from-green-600 to-yellow-600 bg-clip-text text-transparent mb-2">
+                  {totpStep === 'setup' ? 'Set up 2FA' : 'Enter your code'}
+                </h1>
+                <p className="text-gray-600">
+                  {totpStep === 'setup'
+                    ? 'Admin accounts require an authenticator app — scan the code below to get started.'
+                    : 'Open your authenticator app and enter the 6-digit code.'}
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-3xl font-black bg-gradient-to-r from-green-600 to-yellow-600 bg-clip-text text-transparent mb-2">
+                  Welcome Back!
+                </h1>
+                <p className="text-gray-600">Login to manage your business</p>
+              </>
+            )}
           </motion.div>
 
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm"
-            >
-              {error}
-            </motion.div>
-          )}
+          {totpStep ? (
+            <>
+              {totpError && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm"
+                >
+                  {totpError}
+                </motion.div>
+              )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleTotpSubmit} className="space-y-6">
+                {totpStep === 'setup' && (
+                  <div className="flex flex-col items-center gap-3">
+                    {qrCodeDataUrl && (
+                      <img
+                        src={qrCodeDataUrl}
+                        alt="Scan with your authenticator app"
+                        className="w-48 h-48 rounded-xl border border-gray-200 p-2 bg-white"
+                      />
+                    )}
+                    <p className="text-xs text-gray-500 text-center">
+                      Can't scan? Enter this key manually in your authenticator app:
+                    </p>
+                    <code className="text-xs font-mono bg-gray-100 px-3 py-1.5 rounded-lg break-all text-center">
+                      {manualEntryKey}
+                    </code>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    6-digit code
+                  </label>
+                  <div className="relative">
+                    <ShieldCheck className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={6}
+                      value={totpCode}
+                      onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
+                      required
+                      className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white/50 backdrop-blur-sm tracking-[0.3em] text-center font-mono text-lg"
+                      placeholder="000000"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={totpLoading || totpCode.length !== 6}
+                  className={`w-full py-4 rounded-xl font-bold text-white flex items-center justify-center gap-2 ${
+                    totpLoading || totpCode.length !== 6
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'
+                  } shadow-lg hover:shadow-xl transition-all`}
+                >
+                  {totpLoading ? (
+                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <ShieldCheck size={20} />
+                      {totpStep === 'setup' ? 'Confirm & finish setup' : 'Verify'}
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTotpStep(null);
+                    setTotpCode('');
+                    setTotpError('');
+                  }}
+                  className="w-full text-sm text-gray-500 hover:text-gray-700 transition"
+                >
+                  ← Back to login
+                </button>
+              </form>
+            </>
+          ) : (
+            <>
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm"
+                >
+                  {error}
+                </motion.div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-6">
             <motion.div
               initial={{ opacity: 0, x: -50 }}
               animate={{ opacity: 1, x: 0 }}
@@ -179,44 +328,50 @@ const LoginPage = () => {
               )}
             </motion.button>
           </form>
+            </>
+          )}
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-            className="mt-6 text-center"
-          >
-            <p className="text-gray-600">
-              Don't have an account?{' '}
-              <Link
-                to="/business-form"
-                className="text-green-600 font-semibold hover:text-green-700 transition"
+          {!totpStep && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.7 }}
+                className="mt-6 text-center"
               >
-                Register your business
-              </Link>
-              {' '}or{' '}
-              <Link
-                to="/register-marketer"
-                className="text-green-600 font-semibold hover:text-green-700 transition"
-              >
-                register as a marketer
-              </Link>
-            </p>
-          </motion.div>
+                <p className="text-gray-600">
+                  Don't have an account?{' '}
+                  <Link
+                    to="/business-form"
+                    className="text-green-600 font-semibold hover:text-green-700 transition"
+                  >
+                    Register your business
+                  </Link>
+                  {' '}or{' '}
+                  <Link
+                    to="/register-marketer"
+                    className="text-green-600 font-semibold hover:text-green-700 transition"
+                  >
+                    register as a marketer
+                  </Link>
+                </p>
+              </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-            className="mt-4 text-center"
-          >
-            <Link
-              to="/"
-              className="text-sm text-gray-500 hover:text-gray-700 transition"
-            >
-              ← Back to Home
-            </Link>
-          </motion.div>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.8 }}
+                className="mt-4 text-center"
+              >
+                <Link
+                  to="/"
+                  className="text-sm text-gray-500 hover:text-gray-700 transition"
+                >
+                  ← Back to Home
+                </Link>
+              </motion.div>
+            </>
+          )}
         </div>
       </motion.div>
     </div>

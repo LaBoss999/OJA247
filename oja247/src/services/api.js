@@ -10,11 +10,16 @@ const axiosInstance = axios.create({
   },
 });
 
-// Add token to requests if it exists (for authenticated routes)
+// Add token to requests if it exists (for authenticated routes). Only
+// applies the stored session token when the caller hasn't already set an
+// explicit Authorization header — needed for the TOTP pre-auth flow, which
+// must use its own short-lived token instead of whatever's in localStorage.
 axiosInstance.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (!config.headers.Authorization) {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });

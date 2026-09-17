@@ -1,5 +1,7 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { authenticator } from "otplib";
+import QRCode from "qrcode";
 import User from "../models/User.js";
 import Business from "../models/Business.js";
 import {
@@ -12,6 +14,15 @@ import { sendVendorWelcomeEmail, sendPasswordResetEmail } from "../services/emai
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: "30d"
+  });
+};
+
+// Short-lived token issued after password verification but before TOTP is
+// confirmed — only usable against the TOTP setup/verify endpoints (see
+// requireTotpPendingToken in authMiddleware.js), never a real session.
+const generatePreAuthToken = (id) => {
+  return jwt.sign({ id, purpose: "totp_pending" }, process.env.JWT_SECRET, {
+    expiresIn: "10m"
   });
 };
 
@@ -143,6 +154,17 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
+    // TOTP is mandatory for admin accounts only — owners skip straight to
+    // a normal token below. An admin who hasn't set up TOTP yet is routed
+    // to setup instead of being let in; one who has must supply a code.
+    if (user.role === "admin") {
+      const preAuthToken = generatePreAuthToken(user._id);
+      if (!user.totpEnabled) {
+        return res.json({ success: true, requiresTotpSetup: true, preAuthToken });
+      }
+      return res.json({ success: true, requiresTotpCode: true, preAuthToken });
+    }
+
     // Generate token
     const token = generateToken(user._id);
 
@@ -159,6 +181,95 @@ export const login = async (req, res) => {
     });
   } catch (error) {
     console.error("Login error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// POST /api/auth/totp/setup-init — first login for an admin with TOTP not
+// yet enabled. Generates a secret (or reuses one already in progress, so
+// refreshing the setup screen doesn't invalidate a code the admin already
+// scanned) and returns a QR code to scan into their authenticator app.
+export const totpSetupInit = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).select("+totpSecret");
+
+    if (user.totpEnabled) {
+      return res.status(400).json({ message: "2FA is already set up on this account" });
+    }
+
+    if (!user.totpSecret) {
+      user.totpSecret = authenticator.generateSecret();
+      await user.save();
+    }
+
+    const otpauthUrl = authenticator.keyuri(user.email, "OJA247 Admin", user.totpSecret);
+    const qrCodeDataUrl = await QRCode.toDataURL(otpauthUrl);
+
+    res.json({ success: true, qrCodeDataUrl, manualEntryKey: user.totpSecret });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// POST /api/auth/totp/setup-verify — admin submits the 6-digit code from
+// their authenticator app to confirm they actually scanned it correctly.
+// Only on success does totpEnabled flip true and a real session start.
+export const totpSetupVerify = async (req, res) => {
+  try {
+    const { code } = req.body;
+    const user = await User.findById(req.user._id).select("+totpSecret");
+
+    if (user.totpEnabled) {
+      return res.status(400).json({ message: "2FA is already set up on this account" });
+    }
+    if (!user.totpSecret) {
+      return res.status(400).json({ message: "No 2FA setup in progress — call setup-init first" });
+    }
+
+    const isValid = authenticator.verify({ token: String(code || ""), secret: user.totpSecret });
+    if (!isValid) {
+      return res.status(401).json({ message: "Invalid code — check your authenticator app and try again" });
+    }
+
+    user.totpEnabled = true;
+    await user.save();
+
+    const token = generateToken(user._id);
+    res.json({
+      success: true,
+      token,
+      user: { id: user._id, email: user.email, businessId: null, role: user.role },
+      business: null
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// POST /api/auth/totp/verify — normal login step for an admin who already
+// has TOTP enabled from a previous session.
+export const totpVerifyLogin = async (req, res) => {
+  try {
+    const { code } = req.body;
+    const user = await User.findById(req.user._id).select("+totpSecret");
+
+    if (!user.totpEnabled || !user.totpSecret) {
+      return res.status(400).json({ message: "2FA is not set up on this account" });
+    }
+
+    const isValid = authenticator.verify({ token: String(code || ""), secret: user.totpSecret });
+    if (!isValid) {
+      return res.status(401).json({ message: "Invalid or expired code" });
+    }
+
+    const token = generateToken(user._id);
+    res.json({
+      success: true,
+      token,
+      user: { id: user._id, email: user.email, businessId: null, role: user.role },
+      business: null
+    });
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
