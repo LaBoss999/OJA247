@@ -1,6 +1,8 @@
 import express from "express";
 import { runWeeklyPayoutBatch } from "../controllers/payoutBatchController.js";
 import { runSubscriptionExpiryCheck } from "../controllers/subscriptionExpiryCronController.js";
+import { runDisputeEscalationCheck } from "../controllers/disputeCronController.js";
+import { runVerificationReminderCheck } from "../controllers/verificationReminderCronController.js";
 
 const router = express.Router();
 
@@ -8,5 +10,7 @@ const router = express.Router();
 // CRON_SECRET automatically — see the "crons" entry in vercel.json.
 router.get("/payout-batch", runWeeklyPayoutBatch);
 router.get("/subscription-expiry", runSubscriptionExpiryCheck);
+router.get("/dispute-escalation", runDisputeEscalationCheck);
+router.get("/verification-reminder", runVerificationReminderCheck);
 
 export default router;

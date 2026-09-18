@@ -24,6 +24,9 @@ import {
   markPointsWithdrawalPaid,
   getTaxLedger,
   markTaxRemitted,
+  adminListDisputes,
+  adminResolveDispute,
+  getFlaggedVendors,
 } from "../controllers/adminController.js";
 import { getPayoutBatches, markPayoutBatchPaid } from "../controllers/payoutBatchController.js";
 
@@ -77,5 +80,13 @@ router.patch("/points-withdrawals/:id/mark-paid", markPointsWithdrawalPaid);
 // Tax Ledger tab (accrued per paid order — see orderController.js)
 router.get("/tax-ledger", getTaxLedger);
 router.patch("/tax-ledger/:id/mark-remitted", markTaxRemitted);
+
+// Disputes — only escalated ones (Phase 2's vendor self-resolve view lives
+// under /api/disputes, not here). See adminController.js for why
+// resolution here is two independent levers (record-keeping status +
+// the existing ban toggle above) rather than one flow.
+router.get("/disputes", adminListDisputes);
+router.get("/disputes/flagged-vendors", getFlaggedVendors);
+router.patch("/disputes/:id/resolve", adminResolveDispute);
 
 export default router;

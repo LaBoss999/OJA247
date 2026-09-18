@@ -10,6 +10,7 @@ import ReferralAttribution from "../models/ReferralAttribution.js";
 import SubscriptionPayment from "../models/SubscriptionPayment.js";
 import PointsLedger from "../models/PointsLedger.js";
 import TaxLedger from "../models/TaxLedger.js";
+import Dispute, { FLAG_WINDOW_DAYS, FLAG_MIN_ORDERS, FLAG_DISPUTE_RATE_THRESHOLD } from "../models/Dispute.js";
 import { sendVerificationReviewedEmail, sendAccountBanStatusEmail } from "../services/emailService.js";
 
 // Get all users
@@ -137,6 +138,21 @@ export const toggleUserBan = async (req, res) => {
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
+    }
+
+    // Banning previously only blocked login (see authMiddleware.js) — the
+    // storefront itself stayed publicly listed and orderable, which made
+    // the ban lever mostly toothless for the actual problem it's meant to
+    // solve (see the disputes phased plan doc). isHidden currently has no
+    // other writer anywhere in the codebase, so this simple two-way
+    // toggle is safe for now; if a second reason to hide a business shows
+    // up later (e.g. the 30-day verification deadline), this will need a
+    // reason flag instead of a bare boolean so the two don't stomp on
+    // each other.
+    if (user.businessId) {
+      await Business.findByIdAndUpdate(user.businessId._id || user.businessId, {
+        isHidden: Boolean(banned),
+      });
     }
 
     // User has no name field of its own — fall back to their business name,
@@ -625,6 +641,122 @@ export const markTaxRemitted = async (req, res) => {
     }
 
     res.json({ success: true, entry });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+// Disputes admin section — only escalated disputes land here (Phase 2's
+// vendor self-resolve handles "open" ones). Admin has two independent
+// levers, not one resolution flow: mark the dispute resolved/unresolved
+// (record-keeping only — the platform doesn't process refunds itself,
+// see the disputes phased plan doc) and separately, ban the vendor via
+// the existing toggleUserBan above if the pattern warrants it.
+
+// GET /api/admin/disputes?status=escalated
+export const adminListDisputes = async (req, res) => {
+  try {
+    const { status } = req.query;
+    const query = status ? { status } : { status: "escalated" };
+
+    const disputes = await Dispute.find(query).sort({ createdAt: -1 }).limit(200);
+    res.json({ disputes });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// PATCH /api/admin/disputes/:id/resolve
+// body: { outcome: "resolved" | "unresolved", note, refunded? }
+export const adminResolveDispute = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { outcome, note, refunded } = req.body;
+
+    if (!["resolved", "unresolved"].includes(outcome)) {
+      return res.status(400).json({ message: "outcome must be 'resolved' or 'unresolved'" });
+    }
+
+    const dispute = await Dispute.findById(id);
+    if (!dispute) {
+      return res.status(404).json({ message: "Dispute not found" });
+    }
+    if (dispute.status !== "escalated") {
+      return res.status(400).json({
+        message: `Only escalated disputes can be resolved here (this one is ${dispute.status}).`,
+      });
+    }
+
+    dispute.status = outcome;
+    dispute.adminResolution = { note: note || "", resolvedBy: req.user._id, resolvedAt: new Date() };
+    await dispute.save();
+
+    const order = await Order.findById(dispute.orderId);
+    if (order && order.status === "disputed") {
+      order.status = refunded ? "refunded" : "paid";
+      await order.save();
+    }
+
+    res.json({ dispute });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// GET /api/admin/disputes/flagged-vendors
+// Phase 5: surfaces vendors whose dispute rate is high enough to be worth
+// a look — not an automatic action, since there's nothing between
+// "visible to admin" and the ban toggle above. Dispute count and order
+// count are both scoped to the same rolling window (FLAG_WINDOW_DAYS) so
+// a vendor's ancient history doesn't drag their current standing around.
+export const getFlaggedVendors = async (req, res) => {
+  try {
+    const windowStart = new Date(Date.now() - FLAG_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
+    const [disputeCounts, orderCounts] = await Promise.all([
+      Dispute.aggregate([
+        { $match: { createdAt: { $gte: windowStart } } },
+        { $group: { _id: "$businessId", disputeCount: { $sum: 1 } } },
+      ]),
+      // Any order that actually went through payment counts toward the
+      // denominator, whether or not it later ended up disputed/refunded —
+      // "disputed"/"refunded" are still real orders, just ones that had a
+      // problem. Multi-vendor orders unwind so each vendor only gets
+      // credited for their own share of the order.
+      Order.aggregate([
+        { $match: { status: { $in: ["paid", "disputed", "refunded"] }, createdAt: { $gte: windowStart } } },
+        { $unwind: "$vendors" },
+        { $group: { _id: "$vendors.businessId", orderCount: { $sum: 1 } } },
+      ]),
+    ]);
+
+    const orderCountByBusiness = new Map(orderCounts.map((o) => [String(o._id), o.orderCount]));
+
+    const candidates = disputeCounts
+      .map((d) => {
+        const businessId = String(d._id);
+        const orderCount = orderCountByBusiness.get(businessId) || 0;
+        const rate = orderCount > 0 ? d.disputeCount / orderCount : 0;
+        return { businessId, disputeCount: d.disputeCount, orderCount, rate };
+      })
+      .filter((c) => c.orderCount >= FLAG_MIN_ORDERS && c.rate >= FLAG_DISPUTE_RATE_THRESHOLD)
+      .sort((a, b) => b.rate - a.rate);
+
+    const businesses = await Business.find({ _id: { $in: candidates.map((c) => c.businessId) } })
+      .select("name")
+      .lean();
+    const nameByBusiness = new Map(businesses.map((b) => [String(b._id), b.name]));
+
+    const flagged = candidates.map((c) => ({
+      ...c,
+      businessName: nameByBusiness.get(c.businessId) || "Unknown business",
+    }));
+
+    res.json({
+      windowDays: FLAG_WINDOW_DAYS,
+      minOrders: FLAG_MIN_ORDERS,
+      threshold: FLAG_DISPUTE_RATE_THRESHOLD,
+      flagged,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

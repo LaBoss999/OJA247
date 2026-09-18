@@ -1,5 +1,10 @@
 import mongoose from "mongoose";
 
+// How often (in days) a vendor stuck below Verified tier gets a reminder
+// email. This replaced the old 30-day auto-hide deadline — verification
+// is nudged now, never enforced by hiding the storefront.
+export const VERIFICATION_REMINDER_INTERVAL_DAYS = 7;
+
 const VendorSchema = new mongoose.Schema(
   {
     businessId: { type: mongoose.Schema.Types.ObjectId, ref: "Business", required: true, unique: true },
@@ -34,6 +39,10 @@ const VendorSchema = new mongoose.Schema(
       enum: ["incomplete", "basic", "verified"],
       default: "incomplete",
     },
+    // When the last "complete your verification" reminder email went out —
+    // lets the cron space reminders VERIFICATION_REMINDER_INTERVAL_DAYS
+    // apart instead of re-sending every time the job runs.
+    lastVerificationReminderAt: { type: Date, default: null },
 
     // Manual admin review — automatic verificationTier only reflects which
     // documents were submitted, not whether an admin has confirmed them.

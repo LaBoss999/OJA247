@@ -50,7 +50,13 @@ const OrderSchema = new mongoose.Schema(
     deliveryMethod: { type: String, default: "delivery" },
     status: {
       type: String,
-      enum: ["pending", "paid", "failed", "cancelled"],
+      // disputed/refunded added alongside the Dispute model (see
+      // Dispute.js) — previously an order just went dark after "paid"
+      // with no way to reflect a dispute or an off-platform refund. The
+      // platform doesn't process refunds itself (see the disputes phased
+      // plan doc), so "refunded" here is a record-keeping label set by
+      // whoever resolves the dispute, not a trigger for any payment action.
+      enum: ["pending", "paid", "failed", "cancelled", "disputed", "refunded"],
       default: "pending",
     },
     paymentStatus: {

@@ -2,6 +2,7 @@ import express from "express";
 import {
   createOrder,
   getOrderByReference,
+  lookupOrderForDispute,
   updateOrderStatus,
   verifyOrderPayment,
   getOrdersByBusiness,
@@ -16,6 +17,9 @@ router.post("/verify/:reference", verifyOrderPayment);
 // Public — Paystack calls this directly, verified via signature, not a user token
 router.post("/webhook", handlePaystackWebhook);
 router.get("/reference/:reference", getOrderByReference);
+// Email-verified lookup — see lookupOrderForDispute's comment for why this
+// is separate from the bare-reference endpoint above.
+router.get("/lookup", lookupOrderForDispute);
 router.patch("/reference/:reference", updateOrderStatus);
 
 // Vendor's own orders — requires a valid logged-in user (any authenticated

@@ -678,6 +678,144 @@ export async function sendAccountBanStatusEmail({ to, name, banned, dashboardUrl
   });
 }
 
+const DISPUTE_REASON_LABELS = {
+  item_not_received: "Item not received",
+  wrong_item: "Wrong item received",
+  damaged: "Item arrived damaged",
+  not_as_described: "Not as described",
+  other: "Other",
+};
+
+export async function sendDisputeFiledVendorEmail({
+  to,
+  businessName,
+  orderReference,
+  reason,
+  description,
+  selfResolveDeadline,
+}) {
+  return sendEmail({
+    to,
+    subject: `A customer has raised a dispute — order ${orderReference}`,
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">A customer has a problem with an order</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${businessName}, a customer has raised a dispute on order <strong>${orderReference}</strong>.</p>
+      <div style="background:#fff7ed; border-radius:10px; padding:16px 18px; margin:20px 0;">
+        <p style="margin:0 0 6px; font-size:13px; color:#9a3412; font-weight:700;">${DISPUTE_REASON_LABELS[reason] || reason}</p>
+        <p style="margin:0; font-size:14px; color:#4b5563; line-height:1.6;">${description}</p>
+      </div>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Please reach out to the customer directly to sort this out. You have until <strong>${formatDate(selfResolveDeadline)}</strong> to resolve it — after that it moves to platform review.</p>
+      ${button("View in dashboard", `${SITE_URL}/business-dashboard`)}
+      `,
+      { preheader: `Dispute on order ${orderReference}: ${DISPUTE_REASON_LABELS[reason] || reason}` }
+    ),
+  });
+}
+
+export async function sendDisputeFiledCustomerEmail({ to, customerName, businessName, orderReference }) {
+  return sendEmail({
+    to,
+    subject: `We've received your report on order ${orderReference}`,
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">We've let ${businessName} know</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${customerName}, thanks for letting us know about an issue with order <strong>${orderReference}</strong>. We've notified ${businessName} and asked them to reach out to you directly to sort it out.</p>
+      <p style="color:#6b7280; font-size:13px; line-height:1.6;">If you don't hear back within a week, this will automatically move to OJA247 for review.</p>
+      `,
+      { preheader: `We've notified ${businessName} about your order` }
+    ),
+  });
+}
+
+export async function sendDisputeResolvedCustomerEmail({
+  to,
+  customerName,
+  businessName,
+  orderReference,
+  refunded,
+}) {
+  return sendEmail({
+    to,
+    subject: `${businessName} has resolved your report on order ${orderReference}`,
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">Your dispute has been marked resolved</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${customerName}, ${businessName} has marked the issue with order <strong>${orderReference}</strong> as resolved${refunded ? ", and noted that you've been refunded" : ""}.</p>
+      <p style="color:#6b7280; font-size:13px; line-height:1.6;">If that doesn't match what actually happened, reply to this email and we'll take another look.</p>
+      `,
+      { preheader: `${businessName} marked order ${orderReference} resolved` }
+    ),
+  });
+}
+
+export async function sendDisputeEscalatedVendorEmail({ to, businessName, orderReference, reason }) {
+  return sendEmail({
+    to,
+    subject: `Dispute on order ${orderReference} has moved to platform review`,
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">This dispute is now under platform review</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${businessName}, the dispute on order <strong>${orderReference}</strong> (${DISPUTE_REASON_LABELS[reason] || reason}) wasn't marked resolved within the response window, so OJA247 is stepping in to review it.</p>
+      <p style="color:#6b7280; font-size:13px; line-height:1.6;">You can still resolve this directly with the customer — let us know if you do.</p>
+      `,
+      { preheader: `Dispute on order ${orderReference} escalated to platform review` }
+    ),
+  });
+}
+
+export async function sendDisputeEscalatedCustomerEmail({ to, customerName, businessName, orderReference }) {
+  return sendEmail({
+    to,
+    subject: `Your report on order ${orderReference} is now with OJA247`,
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">We're taking a closer look</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${customerName}, ${businessName} didn't resolve your report on order <strong>${orderReference}</strong> within the response window, so OJA247 is now reviewing it directly.</p>
+      `,
+      { preheader: `OJA247 is reviewing your report on order ${orderReference}` }
+    ),
+  });
+}
+
+export async function sendDisputeEscalatedAdminEmail({ businessName, orderReference, reason, disputeId }) {
+  return sendEmail({
+    to: ADMIN_EMAIL,
+    subject: `Dispute auto-escalated — ${businessName}, order ${orderReference}`,
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">A dispute needs review</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;"><strong>${businessName}</strong> didn't resolve a dispute on order <strong>${orderReference}</strong> (${DISPUTE_REASON_LABELS[reason] || reason}) within the self-resolve window, so it's moved to platform review.</p>
+      ${button("Review in admin panel", `${SITE_URL}/admin`)}
+      `,
+      { preheader: `Dispute on order ${orderReference} needs admin review` }
+    ),
+  });
+}
+
+export async function sendVerificationReminderEmail({ to, businessName, verificationTier, dashboardUrl }) {
+  return sendEmail({
+    to,
+    subject:
+      verificationTier === "basic"
+        ? "You're on Basic — finish verification for higher limits"
+        : "Finish setting up your vendor verification",
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">A quick reminder</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${businessName}, your storefront is live${
+        verificationTier === "basic" ? " on the Basic tier" : ""
+      } — no action needed to keep selling. But finishing verification${
+        verificationTier === "basic" ? " (CAC document, address proof, and a selfie)" : ""
+      } raises your payout limits and unlocks the Verified badge on your storefront.</p>
+      ${button("Finish verification", dashboardUrl)}
+      <p style="color:#9ca3af; font-size:12px; line-height:1.6; margin-top:20px;">This is just a nudge — your store stays fully visible either way.</p>
+      `,
+      { preheader: `Finish verification for higher payout limits and a verified badge` }
+    ),
+  });
+}
+
 export default {
   sendEmail,
   sendPasswordResetEmail,
@@ -696,4 +834,11 @@ export default {
   sendMarketerConversionEmail,
   sendMarketerPayoutPaidEmail,
   sendBusinessReferralConversionEmail,
+  sendDisputeFiledVendorEmail,
+  sendDisputeFiledCustomerEmail,
+  sendDisputeResolvedCustomerEmail,
+  sendDisputeEscalatedVendorEmail,
+  sendDisputeEscalatedCustomerEmail,
+  sendDisputeEscalatedAdminEmail,
+  sendVerificationReminderEmail,
 };

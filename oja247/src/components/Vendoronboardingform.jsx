@@ -388,18 +388,7 @@ export default function VendorOnboardingForm({ onSubmitted } = {}) {
         {result.verificationTier === 'basic' && (
           <p className="vof-note">
             Add your CAC document, address proof, and a selfie any time to move up to Verified — it raises
-            your payout limits and unlocks the Verified badge.
-          </p>
-        )}
-        {result.verificationDeadline && (
-          <p className="vof-note">
-            Complete your verification before{' '}
-            {new Date(result.verificationDeadline).toLocaleDateString('en-NG', {
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-            })}{' '}
-            or your listings will be hidden until you do.
+            your payout limits and unlocks the Verified badge. We'll send the occasional reminder until it's done.
           </p>
         )}
       </div>

@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import Order from "../models/Order.js";
 import Vendor from "../models/Vendor.js";
+import Business from "../models/Business.js";
 import TaxLedger from "../models/TaxLedger.js";
 import { sendOrderConfirmationEmail, sendVendorNewOrderEmail, sendOrderPaymentFailedEmail } from "../services/emailService.js";
 
@@ -206,6 +207,24 @@ export const createOrder = async (req, res) => {
         })
       : [];
 
+    // Belt-and-suspenders on top of the public listing filter: isHidden
+    // (set on ban — see adminController.js toggleUserBan, and previously
+    // the storefront could still be checked out against directly even
+    // when hidden from browse/search) has to be checked here too, or
+    // someone with a stale/shared product link can still complete a
+    // purchase from a vendor that's supposed to be shut down.
+    const vendorIds = vendors.map((v) => v.businessId).filter(Boolean);
+    if (vendorIds.length > 0) {
+      const hiddenVendors = await Business.find({ _id: { $in: vendorIds }, isHidden: true }).select("name");
+      if (hiddenVendors.length > 0) {
+        return res.status(400).json({
+          message: `${hiddenVendors.map((b) => b.name).join(", ")} ${
+            hiddenVendors.length === 1 ? "is" : "are"
+          } no longer available. Remove ${hiddenVendors.length === 1 ? "it" : "them"} from your cart to continue.`,
+        });
+      }
+    }
+
     // Every vendor in the cart must have a working payout subaccount before
     // we accept payment — otherwise their share of the money has nowhere to
     // automatically go.
@@ -363,6 +382,38 @@ export const updateOrderStatus = async (req, res) => {
   } catch (error) {
     console.error("Update order status error:", error);
     res.status(500).json({ message: "Error updating order" });
+  }
+};
+
+// GET /api/orders/lookup?reference=...&email=...
+// Unlike getOrderByReference below (bare reference, no verification — used
+// on the checkout confirmation page right after payment, where the
+// customer just came from Paystack and the reference alone is enough),
+// this also checks the customer's email matches, since it's meant for
+// contexts where the requester isn't necessarily the person who just paid
+// — e.g. filing a dispute later. Guards against someone who merely has a
+// reference number (which can leak into logs, screenshots, etc.) pulling
+// up someone else's order.
+export const lookupOrderForDispute = async (req, res) => {
+  try {
+    const { reference, email } = req.query;
+
+    if (!reference || !email) {
+      return res.status(400).json({ message: "reference and email are required" });
+    }
+
+    const order = await Order.findOne({ reference });
+
+    if (!order || order.customer?.email?.toLowerCase() !== String(email).toLowerCase()) {
+      // Same message either way — don't reveal whether the reference
+      // exists to someone who guessed it with the wrong email.
+      return res.status(404).json({ message: "No matching order found" });
+    }
+
+    res.json({ order });
+  } catch (error) {
+    console.error("Lookup order for dispute error:", error);
+    res.status(500).json({ message: "Error looking up order" });
   }
 };
 
