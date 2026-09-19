@@ -4,6 +4,7 @@ import Vendor from "../models/Vendor.js";
 import Business from "../models/Business.js";
 import TaxLedger from "../models/TaxLedger.js";
 import { sendOrderConfirmationEmail, sendVendorNewOrderEmail, sendOrderPaymentFailedEmail } from "../services/emailService.js";
+import { sendVendorNewOrderWhatsApp } from "../services/whatsappService.js";
 
 // Shared by /verify and the webhook — idempotent, safe to call twice for the
 // same reference (e.g. if the customer's browser confirms AND the webhook
@@ -63,9 +64,12 @@ async function markOrderPaid(reference) {
 
   const businessIds = order.vendors.map((v) => v.businessId).filter(Boolean);
   const vendorRecords = await Vendor.find({ businessId: { $in: businessIds } }).select(
-    "businessId contactEmail"
+    "businessId contactEmail contactWhatsapp"
   );
   const emailByBusinessId = new Map(vendorRecords.map((v) => [v.businessId.toString(), v.contactEmail]));
+  const whatsappByBusinessId = new Map(
+    vendorRecords.map((v) => [v.businessId.toString(), v.contactWhatsapp])
+  );
 
   // forEach can't be awaited (its callback's returned promises are
   // discarded), so this used to race the same way the other unawaited
@@ -73,23 +77,47 @@ async function markOrderPaid(reference) {
   // vendor's email is done.
   await Promise.all(
     order.vendors.map((v) => {
-      const vendorEmail = v.businessId && emailByBusinessId.get(v.businessId.toString());
-      if (!vendorEmail) return null;
-
       const vendorItems = order.items.filter((i) => i.businessId === v.businessId);
-      return sendVendorNewOrderEmail({
-        to: vendorEmail,
-        businessName: v.businessName,
-        customerName: order.customer?.fullName,
-        customerPhone: order.customer?.phone,
-        reference: order.reference,
-        items: vendorItems,
-        subtotal: v.itemsSubtotal,
-        deliveryFee: v.deliveryFee,
-        deliveryMethod: order.deliveryMethod,
-        address: fullAddress,
-        note: order.customer?.note,
-      });
+
+      const emailPromise = (() => {
+        const vendorEmail = v.businessId && emailByBusinessId.get(v.businessId.toString());
+        if (!vendorEmail) return null;
+        return sendVendorNewOrderEmail({
+          to: vendorEmail,
+          businessName: v.businessName,
+          customerName: order.customer?.fullName,
+          customerPhone: order.customer?.phone,
+          reference: order.reference,
+          items: vendorItems,
+          subtotal: v.itemsSubtotal,
+          deliveryFee: v.deliveryFee,
+          deliveryMethod: order.deliveryMethod,
+          address: fullAddress,
+          note: order.customer?.note,
+        });
+      })();
+
+      // WhatsApp is best-effort alongside email, not instead of it — if
+      // the number's missing, unrecognized, or Twilio isn't configured,
+      // sendVendorNewOrderWhatsApp already resolves with {sent:false}
+      // rather than throwing (see whatsappService.js), so this never
+      // blocks the order flow or the email above.
+      const whatsappPromise = (() => {
+        const vendorWhatsapp = v.businessId && whatsappByBusinessId.get(v.businessId.toString());
+        if (!vendorWhatsapp) return null;
+        const itemsSummary = vendorItems.map((i) => `${i.quantity}x ${i.name}`).join(", ");
+        return sendVendorNewOrderWhatsApp({
+          to: vendorWhatsapp,
+          orderReference: order.reference,
+          customerName: order.customer?.fullName,
+          customerPhone: order.customer?.phone,
+          itemsSummary,
+          total: v.itemsSubtotal,
+          dashboardUrl: `${process.env.SITE_URL || "https://oja247.store"}/business-dashboard`,
+        });
+      })();
+
+      return Promise.all([emailPromise, whatsappPromise]);
     })
   );
 

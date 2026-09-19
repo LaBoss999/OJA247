@@ -205,7 +205,7 @@ export async function sendVendorWelcomeEmail({ to, businessName }) {
       <p style="color:#4b5563; font-size:14px; line-height:1.6; margin-bottom:4px;">Here's what to do next:</p>
       <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%; margin: 12px 0 4px;">
         <tr>
-          <td style="padding:10px 0; border-bottom:1px solid #f1f2f4; font-size:14px; color:#374151;">✅&nbsp;&nbsp;Complete vendor verification for higher payout limits and a verified badge</td>
+          <td style="padding:10px 0; border-bottom:1px solid #f1f2f4; font-size:14px; color:#374151;">✅&nbsp;&nbsp;Complete vendor verification for a verified badge on your storefront</td>
         </tr>
         <tr>
           <td style="padding:10px 0; border-bottom:1px solid #f1f2f4; font-size:14px; color:#374151;">📦&nbsp;&nbsp;Add your first products</td>
@@ -230,7 +230,7 @@ export async function sendVerificationReviewedEmail({ to, businessName, decision
       approved
         ? `
           <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">You're verified ✅</h1>
-          <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${businessName}, your vendor verification documents have been approved. Higher payout limits and your verified badge are now active on your storefront.</p>
+          <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${businessName}, your vendor verification documents have been approved. Your verified badge is now active on your storefront.</p>
           ${button("View my dashboard", `${SITE_URL}/dashboard`)}
           `
         : `
@@ -826,7 +826,7 @@ export async function sendVerificationReminderEmail({ to, businessName, verifica
     to,
     subject:
       verificationTier === "basic"
-        ? "You're on Basic — finish verification for higher limits"
+        ? "You're on Basic — finish verification for the Verified badge"
         : "Finish setting up your vendor verification",
     html: layout(
       `
@@ -835,11 +835,11 @@ export async function sendVerificationReminderEmail({ to, businessName, verifica
         verificationTier === "basic" ? " on the Basic tier" : ""
       } — no action needed to keep selling. But finishing verification${
         verificationTier === "basic" ? " (CAC document, address proof, and a selfie)" : ""
-      } raises your payout limits and unlocks the Verified badge on your storefront.</p>
+      } unlocks the Verified badge on your storefront.</p>
       ${button("Finish verification", dashboardUrl)}
       <p style="color:#9ca3af; font-size:12px; line-height:1.6; margin-top:20px;">This is just a nudge — your store stays fully visible either way.</p>
       `,
-      { preheader: `Finish verification for higher payout limits and a verified badge` }
+      { preheader: `Finish verification to unlock the Verified badge` }
     ),
   });
 }

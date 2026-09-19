@@ -387,8 +387,8 @@ export default function VendorOnboardingForm({ onSubmitted } = {}) {
         </p>
         {result.verificationTier === 'basic' && (
           <p className="vof-note">
-            Add your CAC document, address proof, and a selfie any time to move up to Verified — it raises
-            your payout limits and unlocks the Verified badge. We'll send the occasional reminder until it's done.
+            Add your CAC document, address proof, and a selfie any time to move up to Verified — it unlocks
+            the Verified badge on your storefront. We'll send the occasional reminder until it's done.
           </p>
         )}
       </div>
@@ -513,8 +513,7 @@ export default function VendorOnboardingForm({ onSubmitted } = {}) {
 
         <p className="vof-tier-note">
           This gets you to <strong>Basic</strong> — you can list right away. Add the two documents below
-          any time in your first 30 days to reach <strong>Verified</strong> (higher payout limits, Verified
-          badge).
+          any time to reach <strong>Verified</strong> and unlock the Verified badge.
         </p>
 
         <div className="vof-row">
