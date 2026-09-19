@@ -346,7 +346,15 @@ export const forgotPassword = async (req, res) => {
     await user.save();
 
     const resetUrl = `${process.env.SITE_URL || "https://oja247.store"}/reset-password?token=${rawToken}&type=vendor`;
-    await sendPasswordResetEmail({ to: user.email, name: "", resetUrl });
+    const result = await sendPasswordResetEmail({ to: user.email, name: "", resetUrl });
+    // The client always gets the same generic response regardless (see
+    // genericResponse above — don't leak account existence), but a failed
+    // send here means this user has no way to reset their password until
+    // it's fixed, so it needs to be loud in server logs even though the
+    // response to them can't say so.
+    if (!result.sent) {
+      console.error(`Password reset email did not send for ${user.email}:`, result.error || "(no transporter configured)");
+    }
 
     res.json(genericResponse);
   } catch (error) {
