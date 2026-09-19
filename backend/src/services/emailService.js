@@ -62,6 +62,34 @@ async function sendEmail({ to, subject, html, text }) {
   }
 }
 
+// Every failure above is deliberately non-throwing (see the comment on
+// sendEmail) so a broken mail server never takes down checkout or
+// registration — but that also means a misconfigured or broken mailbox
+// fails completely silently: no error the caller sees, nothing in the
+// response, just an email that quietly never arrives. Password reset in
+// particular has no other channel to fall back on if this goes wrong.
+// Call this once at server startup (see server.js) so a broken mail
+// setup shows up loudly in deploy logs immediately, not days later as
+// a "the email never showed up" report with nothing to go on.
+export async function verifyEmailTransporter() {
+  const t = getTransporter();
+  if (!t) {
+    console.error(
+      "EMAIL DISABLED: ZOHO_SMTP_USER / ZOHO_SMTP_PASS are not set — no emails (password resets included) will send."
+    );
+    return;
+  }
+  try {
+    await t.verify();
+    console.log("Email transporter verified OK (Zoho SMTP reachable, credentials accepted).");
+  } catch (error) {
+    console.error(
+      "EMAIL TRANSPORTER VERIFICATION FAILED — emails will silently fail to send until this is fixed:",
+      error.message
+    );
+  }
+}
+
 // Shared wrapper so every email looks like it's from the same platform,
 // without repeating header/footer markup in every template below. Modeled
 // on how most transactional email actually looks: light gray page
@@ -841,4 +869,5 @@ export default {
   sendDisputeEscalatedCustomerEmail,
   sendDisputeEscalatedAdminEmail,
   sendVerificationReminderEmail,
+  verifyEmailTransporter,
 };

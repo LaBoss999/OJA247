@@ -23,6 +23,7 @@ import marketerRoutes from "./src/routes/marketerRoutes.js";
 import subscriptionRoutes from "./src/routes/subscriptionRoutes.js";
 import cronRoutes from "./src/routes/cronRoutes.js";
 import disputeRoutes from "./src/routes/disputeRoutes.js";
+import { verifyEmailTransporter } from "./src/services/emailService.js";
 
 console.log("=== Environment Variables Check ===");
 console.log("CLOUDINARY_CLOUD_NAME:", process.env.CLOUDINARY_CLOUD_NAME);
@@ -83,6 +84,11 @@ app.use("/api/disputes", disputeRoutes);
 // Mongo is ready instead of letting requests race ahead of the connection.
 // Cached in db.js, so warm invocations skip straight past this.
 await connectDB();
+
+// Not awaited — this only logs (see verifyEmailTransporter's comment for
+// why it exists), so it shouldn't hold up request handling the way Mongo
+// readiness does above.
+verifyEmailTransporter();
 
 // Only run server locally
 if (process.env.NODE_ENV !== "production") {
