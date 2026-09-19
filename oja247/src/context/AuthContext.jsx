@@ -101,6 +101,39 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Google Sign-In — login only, matches an existing account by the
+  // verified email in the Google credential. Mirrors login()'s response
+  // handling exactly (including the admin TOTP branch) so LoginPage.jsx
+  // can reuse the same downstream code either way.
+  const googleLogin = async (credential) => {
+    try {
+      const response = await axiosInstance.post('/api/auth/google', { credential });
+
+      if (response.data.requiresTotpSetup || response.data.requiresTotpCode) {
+        return {
+          success: true,
+          requiresTotpSetup: response.data.requiresTotpSetup || false,
+          requiresTotpCode: response.data.requiresTotpCode || false,
+          preAuthToken: response.data.preAuthToken
+        };
+      }
+
+      const { token, user, business } = response.data;
+
+      localStorage.setItem('token', token);
+      setToken(token);
+      setUser(user);
+      setBusiness(business);
+
+      return { success: true, user, business };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Google sign-in failed'
+      };
+    }
+  };
+
   // Fetches the QR code for an admin setting up TOTP for the first time.
   // Uses preAuthToken explicitly, not the (nonexistent yet) session token.
   const getTotpSetupQr = async (preAuthToken) => {
@@ -184,6 +217,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     register,
     login,
+    googleLogin,
     logout,
     updatePassword,
     getTotpSetupQr,

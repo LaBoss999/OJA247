@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { authenticator } from "otplib";
 import QRCode from "qrcode";
+import { OAuth2Client } from "google-auth-library";
 import User from "../models/User.js";
 import Business from "../models/Business.js";
 import {
@@ -181,6 +182,74 @@ export const login = async (req, res) => {
     });
   } catch (error) {
     console.error("Login error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// POST /api/auth/google — login (not signup) via Google. The frontend
+// sends the ID token credential from Google Identity Services; we verify
+// its signature/audience with Google directly (never trust a client-sent
+// email on its own), then match it against an EXISTING account by email.
+// No account is created here — if nobody with that email has registered
+// through the normal flow, we tell them to sign up first. Deliberately
+// mirrors login()'s response shapes (including the admin TOTP gate) so
+// the frontend can treat both paths identically after this point.
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+export const googleLogin = async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) {
+      return res.status(400).json({ message: "Missing Google credential" });
+    }
+
+    let payload;
+    try {
+      const ticket = await googleClient.verifyIdToken({
+        idToken: credential,
+        audience: process.env.GOOGLE_CLIENT_ID,
+      });
+      payload = ticket.getPayload();
+    } catch (verifyError) {
+      return res.status(401).json({ message: "Invalid Google credential" });
+    }
+
+    if (!payload?.email_verified) {
+      return res.status(401).json({ message: "Google account email is not verified" });
+    }
+
+    const user = await User.findOne({ email: payload.email.toLowerCase() }).populate("businessId");
+
+    if (!user) {
+      return res.status(404).json({
+        message: "No OJA247 account found for this Google email. Sign up first.",
+      });
+    }
+
+    // Same TOTP gate as password login — Google sign-in doesn't bypass 2FA.
+    if (user.role === "admin") {
+      const preAuthToken = generatePreAuthToken(user._id);
+      if (!user.totpEnabled) {
+        return res.json({ success: true, requiresTotpSetup: true, preAuthToken });
+      }
+      return res.json({ success: true, requiresTotpCode: true, preAuthToken });
+    }
+
+    const token = generateToken(user._id);
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        businessId: user.businessId?._id || null,
+        role: user.role,
+      },
+      business: user.businessId || null,
+    });
+  } catch (error) {
+    console.error("Google login error:", error);
     res.status(500).json({ message: error.message });
   }
 };

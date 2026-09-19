@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, Lock, LogIn, Eye, EyeOff, ShieldCheck } from 'lucide-react';
@@ -7,7 +7,7 @@ import Logo from '../assets/OJA247 VX1.png';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login, getTotpSetupQr, completeTotpSetup, verifyTotpLogin } = useAuth();
+  const { login, googleLogin, getTotpSetupQr, completeTotpSetup, verifyTotpLogin } = useAuth();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -35,13 +35,9 @@ const LoginPage = () => {
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-
-    const result = await login(formData.email, formData.password);
-
+  // Shared by both password login (handleSubmit) and Google Sign-In
+  // (handleGoogleCredential) — same TOTP branching, same navigation.
+  const handleLoginResult = async (result) => {
     if (result.success) {
       if (result.requiresTotpSetup) {
         setPreAuthToken(result.preAuthToken);
@@ -73,6 +69,65 @@ const LoginPage = () => {
 
     setLoading(false);
   };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    const result = await login(formData.email, formData.password);
+    await handleLoginResult(result);
+  };
+
+  // Called by Google's SDK with { credential: <ID token JWT> } once the
+  // person picks an account in the Google popup/One Tap prompt.
+  const handleGoogleCredential = async (googleResponse) => {
+    setError('');
+    setLoading(true);
+    const result = await googleLogin(googleResponse.credential);
+    await handleLoginResult(result);
+  };
+
+  useEffect(() => {
+    // The script tag in index.html is async/defer, so it's very likely
+    // NOT loaded yet by the time this effect first runs on mount — a
+    // single check-and-bail (the previous version of this code) would
+    // silently never render the button in that common case. Poll briefly
+    // instead, stop as soon as it's ready.
+    let intervalId;
+    let attempts = 0;
+    const maxAttempts = 40; // ~10s at 250ms — generous for a slow connection
+
+    const tryRender = () => {
+      attempts += 1;
+      if (!window.google?.accounts?.id) {
+        if (attempts >= maxAttempts) clearInterval(intervalId);
+        return;
+      }
+      clearInterval(intervalId);
+
+      window.google.accounts.id.initialize({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredential,
+      });
+
+      const btnContainer = document.getElementById('google-signin-button');
+      if (btnContainer) {
+        window.google.accounts.id.renderButton(btnContainer, {
+          theme: 'outline',
+          size: 'large',
+          width: 320,
+          text: 'continue_with',
+        });
+      }
+    };
+
+    tryRender(); // in case it's already loaded (e.g. fast connection, cached script)
+    intervalId = setInterval(tryRender, 250);
+
+    return () => clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleTotpSubmit = async (e) => {
     e.preventDefault();
@@ -328,7 +383,19 @@ const LoginPage = () => {
               )}
             </motion.button>
           </form>
+
+          <div className="flex items-center gap-3 my-6">
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-xs text-gray-400 font-medium">OR</span>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
+
+          {/* Google renders its own button into this container once the
+              SDK script loads (see the useEffect above) — it's not a
+              regular React-controlled button, Google owns its DOM/styling. */}
+          <div id="google-signin-button" className="flex justify-center" />
             </>
+
           )}
 
           {!totpStep && (

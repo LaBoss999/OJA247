@@ -286,7 +286,7 @@ const LandingPage = () => {
           page, because at 10% opacity it barely registered. Sections
           below must stay transparent/translucent for this to read as one
           continuous background rather than cutting off partway down. */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         <motion.div
           className="absolute w-[30rem] h-[30rem] bg-green-400/25 rounded-full blur-3xl"
           animate={{ x: mousePosition.x / 20, y: mousePosition.y / 20 }}
@@ -346,7 +346,7 @@ const LandingPage = () => {
       {particles.map((p, i) => (
         <motion.div
           key={i}
-          className="absolute w-2 h-2 bg-green-400/20 rounded-full"
+          className="absolute w-2 h-2 bg-green-400/20 rounded-full z-0"
           initial={{
             x: p.startX,
             y: p.startY,
@@ -365,7 +365,7 @@ const LandingPage = () => {
       ))}
 
       {/* Hero Section */}
-      <main className="relative min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 pt-24 sm:pt-32 pb-12 sm:pb-20 text-center">
+      <main className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 sm:px-6 pt-24 sm:pt-32 pb-12 sm:pb-20 text-center">
         {/* Only the badge/heading/subtext fade+scale on scroll now */}
         <motion.div style={{ opacity, scale }} className="relative z-10 w-full">
           <motion.div
