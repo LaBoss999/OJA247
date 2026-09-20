@@ -38,6 +38,22 @@ export const getMarketerDashboard = async (req, res) => {
       .filter((p) => p.status === "paid")
       .reduce((sum, p) => sum + p.amount, 0);
 
+    const totalConverted = referrals.filter((r) => r.status === "converted").length;
+    const pendingReferralsCount = referrals.filter((r) => r.status === "pending").length;
+
+    // Payout amount varies by which plan the referral eventually buys (see
+    // MARKETER_PAYOUT_RATE_BY_PLAN in referralService.js), so there's no
+    // single "amount per referral" to multiply by for a forecast. Instead,
+    // estimate from this marketer's own historical average — paidTotal is
+    // actual money already paid out, which only happens for converted
+    // referrals, so dividing by totalConverted gives a real per-conversion
+    // average specific to this marketer's typical referral mix.
+    const avgPayoutPerConversion = totalConverted > 0 ? paidTotal / totalConverted : null;
+    const payoutForecast =
+      avgPayoutPerConversion !== null
+        ? Math.round(avgPayoutPerConversion * pendingReferralsCount)
+        : null; // no conversions yet — nothing to estimate from
+
     res.json({
       success: true,
       referralCode: req.marketer.referralCode,
@@ -49,9 +65,11 @@ export const getMarketerDashboard = async (req, res) => {
       },
       stats: {
         totalReferred: referrals.length,
-        totalConverted: referrals.filter((r) => r.status === "converted").length,
+        totalConverted,
+        conversionRate: referrals.length > 0 ? totalConverted / referrals.length : 0,
         pendingPayoutTotal: pendingTotal, // owed, not yet paid out
         lifetimePaidTotal: paidTotal,
+        payoutForecast, // null if no conversions yet to estimate from
       },
       referrals,
       payoutHistory: payouts

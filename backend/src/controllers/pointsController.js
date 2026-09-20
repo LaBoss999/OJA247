@@ -31,10 +31,33 @@ export const getPointsDashboard = async (req, res) => {
 
     const ledger = await PointsLedger.find({ businessId }).sort({ createdAt: -1 }).limit(50);
 
+    const totalConverted = referrals.filter((r) => r.status === "converted").length;
+
+    // Progress toward being able to redeem points for a subscription.
+    // Points are a flat 1pt = ₦1 (see BUSINESS_REFERRAL_POINTS in
+    // referralService.js), so the target is just the cheapest plan's price
+    // — the monthly plan — since that's the earliest milestone reachable,
+    // even though points can be applied toward any plan at checkout.
+    const MONTHLY_PLAN_PRICE = 1999;
+    const pointsBalance = business.pointsBalance || 0;
+    const nextRedemption = {
+      targetLabel: "Monthly plan",
+      targetAmount: MONTHLY_PLAN_PRICE,
+      progress: Math.min(1, pointsBalance / MONTHLY_PLAN_PRICE),
+      remainingPoints: Math.max(0, MONTHLY_PLAN_PRICE - pointsBalance),
+      canRedeemNow: pointsBalance >= MONTHLY_PLAN_PRICE,
+    };
+
     res.json({
       success: true,
       referralCode: business.referralCode,
-      pointsBalance: business.pointsBalance || 0,
+      pointsBalance,
+      stats: {
+        totalReferred: referrals.length,
+        totalConverted,
+        conversionRate: referrals.length > 0 ? totalConverted / referrals.length : 0,
+      },
+      nextRedemption,
       referrals,
       ledger: ledger.map((entry) => ({
         id: entry._id,

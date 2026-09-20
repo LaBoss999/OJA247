@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Copy,
-  Check,
   LogOut,
   Users,
   CheckCircle2,
@@ -10,9 +8,13 @@ import {
   TrendingUp,
   Landmark,
   Pencil,
+  Percent,
+  Target,
 } from "lucide-react";
 import marketerApi from "../services/marketerApi";
 import Loader from "../components/Loader";
+import ShareButtons from "../components/ShareButtons";
+import ReferralActivityList from "../components/ReferralActivityList";
 import Logo from "../assets/OJA247 VX1.png";
 
 const MarketerDashboard = () => {
@@ -20,7 +22,6 @@ const MarketerDashboard = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
 
   // Payout details form
   const [editingPayout, setEditingPayout] = useState(false);
@@ -166,12 +167,6 @@ const MarketerDashboard = () => {
     ? `${window.location.origin}/business-form?ref=${data.referralCode}`
     : "";
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(referralLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const handleSavePayout = async (e) => {
     e.preventDefault();
     setPayoutMessage("");
@@ -275,24 +270,21 @@ const MarketerDashboard = () => {
             </div>
           )}
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mb-3">
             <input
               readOnly
               value={referralLink}
               className="flex-1 p-3 border border-gray-300 rounded-lg text-sm bg-gray-50 text-gray-600"
             />
-            <button
-              onClick={handleCopy}
-              className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg font-semibold text-sm shadow"
-            >
-              {copied ? <Check size={16} /> : <Copy size={16} />}
-              {copied ? "Copied" : "Copy"}
-            </button>
           </div>
+          <ShareButtons
+            link={referralLink}
+            message="Get your business online with OJA247 — sign up with my link:"
+          />
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-2">
           <div className="bg-white rounded-xl shadow-sm border p-4">
             <div className="flex items-center gap-2 mb-1">
               <Users size={14} className="text-green-600" />
@@ -309,11 +301,31 @@ const MarketerDashboard = () => {
           </div>
           <div className="bg-white rounded-xl shadow-sm border p-4">
             <div className="flex items-center gap-2 mb-1">
+              <Percent size={14} className="text-green-600" />
+              <p className="text-xs text-gray-500 font-semibold">Conversion Rate</p>
+            </div>
+            <p className="text-2xl font-extrabold text-gray-900">
+              {Math.round(data.stats.conversionRate * 100)}%
+            </p>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border p-4">
+            <div className="flex items-center gap-2 mb-1">
               <Wallet size={14} className="text-green-600" />
               <p className="text-xs text-gray-500 font-semibold">Pending Payout</p>
             </div>
             <p className="text-2xl font-extrabold text-green-700">
               ₦{data.stats.pendingPayoutTotal.toLocaleString()}
+            </p>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border p-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Target size={14} className="text-green-600" />
+              <p className="text-xs text-gray-500 font-semibold">If Pending Convert</p>
+            </div>
+            <p className="text-2xl font-extrabold text-gray-900">
+              {data.stats.payoutForecast !== null
+                ? `~₦${data.stats.payoutForecast.toLocaleString()}`
+                : "—"}
             </p>
           </div>
           <div className="bg-white rounded-xl shadow-sm border p-4">
@@ -327,8 +339,10 @@ const MarketerDashboard = () => {
           </div>
         </div>
         <p className="text-xs text-gray-400 mb-4">
-          Converted = the business has paid their subscription. Request a withdrawal any time you have at least
-          ₦{MIN_WITHDRAWAL.toLocaleString()} pending — an admin is notified right away to process it.
+          Converted = the business has paid their subscription. "If Pending Convert" is an estimate based on
+          your own average payout per conversion — actual amounts depend on which plan each referral buys.
+          Request a withdrawal any time you have at least ₦{MIN_WITHDRAWAL.toLocaleString()} pending — an
+          admin is notified right away to process it.
         </p>
 
         <div className="mb-6">
@@ -446,37 +460,12 @@ const MarketerDashboard = () => {
         </div>
 
         {/* Referral list */}
-        <div className="bg-white rounded-2xl shadow-sm border overflow-hidden mb-6">
-          <div className="px-6 py-4 border-b">
-            <h3 className="font-bold text-gray-900">Your Referrals</h3>
-          </div>
-          {data.referrals.length === 0 ? (
-            <p className="p-6 text-sm text-gray-500">
-              No referrals yet — share your link above to get started.
-            </p>
-          ) : (
-            <div className="divide-y">
-              {data.referrals.map((r) => (
-                <div key={r.id} className="px-6 py-4 flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-gray-900">{r.businessName}</p>
-                    <p className="text-xs text-gray-400">
-                      Referred {new Date(r.referredAt).toLocaleDateString("en-NG")}
-                    </p>
-                  </div>
-                  <span
-                    className={`text-xs font-bold px-3 py-1 rounded-full ${
-                      r.status === "converted"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-yellow-100 text-yellow-700"
-                    }`}
-                  >
-                    {r.status === "converted" ? "Converted" : "Pending"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="mb-6">
+          <ReferralActivityList
+            referrals={data.referrals}
+            title="Your Referrals"
+            emptyCta="Share your link above to get your first referral."
+          />
         </div>
 
         {/* Payout history */}

@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { Copy, Check, Pencil } from "lucide-react";
+import { Pencil, Percent, Gift } from "lucide-react";
 import axiosInstance from "../services/api";
+import ShareButtons from "./ShareButtons";
+import ReferralActivityList from "./ReferralActivityList";
 
 function ReferralPointsTab({ businessId }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
 
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawing, setWithdrawing] = useState(false);
@@ -32,12 +33,6 @@ function ReferralPointsTab({ businessId }) {
   }, [businessId]);
 
   const referralLink = data ? `${window.location.origin}/business-form?ref=${data.referralCode}` : "";
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(referralLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   const handleWithdraw = async (e) => {
     e.preventDefault();
@@ -132,6 +127,34 @@ function ReferralPointsTab({ businessId }) {
         </p>
       </div>
 
+      {/* Progress toward next redemption + conversion rate */}
+      <div className="bg-white rounded-2xl shadow-sm border p-6">
+        <div className="flex items-center gap-2 mb-2">
+          <Gift size={16} className="text-green-600" />
+          <p className="text-sm font-semibold text-gray-700">
+            {data.nextRedemption.canRedeemNow
+              ? `You can redeem points for your ${data.nextRedemption.targetLabel.toLowerCase()} right now`
+              : `${data.nextRedemption.remainingPoints.toLocaleString()} pts to redeem your ${data.nextRedemption.targetLabel.toLowerCase()}`}
+          </p>
+        </div>
+        <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden mb-4">
+          <div
+            className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full transition-all"
+            style={{ width: `${Math.round(data.nextRedemption.progress * 100)}%` }}
+          />
+        </div>
+        <div className="flex items-center gap-2 pt-3 border-t">
+          <Percent size={14} className="text-green-600" />
+          <p className="text-xs text-gray-500 font-semibold">Conversion Rate</p>
+          <p className="ml-auto text-sm font-extrabold text-gray-900">
+            {Math.round(data.stats.conversionRate * 100)}%
+          </p>
+          <p className="text-xs text-gray-400">
+            ({data.stats.totalConverted}/{data.stats.totalReferred} referred)
+          </p>
+        </div>
+      </div>
+
       {/* Referral link */}
       <div className="bg-white rounded-2xl shadow-sm border p-6">
         <p className="text-sm font-semibold text-gray-500 mb-1">Your Referral Code</p>
@@ -177,20 +200,17 @@ function ReferralPointsTab({ businessId }) {
           </div>
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mb-3">
           <input
             readOnly
             value={referralLink}
             className="flex-1 p-3 border border-gray-300 rounded-lg text-sm bg-gray-50 text-gray-600"
           />
-          <button
-            onClick={handleCopy}
-            className="flex items-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold text-sm"
-          >
-            {copied ? <Check size={16} /> : <Copy size={16} />}
-            {copied ? "Copied" : "Copy"}
-          </button>
         </div>
+        <ShareButtons
+          link={referralLink}
+          message="Get your business online with OJA247 — sign up with my link:"
+        />
         <p className="text-xs text-gray-400 mt-2">
           Earn 1,000 points (₦1,000) each time a business you refer pays their subscription. Use your
           points to pay for your own subscription from the Subscription tab, or withdraw as cash below.
@@ -198,36 +218,11 @@ function ReferralPointsTab({ businessId }) {
       </div>
 
       {/* Referral list */}
-      <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
-        <div className="px-6 py-4 border-b">
-          <h3 className="font-bold text-gray-900">Businesses You've Referred</h3>
-        </div>
-        {data.referrals.length === 0 ? (
-          <p className="p-6 text-sm text-gray-500">No referrals yet.</p>
-        ) : (
-          <div className="divide-y">
-            {data.referrals.map((r) => (
-              <div key={r.id} className="px-6 py-4 flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-gray-900">{r.businessName}</p>
-                  <p className="text-xs text-gray-400">
-                    Referred {new Date(r.referredAt).toLocaleDateString("en-NG")}
-                  </p>
-                </div>
-                <span
-                  className={`text-xs font-bold px-3 py-1 rounded-full ${
-                    r.status === "converted"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-yellow-100 text-yellow-700"
-                  }`}
-                >
-                  {r.status === "converted" ? "Converted" : "Pending"}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      <ReferralActivityList
+        referrals={data.referrals}
+        title="Businesses You've Referred"
+        emptyCta="Share your link above to get your first referral."
+      />
 
       {/* Ledger */}
       <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
