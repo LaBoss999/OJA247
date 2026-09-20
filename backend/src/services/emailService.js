@@ -221,8 +221,9 @@ export async function sendVendorWelcomeEmail({ to, businessName }) {
   });
 }
 
-export async function sendVerificationReviewedEmail({ to, businessName, decision, reviewNotes }) {
+export async function sendVerificationReviewedEmail({ to, businessName, businessCategory, decision, reviewNotes }) {
   const approved = decision === "approved";
+  const badgeLabel = `Verified${businessCategory ? ` ${businessCategory}` : ""} Vendor`;
   return sendEmail({
     to,
     subject: approved ? "Your vendor verification was approved" : "Your vendor verification needs attention",
@@ -230,7 +231,7 @@ export async function sendVerificationReviewedEmail({ to, businessName, decision
       approved
         ? `
           <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">You're verified ✅</h1>
-          <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${businessName}, your vendor verification documents have been approved. Your verified badge is now active on your storefront.</p>
+          <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${businessName}, your vendor verification documents have been approved. Your <strong>${badgeLabel}</strong> badge is now active on your storefront.</p>
           ${button("View my dashboard", `${SITE_URL}/dashboard`)}
           `
         : `

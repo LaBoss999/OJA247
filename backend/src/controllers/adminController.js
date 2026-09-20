@@ -218,13 +218,20 @@ export const reviewVendor = async (req, res) => {
     // approving a vendor had no visible effect on their business record.
     // Rejecting does NOT un-verify a business that was already verified
     // from a past approval — only an explicit approval sets this.
+    let businessCategory = "";
     if (decision === "approved") {
-      await Business.findByIdAndUpdate(vendor.businessId, { verified: true });
+      const updatedBusiness = await Business.findByIdAndUpdate(
+        vendor.businessId,
+        { verified: true },
+        { new: true }
+      ).select("category");
+      businessCategory = updatedBusiness?.category || "";
     }
 
     await sendVerificationReviewedEmail({
       to: vendor.contactEmail,
       businessName: vendor.businessName,
+      businessCategory,
       decision,
       reviewNotes: notes || "",
     });

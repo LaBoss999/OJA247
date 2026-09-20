@@ -266,11 +266,11 @@ function BusinessDetails() {
               </h1>
               {business.verified && (
                 <span
-                  className="inline-flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 bg-blue-500 rounded-full flex-shrink-0"
-                  title="Verified business"
+                  className="inline-flex items-center gap-1 pl-1.5 pr-2.5 py-1 bg-blue-500 rounded-full flex-shrink-0"
+                  title={`Verified ${business.category || ""} Vendor`.trim()}
                 >
                   <svg
-                    className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white"
+                    className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white flex-shrink-0"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -282,6 +282,12 @@ function BusinessDetails() {
                       d="M5 13l4 4L19 7"
                     />
                   </svg>
+                  {/* Text alongside the icon, not just a hover title — a
+                      title attribute alone is invisible on mobile, where
+                      there's no hover state to reveal it. */}
+                  <span className="text-xs sm:text-sm font-semibold text-white whitespace-nowrap">
+                    Verified{business.category ? ` ${business.category}` : ""}
+                  </span>
                 </span>
               )}
             </div>
