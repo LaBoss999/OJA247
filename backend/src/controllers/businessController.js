@@ -3,6 +3,7 @@ import Business from "../models/Business.js";
 import Order from "../models/Order.js";
 import PlatformSettings from "../models/PlatformSettings.js";
 import User from "../models/User.js";
+import Follow from "../models/Follow.js";
 import { isValidCustomReferralCode, isBusinessReferralCodeTaken } from "../services/referralService.js";
 import { sendBusinessReferralCodeChangedEmail } from "../services/emailService.js";
 
@@ -91,7 +92,15 @@ export const getBusiness = async (req, res) => {
       : await Business.findOne({ slug: id });
 
     if (!business) return res.status(404).json({ message: "Not found" });
-    res.json(business);
+
+    // Follower count is public info (shown to guests too, same as any
+    // other social-proof number) — this route stays unauthenticated on
+    // purpose, so "am I following this" isn't answered here at all; the
+    // frontend makes a separate, protected call to /api/follows/status
+    // only when the viewer is actually a logged-in customer.
+    const followerCount = await Follow.countDocuments({ businessId: business._id });
+
+    res.json({ ...business.toObject(), followerCount });
   } catch (error) {
     res.status(500).json({ message: "Error fetching business" });
   }

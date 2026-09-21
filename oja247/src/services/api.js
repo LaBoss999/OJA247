@@ -27,6 +27,9 @@ axiosInstance.interceptors.request.use((config) => {
 // Business API calls
 export const getAllBusinesses = () => axiosInstance.get('/api/businesses');
 export const getBusinessById = (id) => axiosInstance.get(`/api/businesses/${id}`);
+export const getFollowStatus = (businessId) => axiosInstance.get(`/api/follows/status/${businessId}`);
+export const followBusiness = (businessId) => axiosInstance.post(`/api/follows/${businessId}`);
+export const unfollowBusiness = (businessId) => axiosInstance.delete(`/api/follows/${businessId}`);
 export const createBusiness = (businessData) => axiosInstance.post('/api/businesses', businessData);
 export const updateBusiness = (id, businessData) => axiosInstance.put(`/api/businesses/${id}`, businessData);
 export const deleteBusiness = (id) => axiosInstance.delete(`/api/businesses/${id}`);

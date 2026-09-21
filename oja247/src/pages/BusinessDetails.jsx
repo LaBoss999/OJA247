@@ -1,7 +1,8 @@
-import { useParams, Link, useLocation } from "react-router-dom";
+import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { getBusinessById, getProductsByBusiness } from "../services/api";
+import { getBusinessById, getProductsByBusiness, getFollowStatus, followBusiness, unfollowBusiness } from "../services/api";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import Loader from "../components/Loader";
 import useMinimumLoadingTime from "../hooks/useMinimumLoadingTime";
 
@@ -88,6 +89,8 @@ function StarRating({ rating }) {
 function BusinessDetails() {
   const { id } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isAuthenticated, isCustomer } = useAuth();
   const { addToCart, itemCount } = useCart();
   const [business, setBusiness] = useState(null);
   const [products, setProducts] = useState([]);
@@ -118,7 +121,6 @@ function BusinessDetails() {
       // "montero-designs") or a raw Mongo ID. getBusinessById handles both.
       const businessRes = await getBusinessById(id);
       setBusiness(businessRes.data);
-      setIsFollowing(Boolean(businessRes.data.isFollowedByUser));
       setFollowerCount(businessRes.data.followerCount || 0);
 
       // IMPORTANT: products are keyed by the real Mongo _id, not the slug —
@@ -133,6 +135,25 @@ function BusinessDetails() {
       setLoading(false);
     }
   };
+
+  // Separate from the fetch above on purpose: AuthContext resolves
+  // whether there's a logged-in customer asynchronously (its own
+  // `loading` state), which can finish after this page's initial mount —
+  // depending on isAuthenticated/isCustomer here means this re-runs once
+  // that settles, instead of only checking once at a moment where it
+  // might still incorrectly read as "not logged in" yet. getBusiness
+  // itself stays a public, unauthenticated route either way (see its
+  // comment in businessController.js) — this is purely the "am I
+  // following this" check layered on top, for a customer session only.
+  useEffect(() => {
+    if (!business?._id || !isAuthenticated || !isCustomer) {
+      setIsFollowing(false);
+      return;
+    }
+    getFollowStatus(business._id)
+      .then((res) => setIsFollowing(Boolean(res.data.isFollowing)))
+      .catch((error) => console.error("Error checking follow status:", error));
+  }, [business?._id, isAuthenticated, isCustomer]);
 
   const categories = ["all", ...new Set(products.map((p) => p.category))];
 
@@ -157,13 +178,26 @@ function BusinessDetails() {
   };
 
   const handleFollowToggle = async () => {
+    // The actual "prompt at the wall" moment for this feature — a guest
+    // (or a logged-in vendor account, which isn't a customer) gets sent
+    // to sign in/create an account rather than the click silently doing
+    // nothing, with ?redirect back to this exact storefront so they land
+    // right back here afterward instead of on their account page.
+    if (!isAuthenticated || !isCustomer) {
+      navigate(`/account?redirect=${encodeURIComponent(location.pathname)}`);
+      return;
+    }
+
     const nextFollowing = !isFollowing;
     setIsFollowing(nextFollowing);
     setFollowerCount((c) => (nextFollowing ? c + 1 : Math.max(0, c - 1)));
 
     try {
-      // Replace with your actual follow/unfollow endpoint, e.g.:
-      // nextFollowing ? await followBusiness(id) : await unfollowBusiness(id);
+      const res = nextFollowing ? await followBusiness(business._id) : await unfollowBusiness(business._id);
+      // Reconcile with the server's real count rather than trusting the
+      // optimistic math above — someone else could have followed/
+      // unfollowed the same business in between.
+      setFollowerCount(res.data.followerCount);
     } catch (error) {
       console.error("Error updating follow status:", error);
       setIsFollowing(!nextFollowing);
