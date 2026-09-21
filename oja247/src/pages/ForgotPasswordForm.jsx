@@ -5,17 +5,29 @@ import { Mail, ArrowLeft, CheckCircle } from "lucide-react";
 import axiosInstance from "../services/api";
 import Logo from "../assets/OJA247 VX1.png";
 
-// Reused for both accounts — `type` picks the endpoint and the "back to
-// login" link. Same shape as LoginPage.jsx / MarketerLoginPage.jsx so it
-// looks native next to whichever one sent the user here.
+// Reused for all three account kinds — `type` picks the endpoint and the
+// "back to login" link. Same shape as LoginPage.jsx / MarketerLoginPage.jsx
+// / CustomerAuthPage.jsx so it looks native next to whichever one sent the
+// user here.
+const ENDPOINT_BY_TYPE = {
+  marketer: "/api/marketers/forgot-password",
+  customer: "/api/customer-auth/forgot-password",
+  vendor: "/api/auth/forgot-password",
+};
+const LOGIN_PATH_BY_TYPE = {
+  marketer: "/marketer-login",
+  customer: "/account",
+  vendor: "/login",
+};
+
 const ForgotPasswordForm = ({ type }) => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
 
-  const endpoint = type === "marketer" ? "/api/marketers/forgot-password" : "/api/auth/forgot-password";
-  const loginPath = type === "marketer" ? "/marketer-login" : "/login";
+  const endpoint = ENDPOINT_BY_TYPE[type] || ENDPOINT_BY_TYPE.vendor;
+  const loginPath = LOGIN_PATH_BY_TYPE[type] || LOGIN_PATH_BY_TYPE.vendor;
 
   const handleSubmit = async (e) => {
     e.preventDefault();

@@ -98,3 +98,14 @@ export const checkBusinessOwnership = async (req, res, next) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+// Gate for customer-only routes (order history, follow, reviews — Phase
+// 2/4/5). protect() runs first and already rejects anything with no valid
+// token; this just narrows it to customer-role accounts specifically, the
+// same way requireAdmin narrows to admin.
+export const requireCustomer = (req, res, next) => {
+  if (req.user.role !== "customer") {
+    return res.status(403).json({ message: "Customer account required" });
+  }
+  next();
+};

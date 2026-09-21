@@ -22,6 +22,7 @@ import MarketerLoginPage from "./pages/MarketerLoginPage";
 import MarketerDashboard from "./pages/MarketerDashboard";
 import ForgotPasswordForm from "./pages/ForgotPasswordForm";
 import ResetPasswordForm from "./pages/ResetPasswordForm";
+import CustomerAuthPage from "./pages/CustomerAuthPage";
 
 function App() {
   return (
@@ -47,7 +48,9 @@ function App() {
           <Route path="/marketer-dashboard" element={<MarketerDashboard />} />
           <Route path="/forgot-password" element={<ForgotPasswordForm type="vendor" />} />
           <Route path="/marketer-forgot-password" element={<ForgotPasswordForm type="marketer" />} />
+          <Route path="/customer-forgot-password" element={<ForgotPasswordForm type="customer" />} />
           <Route path="/reset-password" element={<ResetPasswordForm />} />
+          <Route path="/account" element={<CustomerAuthPage />} />
           {/* Protected Routes */}
           <Route
             path="/dashboard/:businessId"

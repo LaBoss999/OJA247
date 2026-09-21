@@ -31,6 +31,12 @@ const OrderSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
+    // Null for a guest order. Set retroactively (not necessarily at order
+    // time) if the same email later creates or logs into a customer
+    // account — see linkGuestOrders in customerAuthController.js. Every
+    // order is placed the same way (guest checkout, no account required),
+    // this just gets backfilled after the fact.
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null, index: true },
     customer: {
       fullName: { type: String, required: true },
       phone: { type: String, required: true },

@@ -10,24 +10,36 @@ const UserSchema = new mongoose.Schema(
       lowercase: true,
       trim: true
     },
+    // No `required: true` here on purpose — a customer who signs up via
+    // Google never sets a password at all (see customerAuthController.js).
+    // Password-based flows (register, customerRegister) already validate
+    // presence explicitly in the controller before this ever gets saved,
+    // so schema-level validation would only be redundant there and wrong
+    // here. minlength still applies to whatever IS provided.
     password: {
       type: String,
-      required: true,
       minlength: 6
     },
     businessId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Business",
       required: function () {
-        return this.role !== "admin"; // only owners need a business
+        return this.role === "owner"; // only owners need a business
       },
       default: null
     },
     role: {
       type: String,
-      enum: ["owner", "admin"],
+      enum: ["owner", "admin", "customer"],
       default: "owner"
     },
+    // Customer-only fields (owners/admins keep this info on the Business/
+    // Vendor records instead). Both optional — a Google signup only has
+    // fullName from the Google profile; phone gets added later if/when
+    // they check out or fill it in, and also doubles as a secondary
+    // signal for matching guest orders (email is the primary match).
+    fullName: { type: String, default: "" },
+    phone: { type: String, default: "" },
     banned: {
       type: Boolean,
       default: false
@@ -58,8 +70,12 @@ UserSchema.pre("save", async function () {
   this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Method to compare passwords
+// Method to compare passwords. Returns false (never throws) for an
+// account with no password set at all — a Google-only signup — so a
+// stray password-login attempt against one fails cleanly instead of
+// bcrypt erroring on an undefined hash.
 UserSchema.methods.comparePassword = async function (candidatePassword) {
+  if (!this.password) return false;
   return await bcrypt.compare(candidatePassword, this.password);
 };
 

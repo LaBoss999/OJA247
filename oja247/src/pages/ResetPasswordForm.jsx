@@ -5,11 +5,23 @@ import { Lock, Eye, EyeOff, CheckCircle } from "lucide-react";
 import axiosInstance from "../services/api";
 import Logo from "../assets/OJA247 VX1.png";
 
+const ENDPOINT_BY_TYPE = {
+  marketer: "/api/marketers/reset-password",
+  customer: "/api/customer-auth/reset-password",
+  vendor: "/api/auth/reset-password",
+};
+const LOGIN_PATH_BY_TYPE = {
+  marketer: "/marketer-login",
+  customer: "/account",
+  vendor: "/login",
+};
+
 const ResetPasswordForm = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
-  const type = searchParams.get("type") === "marketer" ? "marketer" : "vendor";
+  const typeParam = searchParams.get("type");
+  const type = ["marketer", "customer"].includes(typeParam) ? typeParam : "vendor";
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -18,8 +30,8 @@ const ResetPasswordForm = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  const endpoint = type === "marketer" ? "/api/marketers/reset-password" : "/api/auth/reset-password";
-  const loginPath = type === "marketer" ? "/marketer-login" : "/login";
+  const endpoint = ENDPOINT_BY_TYPE[type];
+  const loginPath = LOGIN_PATH_BY_TYPE[type];
 
   const handleSubmit = async (e) => {
     e.preventDefault();

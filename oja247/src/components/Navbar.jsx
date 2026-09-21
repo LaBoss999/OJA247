@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useScroll, useMotionValueEvent } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { Menu, X, User as UserIcon } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import Logo from "../assets/OJA247 VX1.png";
 
@@ -25,7 +25,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [hidden, setHidden] = useState(false);
-  const { isAuthenticated, business } = useAuth();
+  const { isAuthenticated, isCustomer, business, user, logout } = useAuth();
 
   const { scrollY } = useScroll();
 
@@ -89,7 +89,11 @@ const Navbar = () => {
                 </motion.button>
               ))}
 
-              {isAuthenticated ? (
+              {/* Vendor/admin session and customer session are mutually
+                  exclusive (one token per browser — see AuthContext's
+                  authRole comment), so this only ever shows one of the
+                  three states below, never a mix. */}
+              {isAuthenticated && !isCustomer ? (
                 <motion.button
                   whileHover={{ scale: 1.1 }}
                   onClick={() => business?._id && navigate(`/dashboard/${business._id}`)}
@@ -97,14 +101,42 @@ const Navbar = () => {
                 >
                   My Dashboard
                 </motion.button>
+              ) : isAuthenticated && isCustomer ? (
+                <div className="flex items-center gap-3">
+                  {/* No account hub page yet (order history/follow/reviews
+                      land in later phases) — just a name + logout for now
+                      rather than linking somewhere that doesn't exist. */}
+                  <span className="text-sm text-gray-600 font-medium">
+                    Hi, {user?.fullName?.split(" ")[0] || "there"}
+                  </span>
+                  <button
+                    onClick={logout}
+                    className="text-sm text-gray-500 hover:text-gray-700 font-medium transition"
+                  >
+                    Log out
+                  </button>
+                </div>
               ) : (
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  onClick={() => navigate("/login")}
-                  className="px-6 py-2 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition"
-                >
-                  Login
-                </motion.button>
+                <div className="flex items-center gap-2">
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    onClick={() => navigate("/login")}
+                    className="px-6 py-2 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition"
+                  >
+                    Login
+                  </motion.button>
+                  {/* Separate, smaller entry point for buyers — distinct
+                      from the vendor Login button above, which is
+                      specifically the vendor/admin login. */}
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    onClick={() => navigate("/account")}
+                    title="Sign in to your account"
+                    className="p-2.5 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition"
+                  >
+                    <UserIcon size={20} />
+                  </motion.button>
+                </div>
               )}
             </div>
 
@@ -143,21 +175,38 @@ const Navbar = () => {
               </motion.button>
             ))}
 
-            <div className="p-4 border-t border-gray-200 bg-white/80">
-              {isAuthenticated ? (
+            <div className="p-4 border-t border-gray-200 bg-white/80 space-y-2">
+              {isAuthenticated && !isCustomer ? (
                 <button
                   onClick={() => business?._id && navigate(`/dashboard/${business._id}`)}
                   className="w-full px-6 py-3 bg-green-500 text-white rounded-xl font-semibold shadow-lg hover:bg-green-600 transition"
                 >
                   My Dashboard
                 </button>
+              ) : isAuthenticated && isCustomer ? (
+                <div className="flex items-center justify-between px-2">
+                  <span className="text-sm text-gray-600 font-medium">
+                    Hi, {user?.fullName?.split(" ")[0] || "there"}
+                  </span>
+                  <button onClick={() => { logout(); setMobileMenuOpen(false); }} className="text-sm text-gray-500 hover:text-gray-700 font-medium">
+                    Log out
+                  </button>
+                </div>
               ) : (
-                <button
-                  onClick={() => navigate("/login")}
-                  className="w-full px-6 py-3 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition"
-                >
-                  Login
-                </button>
+                <>
+                  <button
+                    onClick={() => navigate("/login")}
+                    className="w-full px-6 py-3 bg-green-600 text-white rounded-xl font-semibold shadow-lg hover:bg-green-700 transition"
+                  >
+                    Login
+                  </button>
+                  <button
+                    onClick={() => navigate("/account")}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 text-gray-600 border border-gray-200 rounded-xl font-medium hover:bg-gray-50 transition"
+                  >
+                    <UserIcon size={18} /> Sign in to your account
+                  </button>
+                </>
               )}
             </div>
           </motion.div>

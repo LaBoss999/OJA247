@@ -15,6 +15,11 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [business, setBusiness] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
+  // Which /me endpoint to call on refresh — customers and vendors/admins
+  // share the same token storage (see the comment on customerLogin below
+  // for why), so this is what tells loadUser() which one is actually
+  // stored right now.
+  const [authRole, setAuthRole] = useState(localStorage.getItem('authRole') || 'vendor');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,13 +28,20 @@ export const AuthProvider = ({ children }) => {
     } else {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const loadUser = async () => {
     try {
-      const response = await axiosInstance.get('/api/auth/me');
-      setUser(response.data.user);
-      setBusiness(response.data.business);
+      if (authRole === 'customer') {
+        const response = await axiosInstance.get('/api/customer-auth/me');
+        setUser(response.data);
+        setBusiness(null);
+      } else {
+        const response = await axiosInstance.get('/api/auth/me');
+        setUser(response.data.user);
+        setBusiness(response.data.business);
+      }
     } catch (error) {
       console.error('Load user error:', error);
       logout();
@@ -50,6 +62,8 @@ export const AuthProvider = ({ children }) => {
       const { token, user, business } = response.data;
 
       localStorage.setItem('token', token);
+      localStorage.setItem('authRole', 'vendor');
+      setAuthRole('vendor');
       setToken(token);
       setUser(user);
       setBusiness(business);
@@ -88,6 +102,8 @@ export const AuthProvider = ({ children }) => {
       const { token, user, business } = response.data;
 
       localStorage.setItem('token', token);
+      localStorage.setItem('authRole', 'vendor');
+      setAuthRole('vendor');
       setToken(token);
       setUser(user);
       setBusiness(business);
@@ -121,6 +137,8 @@ export const AuthProvider = ({ children }) => {
       const { token, user, business } = response.data;
 
       localStorage.setItem('token', token);
+      localStorage.setItem('authRole', 'vendor');
+      setAuthRole('vendor');
       setToken(token);
       setUser(user);
       setBusiness(business);
@@ -130,6 +148,83 @@ export const AuthProvider = ({ children }) => {
       return {
         success: false,
         message: error.response?.data?.message || 'Google sign-in failed'
+      };
+    }
+  };
+
+  // --- Customer auth ---
+  // Shares the same token/localStorage plumbing as vendor auth above
+  // (see authRole comment near the top) rather than a fully separate
+  // session — simpler, at the cost of only one active identity per
+  // browser at a time. No TOTP branch here; that's admin-only.
+
+  const customerRegister = async (email, password, fullName, phone) => {
+    try {
+      const response = await axiosInstance.post('/api/customer-auth/register', {
+        email,
+        password,
+        fullName,
+        phone,
+      });
+
+      const { token, user } = response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('authRole', 'customer');
+      setAuthRole('customer');
+      setToken(token);
+      setUser(user);
+      setBusiness(null);
+
+      return { success: true, user };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Registration failed',
+      };
+    }
+  };
+
+  const customerLogin = async (email, password) => {
+    try {
+      const response = await axiosInstance.post('/api/customer-auth/login', { email, password });
+
+      const { token, user } = response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('authRole', 'customer');
+      setAuthRole('customer');
+      setToken(token);
+      setUser(user);
+      setBusiness(null);
+
+      return { success: true, user };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Login failed',
+      };
+    }
+  };
+
+  // Unlike the vendor googleLogin above, this auto-creates an account on
+  // first click — see customerAuthController.js's customerGoogleAuth for
+  // why (no separate "sign up first" step for customers).
+  const customerGoogleLogin = async (credential) => {
+    try {
+      const response = await axiosInstance.post('/api/customer-auth/google', { credential });
+
+      const { token, user } = response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('authRole', 'customer');
+      setAuthRole('customer');
+      setToken(token);
+      setUser(user);
+      setBusiness(null);
+
+      return { success: true, user };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Google sign-in failed',
       };
     }
   };
@@ -160,6 +255,8 @@ export const AuthProvider = ({ children }) => {
       );
       const { token, user, business } = response.data;
       localStorage.setItem('token', token);
+      localStorage.setItem('authRole', 'vendor');
+      setAuthRole('vendor');
       setToken(token);
       setUser(user);
       setBusiness(business);
@@ -179,6 +276,8 @@ export const AuthProvider = ({ children }) => {
       );
       const { token, user, business } = response.data;
       localStorage.setItem('token', token);
+      localStorage.setItem('authRole', 'vendor');
+      setAuthRole('vendor');
       setToken(token);
       setUser(user);
       setBusiness(business);
@@ -190,7 +289,9 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('authRole');
     setToken(null);
+    setAuthRole('vendor');
     setUser(null);
     setBusiness(null);
   };
@@ -214,16 +315,21 @@ export const AuthProvider = ({ children }) => {
     user,
     business,
     token,
+    authRole,
     loading,
     register,
     login,
     googleLogin,
+    customerRegister,
+    customerLogin,
+    customerGoogleLogin,
     logout,
     updatePassword,
     getTotpSetupQr,
     completeTotpSetup,
     verifyTotpLogin,
-    isAuthenticated: !!token
+    isAuthenticated: !!token,
+    isCustomer: !!token && authRole === 'customer',
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
