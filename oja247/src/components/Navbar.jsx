@@ -103,12 +103,12 @@ const Navbar = () => {
                 </motion.button>
               ) : isAuthenticated && isCustomer ? (
                 <div className="flex items-center gap-3">
-                  {/* No account hub page yet (order history/follow/reviews
-                      land in later phases) — just a name + logout for now
-                      rather than linking somewhere that doesn't exist. */}
-                  <span className="text-sm text-gray-600 font-medium">
+                  <button
+                    onClick={() => navigate("/orders")}
+                    className="text-sm text-gray-700 hover:text-green-600 font-semibold transition"
+                  >
                     Hi, {user?.fullName?.split(" ")[0] || "there"}
-                  </span>
+                  </button>
                   <button
                     onClick={logout}
                     className="text-sm text-gray-500 hover:text-gray-700 font-medium transition"
@@ -185,9 +185,12 @@ const Navbar = () => {
                 </button>
               ) : isAuthenticated && isCustomer ? (
                 <div className="flex items-center justify-between px-2">
-                  <span className="text-sm text-gray-600 font-medium">
+                  <button
+                    onClick={() => { navigate("/orders"); setMobileMenuOpen(false); }}
+                    className="text-sm text-gray-700 hover:text-green-600 font-semibold"
+                  >
                     Hi, {user?.fullName?.split(" ")[0] || "there"}
-                  </span>
+                  </button>
                   <button onClick={() => { logout(); setMobileMenuOpen(false); }} className="text-sm text-gray-500 hover:text-gray-700 font-medium">
                     Log out
                   </button>

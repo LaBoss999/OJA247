@@ -23,6 +23,7 @@ import MarketerDashboard from "./pages/MarketerDashboard";
 import ForgotPasswordForm from "./pages/ForgotPasswordForm";
 import ResetPasswordForm from "./pages/ResetPasswordForm";
 import CustomerAuthPage from "./pages/CustomerAuthPage";
+import OrderHistoryPage from "./pages/OrderHistoryPage";
 
 function App() {
   return (
@@ -51,6 +52,7 @@ function App() {
           <Route path="/customer-forgot-password" element={<ForgotPasswordForm type="customer" />} />
           <Route path="/reset-password" element={<ResetPasswordForm />} />
           <Route path="/account" element={<CustomerAuthPage />} />
+          <Route path="/orders" element={<OrderHistoryPage />} />
           {/* Protected Routes */}
           <Route
             path="/dashboard/:businessId"

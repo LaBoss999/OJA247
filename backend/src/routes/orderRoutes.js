@@ -6,9 +6,10 @@ import {
   updateOrderStatus,
   verifyOrderPayment,
   getOrdersByBusiness,
+  getMyOrders,
   handlePaystackWebhook,
 } from "../controllers/orderController.js";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect, requireCustomer } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -21,6 +22,11 @@ router.get("/reference/:reference", getOrderByReference);
 // is separate from the bare-reference endpoint above.
 router.get("/lookup", lookupOrderForDispute);
 router.patch("/reference/:reference", updateOrderStatus);
+
+// Customer's own order history — scoped to req.user._id server-side (see
+// getMyOrders), so there's no id param a customer could tamper with to see
+// someone else's orders the way there theoretically could be below.
+router.get("/my-orders", protect, requireCustomer, getMyOrders);
 
 // Vendor's own orders — requires a valid logged-in user (any authenticated
 // vendor can currently query any businessId; add an ownership check here

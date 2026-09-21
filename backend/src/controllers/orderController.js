@@ -481,3 +481,18 @@ export const getOrdersByBusiness = async (req, res) => {
     res.status(500).json({ message: "Error fetching business orders" });
   }
 };
+
+// GET /api/orders/my-orders — the logged-in customer's own order history.
+// req.user comes from protect (see authMiddleware.js); requireCustomer on
+// the route guarantees this is actually a customer token, so there's no
+// separate id param to trust/validate here the way getOrdersByBusiness
+// has to for businessId.
+export const getMyOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({ userId: req.user._id }).sort({ createdAt: -1 });
+    res.json(orders);
+  } catch (error) {
+    console.error("Get my orders error:", error);
+    res.status(500).json({ message: "Error fetching your orders" });
+  }
+};
