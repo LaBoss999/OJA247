@@ -8,14 +8,15 @@ import {
   getCustomerMe,
 } from "../controllers/customerAuthController.js";
 import { protect, requireCustomer } from "../middleware/authMiddleware.js";
+import { authLimiter } from "../middleware/rateLimiters.js";
 
 const router = express.Router();
 
-router.post("/register", customerRegister);
-router.post("/login", customerLogin);
-router.post("/google", customerGoogleAuth);
-router.post("/forgot-password", customerForgotPassword);
-router.post("/reset-password", customerResetPassword);
+router.post("/register", authLimiter, customerRegister);
+router.post("/login", authLimiter, customerLogin);
+router.post("/google", authLimiter, customerGoogleAuth);
+router.post("/forgot-password", authLimiter, customerForgotPassword);
+router.post("/reset-password", authLimiter, customerResetPassword);
 
 router.get("/me", protect, requireCustomer, getCustomerMe);
 

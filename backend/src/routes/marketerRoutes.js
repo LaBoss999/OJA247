@@ -13,13 +13,14 @@ import {
   updateMarketerReferralCode,
 } from "../controllers/marketerController.js";
 import { protectMarketer } from "../middleware/marketerAuthMiddleware.js";
+import { authLimiter } from "../middleware/rateLimiters.js";
 
 const router = express.Router();
 
-router.post("/register", registerMarketer);
-router.post("/login", loginMarketer);
-router.post("/forgot-password", forgotMarketerPassword);
-router.post("/reset-password", resetMarketerPassword);
+router.post("/register", authLimiter, registerMarketer);
+router.post("/login", authLimiter, loginMarketer);
+router.post("/forgot-password", authLimiter, forgotMarketerPassword);
+router.post("/reset-password", authLimiter, resetMarketerPassword);
 router.get("/me", protectMarketer, getMarketerMe);
 router.get("/dashboard", protectMarketer, getMarketerDashboard);
 router.patch("/me/payout-details", protectMarketer, updateMarketerPayoutDetails);

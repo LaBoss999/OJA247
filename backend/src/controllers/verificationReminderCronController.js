@@ -17,8 +17,11 @@ async function getOwnerEmail(businessId) {
 // they last got one — it only catches vendors whose last reminder (or
 // signup, if they've never had one) is old enough.
 export const runVerificationReminderCheck = async (req, res) => {
+  // SECURITY: fail closed if CRON_SECRET is unset — see the matching fix
+  // in disputeCronController.js for why the previous `process.env.CRON_SECRET && ...`
+  // pattern was wrong (it fails open instead).
   const authHeader = req.headers.authorization;
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 

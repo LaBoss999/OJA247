@@ -13,11 +13,14 @@ import { getOwnerEmail } from "./disputeController.js";
 // SELF_RESOLVE_WINDOW_DAYS moves itself to "escalated" here rather than
 // waiting on someone to notice.
 export const runDisputeEscalationCheck = async (req, res) => {
-  // Same bearer-token check as the other cron endpoints — see
-  // subscriptionExpiryCronController.js for why this exists (Vercel Cron
-  // sends this automatically; anyone else needs the secret).
+  // SECURITY: was `if (process.env.CRON_SECRET && authHeader !== ...)` —
+  // that fails OPEN (skips the check entirely) if CRON_SECRET is ever
+  // unset, unlike the safer pattern in payoutBatchController.js/
+  // subscriptionExpiryCronController.js which fails CLOSED. Matching that
+  // safer pattern here — if the secret is missing, this now always
+  // rejects instead of becoming a public, unauthenticated endpoint.
   const authHeader = req.headers.authorization;
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 

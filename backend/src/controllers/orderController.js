@@ -471,6 +471,13 @@ export const getOrdersByBusiness = async (req, res) => {
       return res.status(400).json({ message: "businessId is required" });
     }
 
+    // SECURITY: without this check, any logged-in vendor could view any
+    // OTHER business's full order list — customer names, phone numbers,
+    // addresses, order amounts — just by knowing/guessing a businessId.
+    if (req.user.role !== "admin" && req.user.businessId?.toString() !== businessId) {
+      return res.status(403).json({ message: "Not authorized to view these orders" });
+    }
+
     const orders = await Order.find({ "items.businessId": businessId }).sort({
       createdAt: -1,
     });

@@ -1,6 +1,7 @@
 import express from 'express';
 import cloudinary from '../config/cloudinaryConfig.js';
 import multer from 'multer';
+import { uploadLimiter } from '../middleware/rateLimiters.js';
 
 const router = express.Router();
 
@@ -40,7 +41,7 @@ const uploadToCloudinary = async (fileBuffer, filename) => {
 };
 
 // Upload single image
-router.post('/single', upload.single('image'), async (req, res) => {
+router.post('/single', uploadLimiter, upload.single('image'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
@@ -60,7 +61,7 @@ router.post('/single', upload.single('image'), async (req, res) => {
 });
 
 // Upload multiple images (max 5)
-router.post('/multiple', upload.array('images', 5), async (req, res) => {
+router.post('/multiple', uploadLimiter, upload.array('images', 5), async (req, res) => {
   try {
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: 'No files uploaded' });

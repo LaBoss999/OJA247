@@ -141,8 +141,17 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // SECURITY: without this type check, a request body like
+    // {"email": {"$regex": "..."}, "password": "..."} would pass `email`
+    // as a raw object straight into the query below — classic NoSQL
+    // operator injection, letting an attacker manipulate which user the
+    // query matches. Rejecting non-strings outright closes that off.
+    if (typeof email !== "string" || typeof password !== "string") {
+      return res.status(400).json({ message: "Invalid email or password" });
+    }
+
     // Find user by email
-    const user = await User.findOne({ email }).populate("businessId");
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).populate("businessId");
 
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });

@@ -11,6 +11,7 @@ if (process.env.NODE_ENV !== "production") {
 
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import { connectDB } from "./src/db.js";
 import businessRoutes from "./src/routes/businessRoutes.js";
 import productRoutes from "./src/routes/productRoutes.js";
@@ -26,6 +27,7 @@ import disputeRoutes from "./src/routes/disputeRoutes.js";
 import customerAuthRoutes from "./src/routes/customerAuthRoutes.js";
 import followRoutes from "./src/routes/followRoutes.js";
 import { verifyEmailTransporter } from "./src/services/emailService.js";
+import { generalLimiter } from "./src/middleware/rateLimiters.js";
 
 console.log("=== Environment Variables Check ===");
 console.log("CLOUDINARY_CLOUD_NAME:", process.env.CLOUDINARY_CLOUD_NAME);
@@ -37,6 +39,17 @@ console.log(
 console.log("===================================");
 
 const app = express();
+
+// SECURITY: sets standard protective headers (X-Content-Type-Options,
+// X-Frame-Options, a conservative default CSP, etc.) — the app had none
+// of this before. crossOriginResourcePolicy is relaxed to "cross-origin"
+// since images/assets here are legitimately loaded from other origins
+// (the frontend on a different domain, Cloudinary-hosted images).
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
 
 // CORS configuration for production
 app.use(
@@ -59,6 +72,13 @@ app.use(
   })
 );
 app.use(express.urlencoded({ limit: "25mb", extended: true }));
+
+// SECURITY: loose baseline rate limit across the whole API — not meant to
+// stop targeted abuse (specific routes like login/upload have their own
+// tighter limiters for that), just a backstop against a runaway script or
+// scraper hitting any single IP unreasonably hard. 500 req/15min is well
+// above legitimate Paystack webhook or Vercel Cron traffic.
+app.use(generalLimiter);
 
 // Health check route
 app.get("/", (req, res) => {

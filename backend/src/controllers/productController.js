@@ -61,7 +61,6 @@ export const getProduct = async (req, res) => {
 export const createProduct = async (req, res) => {
   try {
     const {
-      businessId,
       name,
       description,
       price,
@@ -71,6 +70,12 @@ export const createProduct = async (req, res) => {
       specifications,
       tags,
     } = req.body;
+
+    // SECURITY: never trust a client-supplied businessId for a regular
+    // vendor — that would let any logged-in user create products under
+    // any other business. Only admins may target an arbitrary business
+    // (e.g. from an admin tool); everyone else is locked to their own.
+    const businessId = req.user.role === "admin" ? req.body.businessId : req.user.businessId;
 
     if (!businessId) {
       return res.status(400).json({ message: "businessId is required" });
@@ -117,6 +122,21 @@ export const updateProduct = async (req, res) => {
       return res.status(400).json({ message: "Invalid product ID" });
     }
 
+    // SECURITY: fetch first to check ownership before writing anything —
+    // without this, any logged-in user could edit any other business's
+    // product just by knowing its ID.
+    const existing = await Product.findById(id);
+    if (!existing) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    if (req.user.role !== "admin" && existing.businessId.toString() !== req.user.businessId?.toString()) {
+      return res.status(403).json({ message: "Not authorized to modify this product" });
+    }
+
+    // Also don't let the update body silently reassign the product to a
+    // different business than the one that owns it.
+    delete updates.businessId;
+
     if (updates.stock !== undefined) {
       updates.inStock = updates.stock > 0;
     }
@@ -125,10 +145,6 @@ export const updateProduct = async (req, res) => {
       new: true,
       runValidators: true,
     });
-
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
 
     res.json(product);
   } catch (error) {
@@ -146,10 +162,17 @@ export const deleteProduct = async (req, res) => {
       return res.status(400).json({ message: "Invalid product ID" });
     }
 
-    const product = await Product.findByIdAndDelete(id);
-    if (!product) {
+    // SECURITY: same ownership check as updateProduct — without it, any
+    // logged-in user could delete any other business's product.
+    const existing = await Product.findById(id);
+    if (!existing) {
       return res.status(404).json({ message: "Product not found" });
     }
+    if (req.user.role !== "admin" && existing.businessId.toString() !== req.user.businessId?.toString()) {
+      return res.status(403).json({ message: "Not authorized to delete this product" });
+    }
+
+    await Product.findByIdAndDelete(id);
     res.json({ message: "Product deleted successfully" });
   } catch (error) {
     console.error("Delete product error:", error);
