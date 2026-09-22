@@ -845,6 +845,34 @@ export async function sendVerificationReminderEmail({ to, businessName, verifica
   });
 }
 
+export async function sendNewProductFollowerEmail({
+  to,
+  customerName,
+  businessName,
+  productName,
+  productImage,
+  storefrontUrl,
+}) {
+  return sendEmail({
+    to,
+    subject: `${businessName} just added something new`,
+    html: layout(
+      `
+      <h1 style="margin:0 0 4px; font-size:20px; color:#111827;">New from a store you follow</h1>
+      <p style="color:#4b5563; font-size:14px; line-height:1.6;">Hi ${customerName}, <strong>${businessName}</strong> just listed a new product:</p>
+      ${
+        productImage
+          ? `<img src="${productImage}" alt="${productName}" style="width:100%; max-width:280px; border-radius:12px; margin:16px 0; display:block;" />`
+          : ""
+      }
+      <p style="font-size:16px; font-weight:700; color:#111827; margin:0 0 16px;">${productName}</p>
+      ${button("View in store", storefrontUrl)}
+      `,
+      { preheader: `${businessName} just listed ${productName}` }
+    ),
+  });
+}
+
 export default {
   sendEmail,
   sendPasswordResetEmail,
@@ -870,5 +898,6 @@ export default {
   sendDisputeEscalatedCustomerEmail,
   sendDisputeEscalatedAdminEmail,
   sendVerificationReminderEmail,
+  sendNewProductFollowerEmail,
   verifyEmailTransporter,
 };
