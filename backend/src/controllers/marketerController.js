@@ -57,6 +57,7 @@ export const getMarketerDashboard = async (req, res) => {
     res.json({
       success: true,
       referralCode: req.marketer.referralCode,
+      phone: req.marketer.phone || "",
       payoutDetails: {
         bankName: req.marketer.bankName || "",
         accountNumber: req.marketer.accountNumber || "",
@@ -200,6 +201,31 @@ export const updateMarketerPayoutDetails = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+// PATCH /api/marketers/me/phone — fills in the phone number for a marketer
+// who signed up via Google (marketerGoogleAuth creates them with phone: "",
+// since Google never provides one). Same "/me/..." convention as
+// updateMarketerPayoutDetails/updateMarketerReferralCode above.
+export const updateMarketerPhone = async (req, res) => {
+  try {
+    const phone = String(req.body.phone || "").trim();
+
+    if (!phone) {
+      return res.status(400).json({ message: "Phone number is required." });
+    }
+
+    const updated = await Marketer.findByIdAndUpdate(
+      req.marketer._id,
+      { phone },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    res.json({ success: true, phone: updated.phone });
+  } catch (error) {
+    console.error("Update marketer phone error:", error);
+    res.status(400).json({ message: error.message });
+  }
+};
+
 // PATCH /api/marketers/me/referral-code — marketer picks their own code,
 // same rules as a vendor's own code (updateBusinessReferralCode in
 // businessController.js): 7-8 chars, letters/numbers, unique within its

@@ -852,7 +852,7 @@ export async function sendNewProductFollowerEmail({
   productName,
   productImage,
   storefrontUrl,
-}) {
+}) {  
   return sendEmail({
     to,
     subject: `${businessName} just added something new`,

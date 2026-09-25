@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import axiosInstance from "../services/marketerApi";
@@ -9,6 +9,66 @@ const MarketerRegisterForm = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  const handleGoogleSuccess = (data) => {
+    localStorage.setItem("marketerToken", data.token);
+    navigate("/marketer-dashboard");
+  };
+
+  // Same endpoint as MarketerLoginPage.jsx — marketerGoogleAuth auto-creates
+  // on first click, so "register" and "sign in" with Google are the same
+  // call either way (see customerAuthController.js for the same pattern).
+  const handleGoogleCredential = async (googleResponse) => {
+    setError("");
+    setLoading(true);
+    try {
+      const { data } = await axiosInstance.post("/api/marketers/google", {
+        credential: googleResponse.credential,
+      });
+      handleGoogleSuccess(data);
+    } catch (err) {
+      setError(err.response?.data?.message || "Google sign-in failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Same polling pattern as MarketerLoginPage.jsx.
+  useEffect(() => {
+    let intervalId;
+    let attempts = 0;
+    const maxAttempts = 40;
+
+    const tryRender = () => {
+      attempts += 1;
+      if (!window.google?.accounts?.id) {
+        if (attempts >= maxAttempts) clearInterval(intervalId);
+        return;
+      }
+      clearInterval(intervalId);
+
+      window.google.accounts.id.initialize({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredential,
+      });
+
+      const btnContainer = document.getElementById("marketer-register-google-signin-button");
+      if (btnContainer) {
+        window.google.accounts.id.renderButton(btnContainer, {
+          theme: "outline",
+          size: "large",
+          width: 320,
+          text: "signup_with",
+        });
+      }
+    };
+
+    tryRender();
+    intervalId = setInterval(tryRender, 250);
+
+    return () => clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -80,6 +140,16 @@ const MarketerRegisterForm = () => {
               {error}
             </div>
           )}
+
+          {/* Google first — same reasoning as CustomerAuthPage.jsx: the
+              whole point of offering it is to skip the form below. */}
+          <div id="marketer-register-google-signin-button" className="flex justify-center mb-5" />
+
+          <div className="flex items-center gap-3 mb-5">
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-xs text-gray-400 font-medium">OR</span>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

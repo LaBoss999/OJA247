@@ -44,6 +44,11 @@ const MarketerDashboard = () => {
   const [savingCode, setSavingCode] = useState(false);
   const [codeMessage, setCodeMessage] = useState("");
 
+  // Phone completion (Google sign-ups start with no phone on file)
+  const [phoneInput, setPhoneInput] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
+  const [phoneMessage, setPhoneMessage] = useState("");
+
   const MIN_WITHDRAWAL = 1000;
 
   const handleWithdraw = async () => {
@@ -193,6 +198,27 @@ const MarketerDashboard = () => {
     }
   };
 
+  const handleSavePhone = async (e) => {
+    e.preventDefault();
+    setPhoneMessage("");
+
+    const trimmed = phoneInput.trim();
+    if (!trimmed) {
+      setPhoneMessage("Enter a phone number.");
+      return;
+    }
+
+    setSavingPhone(true);
+    try {
+      await marketerApi.patch("/api/marketers/me/phone", { phone: trimmed });
+      loadDashboard();
+    } catch (err) {
+      setPhoneMessage(err.response?.data?.message || "Could not save your phone number.");
+    } finally {
+      setSavingPhone(false);
+    }
+  };
+
   if (loading) return <Loader />;
 
   if (error) {
@@ -225,6 +251,36 @@ const MarketerDashboard = () => {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-8">
+        {/* Phone completion prompt — only shown for accounts with no phone
+            on file (Google sign-ups skip this at signup since Google never
+            provides one; see marketerGoogleAuth on the backend). */}
+        {!data.phone && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-6 mb-6">
+            <p className="text-amber-700 font-semibold mb-1">Add your phone number</p>
+            <p className="text-sm text-amber-700/80 mb-4">
+              We don't have a phone number on file for your account yet. Add one so we can reach
+              you about your referrals and payouts.
+            </p>
+            <form onSubmit={handleSavePhone} className="flex items-center gap-2">
+              <input
+                type="tel"
+                value={phoneInput}
+                onChange={(e) => setPhoneInput(e.target.value)}
+                placeholder="e.g. 08012345678"
+                className="flex-1 p-3 border border-amber-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+              />
+              <button
+                type="submit"
+                disabled={savingPhone}
+                className="px-4 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold text-sm disabled:bg-gray-400"
+              >
+                {savingPhone ? "Saving..." : "Save"}
+              </button>
+            </form>
+            {phoneMessage && <p className="text-xs text-red-600 mt-2">{phoneMessage}</p>}
+          </div>
+        )}
+
         {/* Referral code + link */}
         <div className="bg-white rounded-2xl shadow-sm border p-6 mb-6">
           <p className="text-sm font-semibold text-gray-500 mb-1">Your Referral Code</p>

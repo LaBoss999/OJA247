@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import marketerApi from "../services/marketerApi";
@@ -15,20 +15,81 @@ const MarketerLoginPage = () => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  const handleLoginSuccess = (data) => {
+    localStorage.setItem("marketerToken", data.token);
+    navigate("/marketer-dashboard");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
     try {
       const { data } = await marketerApi.post("/api/marketers/login", formData);
-      localStorage.setItem("marketerToken", data.token);
-      navigate("/marketer-dashboard");
+      handleLoginSuccess(data);
     } catch (err) {
       setError(err.response?.data?.message || "Login failed. Please check your details.");
     } finally {
       setLoading(false);
     }
   };
+
+  // Called by Google's SDK with { credential: <ID token JWT> } once the
+  // person picks an account in the Google popup/One Tap prompt. Auto-creates
+  // a marketer account on first click (see backend marketerGoogleAuth).
+  const handleGoogleCredential = async (googleResponse) => {
+    setError("");
+    setLoading(true);
+    try {
+      const { data } = await marketerApi.post("/api/marketers/google", {
+        credential: googleResponse.credential,
+      });
+      handleLoginSuccess(data);
+    } catch (err) {
+      setError(err.response?.data?.message || "Google sign-in failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Same polling pattern as LoginPage.jsx / CustomerAuthPage.jsx — the
+  // Google script tag is async/defer in index.html, so it's very likely not
+  // loaded yet on first render.
+  useEffect(() => {
+    let intervalId;
+    let attempts = 0;
+    const maxAttempts = 40; // ~10s at 250ms
+
+    const tryRender = () => {
+      attempts += 1;
+      if (!window.google?.accounts?.id) {
+        if (attempts >= maxAttempts) clearInterval(intervalId);
+        return;
+      }
+      clearInterval(intervalId);
+
+      window.google.accounts.id.initialize({
+        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredential,
+      });
+
+      const btnContainer = document.getElementById("marketer-google-signin-button");
+      if (btnContainer) {
+        window.google.accounts.id.renderButton(btnContainer, {
+          theme: "outline",
+          size: "large",
+          width: 320,
+          text: "continue_with",
+        });
+      }
+    };
+
+    tryRender();
+    intervalId = setInterval(tryRender, 250);
+
+    return () => clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 py-6 sm:py-12">
@@ -46,6 +107,17 @@ const MarketerLoginPage = () => {
               {error}
             </div>
           )}
+
+          {/* Google renders its own button into this container once the SDK
+              script loads (see the useEffect above) — it's not a regular
+              React-controlled button, Google owns its DOM/styling. */}
+          <div id="marketer-google-signin-button" className="flex justify-center mb-5" />
+
+          <div className="flex items-center gap-3 mb-5">
+            <div className="flex-1 h-px bg-gray-200" />
+            <span className="text-xs text-gray-400 font-medium">OR</span>
+            <div className="flex-1 h-px bg-gray-200" />
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
